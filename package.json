@@ -1,0 +1,9 @@
+{
+  "name": "structuredmerge-typescript",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.19.0",
+  "workspaces": [
+    "packages/*"
+  ]
+}

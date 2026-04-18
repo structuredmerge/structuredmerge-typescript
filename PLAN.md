@@ -44,18 +44,18 @@ Deferred:
 
 Initial package candidates:
 
-- `@kettle-rb/tree-haver-ts`
-- `@kettle-rb/ast-merge-ts`
-- `@kettle-rb/text-merge-ts`
-- `@kettle-rb/json-merge-ts`
+- `@structuredmerge/tree-haver-ts`
+- `@structuredmerge/ast-merge-ts`
+- `@structuredmerge/text-merge-ts`
+- `@structuredmerge/json-merge-ts`
 
 Possible later packages:
 
-- `@kettle-rb/toml-merge-ts`
-- `@kettle-rb/yaml-merge-ts`
-- `@kettle-rb/markdown-merge-ts`
-- `@kettle-rb/merge-ruleset-ts`
-- `@kettle-rb/package-template-ts`
+- `@structuredmerge/toml-merge-ts`
+- `@structuredmerge/yaml-merge-ts`
+- `@structuredmerge/markdown-merge-ts`
+- `@structuredmerge/merge-ruleset-ts`
+- `@structuredmerge/package-template-ts`
 
 ## Ruby Mapping
 
@@ -132,10 +132,14 @@ Requirements:
 
 ## Open Questions
 
-1. Use one monorepo workspace or one repo per package?
-2. Publish under one npm scope or multiple scopes?
-3. How much of the Ruby comment capability model should be ported in v1?
-4. Should text merge expose a matcher-only API before a full merge API?
+1. Publish under one npm scope or multiple scopes?
+2. How much of the Ruby comment capability model should be ported in v1?
+3. Should text merge expose a matcher-only API before a full merge API?
+
+## Decisions
+
+- Use one monorepo workspace with multiple publishable packages.
+- Prefer the `@structuredmerge` npm scope.
 
 ## First Implementation Sequence
 
@@ -144,4 +148,3 @@ Requirements:
 3. implement shared fixture runner
 4. implement `text-merge-ts`
 5. implement `json-merge-ts`
-
