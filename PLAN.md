@@ -44,18 +44,18 @@ Deferred:
 
 Initial package candidates:
 
-- `@structuredmerge/tree-haver-ts`
-- `@structuredmerge/ast-merge-ts`
-- `@structuredmerge/text-merge-ts`
-- `@structuredmerge/json-merge-ts`
+- `@structuredmerge/tree-haver`
+- `@structuredmerge/ast-merge`
+- `@structuredmerge/text-merge`
+- `@structuredmerge/json-merge`
 
 Possible later packages:
 
-- `@structuredmerge/toml-merge-ts`
-- `@structuredmerge/yaml-merge-ts`
-- `@structuredmerge/markdown-merge-ts`
-- `@structuredmerge/merge-ruleset-ts`
-- `@structuredmerge/package-template-ts`
+- `@structuredmerge/toml-merge`
+- `@structuredmerge/yaml-merge`
+- `@structuredmerge/markdown-merge`
+- `@structuredmerge/merge-ruleset`
+- `@structuredmerge/package-template`
 
 ## Ruby Mapping
 
@@ -92,28 +92,28 @@ Requirements:
 
 ## MVP Deliverables
 
-### 1. `tree-haver-ts`
+### 1. `tree-haver`
 
 - grammar registry/loading abstraction
 - parser acquisition
 - parse result wrapper
 - diagnostics for parse errors
 
-### 2. `ast-merge-ts`
+### 2. `ast-merge`
 
 - generic merge result model
 - diagnostics model
 - freeze-region model
 - node matching/refinement interfaces
 
-### 3. `text-merge-ts`
+### 3. `text-merge`
 
 - normalized text segmentation
 - paragraph/block matching
 - configurable similarity threshold
 - symmetric similarity scoring API
 
-### 4. `json-merge-ts`
+### 4. `json-merge`
 
 - JSON and JSONC comments support
 - strict parse behavior
@@ -144,7 +144,7 @@ Requirements:
 ## First Implementation Sequence
 
 1. define TypeScript node/diagnostic interfaces
-2. implement `tree-haver-ts`
+2. implement `tree-haver`
 3. implement shared fixture runner
-4. implement `text-merge-ts`
-5. implement `json-merge-ts`
+4. implement `text-merge`
+5. implement `json-merge`

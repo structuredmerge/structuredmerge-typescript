@@ -5,7 +5,7 @@ family.
 
 Initial workspace packages:
 
-- `@structuredmerge/tree-haver-ts`
-- `@structuredmerge/ast-merge-ts`
-- `@structuredmerge/text-merge-ts`
-- `@structuredmerge/json-merge-ts`
+- `@structuredmerge/tree-haver`
+- `@structuredmerge/ast-merge`
+- `@structuredmerge/text-merge`
+- `@structuredmerge/json-merge`

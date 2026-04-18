@@ -1,5 +1,5 @@
 {
-  "name": "@structuredmerge/tree-haver-ts",
+  "name": "@structuredmerge/ast-merge",
   "version": "0.0.0",
   "private": false,
   "type": "module",

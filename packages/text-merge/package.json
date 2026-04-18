@@ -1,5 +1,5 @@
 {
-  "name": "@structuredmerge/ast-merge-ts",
+  "name": "@structuredmerge/text-merge",
   "version": "0.0.0",
   "private": false,
   "type": "module",
