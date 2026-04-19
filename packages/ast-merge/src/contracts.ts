@@ -107,6 +107,11 @@ export interface ConformanceSuiteDefinition {
   readonly roles: readonly string[];
 }
 
+export interface NamedConformanceSuiteReport {
+  readonly suite: string;
+  readonly report: ConformanceSuiteReport;
+}
+
 export interface ConformanceSuiteSummary {
   readonly total: number;
   readonly passed: number;
@@ -172,6 +177,10 @@ export function conformanceSuiteDefinition(
   suiteName: string
 ): ConformanceSuiteDefinition | undefined {
   return manifest.suites?.[suiteName];
+}
+
+export function conformanceSuiteNames(manifest: ConformanceManifest): readonly string[] {
+  return Object.keys(manifest.suites ?? {}).sort((left, right) => left.localeCompare(right));
 }
 
 export function summarizeConformanceResults(
@@ -279,6 +288,22 @@ export function runPlannedConformanceSuite(
   );
 }
 
+export function runNamedConformanceSuite(
+  manifest: ConformanceManifest,
+  suiteName: string,
+  familyProfile: FamilyFeatureProfile,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
+  featureProfile?: ConformanceFeatureProfileView
+): readonly ConformanceCaseResult[] | undefined {
+  const plan = planNamedConformanceSuite(manifest, suiteName, familyProfile, featureProfile);
+
+  if (!plan) {
+    return undefined;
+  }
+
+  return runPlannedConformanceSuite(plan, execute);
+}
+
 export function reportPlannedConformanceSuite(
   plan: ConformanceSuitePlan,
   execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
@@ -300,6 +325,31 @@ export function reportNamedConformanceSuite(
   }
 
   return reportPlannedConformanceSuite(plan, execute);
+}
+
+export function reportNamedConformanceSuiteEntry(
+  manifest: ConformanceManifest,
+  suiteName: string,
+  familyProfile: FamilyFeatureProfile,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
+  featureProfile?: ConformanceFeatureProfileView
+): NamedConformanceSuiteReport | undefined {
+  const report = reportNamedConformanceSuite(
+    manifest,
+    suiteName,
+    familyProfile,
+    execute,
+    featureProfile
+  );
+
+  if (!report) {
+    return undefined;
+  }
+
+  return {
+    suite: suiteName,
+    report
+  };
 }
 
 export function reportConformanceSuite(

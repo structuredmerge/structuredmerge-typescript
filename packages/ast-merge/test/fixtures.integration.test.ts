@@ -9,6 +9,7 @@ import type {
   ConformanceCaseSelection,
   ConformanceCaseResult,
   ConformanceManifest,
+  NamedConformanceSuiteReport,
   ConformanceOutcome,
   ConformanceSuiteDefinition,
   ConformanceSuitePlan,
@@ -24,12 +25,15 @@ import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   conformanceSuiteDefinition,
+  conformanceSuiteNames,
   planConformanceSuite,
   planNamedConformanceSuite,
+  reportNamedConformanceSuiteEntry,
   reportNamedConformanceSuite,
   reportPlannedConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,
+  runNamedConformanceSuite,
   runPlannedConformanceSuite,
   runConformanceSuite,
   selectConformanceCase,
@@ -208,6 +212,24 @@ interface NamedSuiteReportFixture {
   };
   executions: Record<string, ConformanceCaseExecution>;
   expected_report: ConformanceSuiteReport;
+}
+
+interface NamedSuiteRunnerFixture {
+  suite_name: string;
+  family_profile: NamedSuiteReportFixture['family_profile'];
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_results: ConformanceCaseResult[];
+}
+
+interface SuiteNamesFixture {
+  suite_names: string[];
+}
+
+interface NamedSuiteEntryFixture {
+  suite_name: string;
+  family_profile: NamedSuiteReportFixture['family_profile'];
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_entry: NamedConformanceSuiteReport;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -683,5 +705,80 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(fixture.expected_report);
+  });
+
+  it('conforms to the slice-45 named conformance suite-runner fixture', () => {
+    const fixture = readFixture<NamedSuiteRunnerFixture>(
+      ...diagnosticsFixturePath('named_suite_runner')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(
+      runNamedConformanceSuite(
+        manifest,
+        fixture.suite_name,
+        {
+          family: fixture.family_profile.family,
+          supportedDialects: fixture.family_profile.supported_dialects,
+          supportedPolicies: fixture.family_profile.supported_policies
+        },
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        },
+        {
+          backend: 'kreuzberg-language-pack',
+          supportsDialects: false,
+          supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
+        }
+      )
+    ).toEqual(fixture.expected_results);
+  });
+
+  it('conforms to the slice-46 conformance suite-names fixture', () => {
+    const fixture = readFixture<SuiteNamesFixture>(...diagnosticsFixturePath('suite_names'));
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(conformanceSuiteNames(manifest)).toEqual(fixture.suite_names);
+  });
+
+  it('conforms to the slice-47 named conformance suite-entry fixture', () => {
+    const fixture = readFixture<NamedSuiteEntryFixture>(
+      ...diagnosticsFixturePath('named_suite_entry')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(
+      reportNamedConformanceSuiteEntry(
+        manifest,
+        fixture.suite_name,
+        {
+          family: fixture.family_profile.family,
+          supportedDialects: fixture.family_profile.supported_dialects,
+          supportedPolicies: fixture.family_profile.supported_policies
+        },
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        },
+        {
+          backend: 'kreuzberg-language-pack',
+          supportsDialects: false,
+          supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
+        }
+      )
+    ).toEqual(fixture.expected_entry);
   });
 });
