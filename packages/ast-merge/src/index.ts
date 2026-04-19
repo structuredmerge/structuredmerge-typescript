@@ -5,5 +5,7 @@ export type {
   DiagnosticCategory,
   DiagnosticSeverity,
   MergeResult,
+  PolicyReference,
+  PolicySurface,
   ParseResult
 } from './contracts';

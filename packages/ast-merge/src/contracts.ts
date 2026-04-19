@@ -25,3 +25,10 @@ export interface MergeResult<TOutput> {
   readonly diagnostics: readonly Diagnostic[];
   readonly output?: TOutput;
 }
+
+export type PolicySurface = 'fallback' | 'array';
+
+export interface PolicyReference {
+  readonly surface: PolicySurface;
+  readonly name: string;
+}
