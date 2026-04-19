@@ -8,8 +8,10 @@ import type {
   ConformanceCaseRequirements,
   ConformanceCaseSelection,
   ConformanceCaseResult,
+  ConformanceFamilyPlanContext,
   ConformanceManifest,
   NamedConformanceSuiteReport,
+  NamedConformanceSuitePlan,
   ConformanceOutcome,
   ConformanceSuiteDefinition,
   ConformanceSuitePlan,
@@ -27,6 +29,8 @@ import {
   conformanceSuiteDefinition,
   conformanceSuiteNames,
   planConformanceSuite,
+  planNamedConformanceSuiteEntry,
+  planNamedConformanceSuites,
   planNamedConformanceSuite,
   reportNamedConformanceSuiteEntry,
   reportNamedConformanceSuite,
@@ -232,6 +236,21 @@ interface NamedSuiteEntryFixture {
   expected_entry: NamedConformanceSuiteReport;
 }
 
+interface FamilyPlanContextFixture {
+  context: ConformanceFamilyPlanContext;
+}
+
+interface NamedSuitePlanEntryFixture {
+  suite_name: string;
+  context: ConformanceFamilyPlanContext;
+  expected_entry: NamedConformanceSuitePlan;
+}
+
+interface NamedSuitePlansFixture {
+  contexts: Record<string, ConformanceFamilyPlanContext>;
+  expected_entries: NamedConformanceSuitePlan[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -251,6 +270,80 @@ function diagnosticsFixturePath(role: string): string[] {
   }
 
   return [...entry];
+}
+
+function normalizeFamilyPlanContext(raw: {
+  family_profile: NamedSuiteReportFixture['family_profile'];
+  feature_profile?: {
+    backend: string;
+    supports_dialects: boolean;
+    supported_policies: PolicyReference[];
+  };
+}): ConformanceFamilyPlanContext {
+  return {
+    familyProfile: {
+      family: raw.family_profile.family,
+      supportedDialects: raw.family_profile.supported_dialects,
+      supportedPolicies: raw.family_profile.supported_policies
+    },
+    featureProfile: raw.feature_profile
+      ? {
+          backend: raw.feature_profile.backend,
+          supportsDialects: raw.feature_profile.supports_dialects,
+          supportedPolicies: raw.feature_profile.supported_policies
+        }
+      : undefined
+  };
+}
+
+function normalizeSuitePlan(raw: {
+  suite: string;
+  plan: {
+    family: string;
+    entries: Array<{
+      ref: ConformanceCaseRef;
+      path: string[];
+      run: {
+        ref: ConformanceCaseRef;
+        requirements: ConformanceCaseRequirements;
+        family_profile: NamedSuiteReportFixture['family_profile'];
+        feature_profile?: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: PolicyReference[];
+        };
+      };
+    }>;
+    missing_roles: string[];
+  };
+}): NamedConformanceSuitePlan {
+  return {
+    suite: raw.suite,
+    plan: {
+      family: raw.plan.family,
+      entries: raw.plan.entries.map((entry) => ({
+        ref: entry.ref,
+        path: entry.path,
+        run: {
+          ref: entry.run.ref,
+          requirements: entry.run.requirements,
+          familyProfile: {
+            family: entry.run.family_profile.family,
+            supportedDialects: entry.run.family_profile.supported_dialects,
+            supportedPolicies: entry.run.family_profile.supported_policies
+          },
+          featureProfile: entry.run.feature_profile
+            ? {
+                backend: entry.run.feature_profile.backend,
+                supportsDialects: entry.run.feature_profile.supports_dialects,
+                supportedPolicies: entry.run.feature_profile.supported_policies
+              }
+            : undefined
+        }
+      })),
+      missingRoles: raw.plan.missing_roles
+    }
+  };
 }
 
 describe('ast-merge shared fixtures', () => {
@@ -780,5 +873,69 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(fixture.expected_entry);
+  });
+
+  it('conforms to the slice-48 named conformance suite plan-entry fixture', () => {
+    const fixture = readFixture<NamedSuitePlanEntryFixture>(
+      ...diagnosticsFixturePath('named_suite_plan_entry')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(
+      planNamedConformanceSuiteEntry(
+        manifest,
+        fixture.suite_name,
+        normalizeFamilyPlanContext(fixture.context as never)
+      )
+    ).toEqual(normalizeSuitePlan(fixture.expected_entry as never));
+  });
+
+  it('conforms to the slice-49 conformance family plan-context fixture', () => {
+    const fixture = readFixture<FamilyPlanContextFixture>(
+      ...diagnosticsFixturePath('family_plan_context')
+    );
+
+    expect(normalizeFamilyPlanContext(fixture.context as never)).toEqual({
+      familyProfile: {
+        family: 'json',
+        supportedDialects: ['json', 'jsonc'],
+        supportedPolicies: [
+          { surface: 'array', name: 'destination_wins_array' },
+          { surface: 'fallback', name: 'trailing_comma_destination_fallback' }
+        ]
+      },
+      featureProfile: {
+        backend: 'kreuzberg-language-pack',
+        supportsDialects: false,
+        supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
+      }
+    });
+  });
+
+  it('conforms to the slice-50 named conformance suite-plans fixture', () => {
+    const fixture = readFixture<NamedSuitePlansFixture>(
+      ...diagnosticsFixturePath('named_suite_plans')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
   });
 });

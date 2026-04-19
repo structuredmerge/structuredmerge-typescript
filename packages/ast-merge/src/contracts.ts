@@ -112,6 +112,16 @@ export interface NamedConformanceSuiteReport {
   readonly report: ConformanceSuiteReport;
 }
 
+export interface ConformanceFamilyPlanContext {
+  readonly familyProfile: FamilyFeatureProfile;
+  readonly featureProfile?: ConformanceFeatureProfileView;
+}
+
+export interface NamedConformanceSuitePlan {
+  readonly suite: string;
+  readonly plan: ConformanceSuitePlan;
+}
+
 export interface ConformanceSuiteSummary {
   readonly total: number;
   readonly passed: number;
@@ -425,4 +435,49 @@ export function planNamedConformanceSuite(
     familyProfile,
     featureProfile
   );
+}
+
+export function planNamedConformanceSuiteEntry(
+  manifest: ConformanceManifest,
+  suiteName: string,
+  context: ConformanceFamilyPlanContext
+): NamedConformanceSuitePlan | undefined {
+  const plan = planNamedConformanceSuite(
+    manifest,
+    suiteName,
+    context.familyProfile,
+    context.featureProfile
+  );
+
+  if (!plan) {
+    return undefined;
+  }
+
+  return {
+    suite: suiteName,
+    plan
+  };
+}
+
+export function planNamedConformanceSuites(
+  manifest: ConformanceManifest,
+  contexts: Readonly<Record<string, ConformanceFamilyPlanContext>>
+): readonly NamedConformanceSuitePlan[] {
+  return conformanceSuiteNames(manifest)
+    .map((suiteName) => {
+      const definition = conformanceSuiteDefinition(manifest, suiteName);
+
+      if (!definition) {
+        return undefined;
+      }
+
+      const context = contexts[definition.family];
+
+      if (!context) {
+        return undefined;
+      }
+
+      return planNamedConformanceSuiteEntry(manifest, suiteName, context);
+    })
+    .filter((entry): entry is NamedConformanceSuitePlan => entry !== undefined);
 }
