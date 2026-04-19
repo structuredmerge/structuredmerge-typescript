@@ -197,6 +197,14 @@ function parseError(message: string): Diagnostic {
   };
 }
 
+function destinationParseError(message: string): Diagnostic {
+  return {
+    severity: 'error',
+    category: 'destination_parse_error',
+    message
+  };
+}
+
 function escapePointerSegment(segment: string): string {
   return segment.replace(/~/g, '~0').replace(/\//g, '~1');
 }
@@ -290,12 +298,20 @@ export function matchJsonOwners(
   };
 }
 
-function parseNormalizedJson(source: string, dialect: JsonDialect): unknown {
+function parseNormalizedJson(
+  source: string,
+  dialect: JsonDialect,
+  diagnosticFactory: (message: string) => Diagnostic
+): unknown {
   const result = parseJson(source, dialect);
   if (!result.ok || !result.analysis) {
-    throw new Error(result.diagnostics[0]?.message ?? 'JSON parse failed.');
+    throw diagnosticFactory(result.diagnostics[0]?.message ?? 'JSON parse failed.');
   }
-  return JSON.parse(result.analysis.normalizedSource) as unknown;
+  try {
+    return JSON.parse(result.analysis.normalizedSource) as unknown;
+  } catch (error) {
+    throw diagnosticFactory(error instanceof Error ? error.message : 'JSON parse failed.');
+  }
 }
 
 function mergeValues(template: unknown, destination: unknown): unknown {
@@ -358,8 +374,8 @@ export function mergeJson(
   dialect: JsonDialect
 ): MergeResult<string> {
   try {
-    const template = parseNormalizedJson(templateSource, dialect);
-    const destination = parseNormalizedJson(destinationSource, dialect);
+    const template = parseNormalizedJson(templateSource, dialect, parseError);
+    const destination = parseNormalizedJson(destinationSource, dialect, destinationParseError);
     const merged = mergeValues(template, destination);
 
     return {
@@ -368,9 +384,18 @@ export function mergeJson(
       output: canonicalJson(merged)
     };
   } catch (error) {
+    const diagnostic =
+      error &&
+      typeof error === 'object' &&
+      'severity' in error &&
+      'category' in error &&
+      'message' in error
+        ? (error as Diagnostic)
+        : parseError(error instanceof Error ? error.message : 'JSON merge failed.');
+
     return {
       ok: false,
-      diagnostics: [parseError(error instanceof Error ? error.message : 'JSON merge failed.')]
+      diagnostics: [diagnostic]
     };
   }
 }

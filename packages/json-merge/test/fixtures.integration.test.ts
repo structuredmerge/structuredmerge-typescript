@@ -28,7 +28,17 @@ interface JsonMergeFixture {
   template: string;
   destination: string;
   expected: {
-    output: string;
+    ok?: boolean;
+    output?: string;
+    diagnostics?: Array<{
+      severity: 'info' | 'warning' | 'error';
+      category:
+        | 'parse_error'
+        | 'destination_parse_error'
+        | 'unsupported_feature'
+        | 'fallback_applied'
+        | 'ambiguity';
+    }>;
   };
 }
 
@@ -142,5 +152,44 @@ describe('json-merge shared fixtures', () => {
 
     expect(result.ok).toBe(true);
     expect(result.output).toBe(fixture.expected.output);
+  });
+
+  it('conforms to the slice-09 invalid merge fixtures', () => {
+    const invalidTemplateFixture = readFixture<JsonMergeFixture>(
+      'json',
+      'slice-09-merge',
+      'invalid-template.json'
+    );
+    const invalidTemplateResult = mergeJson(
+      invalidTemplateFixture.template,
+      invalidTemplateFixture.destination,
+      'json'
+    );
+
+    expect(invalidTemplateResult.ok).toBe(invalidTemplateFixture.expected.ok);
+    expect(invalidTemplateResult.output).toBeUndefined();
+    expect(
+      invalidTemplateResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
+    ).toEqual(invalidTemplateFixture.expected.diagnostics);
+
+    const invalidDestinationFixture = readFixture<JsonMergeFixture>(
+      'json',
+      'slice-09-merge',
+      'invalid-destination.json'
+    );
+    const invalidDestinationResult = mergeJson(
+      invalidDestinationFixture.template,
+      invalidDestinationFixture.destination,
+      'json'
+    );
+
+    expect(invalidDestinationResult.ok).toBe(invalidDestinationFixture.expected.ok);
+    expect(invalidDestinationResult.output).toBeUndefined();
+    expect(
+      invalidDestinationResult.diagnostics.map(({ severity, category }) => ({
+        severity,
+        category
+      }))
+    ).toEqual(invalidDestinationFixture.expected.diagnostics);
   });
 });

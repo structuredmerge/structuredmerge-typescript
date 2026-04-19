@@ -43,4 +43,11 @@ describe('json-merge', () => {
     expect(result.ok).toBe(true);
     expect(result.output).toBe('{"alpha":{"beta":9,"gamma":2},"delta":4,"epsilon":5}');
   });
+
+  it('reports destination parse failures distinctly', () => {
+    const result = mergeJson('{"alpha":1}', '{"alpha":', 'json');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.category).toBe('destination_parse_error');
+  });
 });
