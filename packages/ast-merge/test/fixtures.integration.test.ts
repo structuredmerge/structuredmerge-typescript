@@ -10,6 +10,7 @@ import type {
   ConformanceCaseResult,
   ConformanceManifest,
   ConformanceOutcome,
+  ConformanceSuiteDefinition,
   ConformanceSuitePlan,
   ConformanceSuiteReport,
   ConformanceSuiteSummary,
@@ -22,7 +23,9 @@ import type {
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  conformanceSuiteDefinition,
   planConformanceSuite,
+  planNamedConformanceSuite,
   reportPlannedConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,
@@ -188,6 +191,11 @@ interface ManifestRequirementsFixture {
     supported_policies: PolicyReference[];
   };
   expected_requirements: Record<string, ConformanceCaseRequirements>;
+}
+
+interface SuiteDefinitionsFixture {
+  suite_name: string;
+  expected: ConformanceSuiteDefinition;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -599,5 +607,37 @@ describe('ast-merge shared fixtures', () => {
     expect(
       Object.fromEntries(plan.entries.map((entry) => [entry.ref.role, entry.run.requirements]))
     ).toEqual(fixture.expected_requirements);
+  });
+
+  it('conforms to the slice-43 conformance suite-definitions fixture', () => {
+    const fixture = readFixture<SuiteDefinitionsFixture>(
+      ...diagnosticsFixturePath('suite_definitions')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(conformanceSuiteDefinition(manifest, fixture.suite_name)).toEqual(fixture.expected);
+    expect(
+      planNamedConformanceSuite(manifest, fixture.suite_name, {
+        family: 'json',
+        supportedDialects: ['json', 'jsonc'],
+        supportedPolicies: [
+          { surface: 'array', name: 'destination_wins_array' },
+          { surface: 'fallback', name: 'trailing_comma_destination_fallback' }
+        ]
+      })
+    ).toEqual(
+      planConformanceSuite(manifest, fixture.expected.family, fixture.expected.roles, {
+        family: 'json',
+        supportedDialects: ['json', 'jsonc'],
+        supportedPolicies: [
+          { surface: 'array', name: 'destination_wins_array' },
+          { surface: 'fallback', name: 'trailing_comma_destination_fallback' }
+        ]
+      })
+    );
   });
 });

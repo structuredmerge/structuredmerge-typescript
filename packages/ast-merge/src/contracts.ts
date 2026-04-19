@@ -98,7 +98,13 @@ export interface ConformanceFamilyFeatureProfileEntry extends ConformanceManifes
 
 export interface ConformanceManifest {
   readonly family_feature_profiles: readonly ConformanceFamilyFeatureProfileEntry[];
+  readonly suites?: Readonly<Record<string, ConformanceSuiteDefinition>>;
   readonly families: Readonly<Record<string, readonly ConformanceManifestEntry[]>>;
+}
+
+export interface ConformanceSuiteDefinition {
+  readonly family: string;
+  readonly roles: readonly string[];
 }
 
 export interface ConformanceSuiteSummary {
@@ -159,6 +165,13 @@ export function conformanceFamilyFeatureProfilePath(
   family: string
 ): readonly string[] | undefined {
   return manifest.family_feature_profiles.find((entry) => entry.family === family)?.path;
+}
+
+export function conformanceSuiteDefinition(
+  manifest: ConformanceManifest,
+  suiteName: string
+): ConformanceSuiteDefinition | undefined {
+  return manifest.suites?.[suiteName];
 }
 
 export function summarizeConformanceResults(
@@ -325,4 +338,25 @@ export function planConformanceSuite(
     entries,
     missingRoles
   };
+}
+
+export function planNamedConformanceSuite(
+  manifest: ConformanceManifest,
+  suiteName: string,
+  familyProfile: FamilyFeatureProfile,
+  featureProfile?: ConformanceFeatureProfileView
+): ConformanceSuitePlan | undefined {
+  const definition = conformanceSuiteDefinition(manifest, suiteName);
+
+  if (!definition) {
+    return undefined;
+  }
+
+  return planConformanceSuite(
+    manifest,
+    definition.family,
+    definition.roles,
+    familyProfile,
+    featureProfile
+  );
 }
