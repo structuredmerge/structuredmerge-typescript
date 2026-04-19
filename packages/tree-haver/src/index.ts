@@ -1,3 +1,9 @@
 export const packageName = "@structuredmerge/tree-haver";
 
-export type { AnalysisHandle, ParserAdapter, ParserDiagnostics } from "./contracts";
+export type {
+  AdapterInfo,
+  AnalysisHandle,
+  ParserAdapter,
+  ParserDiagnostics,
+  ParserRequest
+} from "./contracts";

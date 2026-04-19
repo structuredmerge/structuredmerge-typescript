@@ -1,4 +1,4 @@
-import type { AnalysisHandle, ParserAdapter } from "@structuredmerge/tree-haver";
+import type { AnalysisHandle, ParserAdapter, ParserRequest } from "@structuredmerge/tree-haver";
 import type { MergeResult } from "@structuredmerge/ast-merge";
 
 export interface TextSpan {
@@ -23,6 +23,13 @@ export interface TextMerger {
 }
 
 export interface TextParserAdapter extends ParserAdapter<TextAnalysis> {}
+
+export function textParseRequest(source: string): ParserRequest {
+  return {
+    source,
+    language: "text"
+  };
+}
 
 export interface TextAnalyzer {
   analyze(source: string): TextAnalysis;

@@ -1,4 +1,4 @@
-import type { AnalysisHandle, ParserAdapter } from "@structuredmerge/tree-haver";
+import type { AnalysisHandle, ParserAdapter, ParserRequest } from "@structuredmerge/tree-haver";
 import type { Diagnostic, MergeResult, ParseResult } from "@structuredmerge/ast-merge";
 
 export type JsonDialect = "json" | "jsonc";
@@ -18,6 +18,14 @@ export interface JsonParserAdapter extends ParserAdapter<JsonAnalysis> {}
 
 export interface JsonAnalyzer {
   parse(source: string, dialect: JsonDialect): ParseResult<JsonAnalysis>;
+}
+
+export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {
+  return {
+    source,
+    language: "json",
+    dialect
+  };
 }
 
 function detectTrailingComma(source: string): boolean {

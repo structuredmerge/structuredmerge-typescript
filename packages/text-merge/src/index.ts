@@ -4,7 +4,8 @@ export {
   analyzeText,
   isSimilar,
   normalizeText,
-  similarityScore
+  similarityScore,
+  textParseRequest
 } from "./contracts";
 export type {
   TextAnalysis,

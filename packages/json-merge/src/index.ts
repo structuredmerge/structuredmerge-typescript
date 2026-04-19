@@ -1,6 +1,6 @@
 export const packageName = "@structuredmerge/json-merge";
 
-export { parseJson } from "./contracts";
+export { jsonParseRequest, parseJson } from "./contracts";
 export type {
   JsonAnalysis,
   JsonAnalyzer,
