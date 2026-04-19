@@ -10,6 +10,8 @@ import type {
   ConformanceCaseResult,
   ConformanceFamilyPlanContext,
   ConformanceManifest,
+  ConformanceManifestPlanningOptions,
+  ConformanceManifestReport,
   NamedConformanceSuiteReport,
   NamedConformanceSuitePlan,
   NamedConformanceSuiteResults,
@@ -23,17 +25,21 @@ import type {
   DiagnosticSeverity,
   FamilyFeatureProfile,
   PolicyReference,
-  PolicySurface
+  PolicySurface,
+  Diagnostic
 } from '../src/index';
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   conformanceSuiteDefinition,
   conformanceSuiteNames,
+  defaultConformanceFamilyContext,
   planConformanceSuite,
   planNamedConformanceSuiteEntry,
+  planNamedConformanceSuitesWithDiagnostics,
   planNamedConformanceSuites,
   planNamedConformanceSuite,
+  reportConformanceManifest,
   reportNamedConformanceSuiteEnvelope,
   reportNamedConformanceSuiteManifest,
   reportNamedConformanceSuiteEntry,
@@ -47,6 +53,7 @@ import {
   runPlannedNamedConformanceSuites,
   runPlannedConformanceSuite,
   runConformanceSuite,
+  resolveConformanceFamilyContext,
   selectConformanceCase,
   summarizeNamedConformanceSuiteReports,
   summarizeConformanceResults
@@ -294,6 +301,43 @@ interface NamedSuiteReportManifestFixture {
   expected_report: NamedConformanceSuiteReportEnvelope;
 }
 
+interface DefaultFamilyContextFixture {
+  family: string;
+  family_profile: NamedSuiteReportFixture['family_profile'];
+  expected_context: {
+    family_profile: NamedSuiteReportFixture['family_profile'];
+  };
+  expected_diagnostic: Diagnostic;
+}
+
+interface ExplicitFamilyContextModeFixture {
+  manifest: ConformanceManifest;
+  options: {
+    contexts: Record<string, ConformanceFamilyPlanContext>;
+    family_profiles: Record<string, NamedSuiteReportFixture['family_profile']>;
+    require_explicit_contexts: boolean;
+  };
+  expected_diagnostic: Diagnostic;
+}
+
+interface MissingSuiteRolesFixture {
+  manifest: ConformanceManifest;
+  options: {
+    contexts: Record<string, ConformanceFamilyPlanContext>;
+  };
+  expected_diagnostic: Diagnostic;
+}
+
+interface ConformanceManifestReportFixture {
+  manifest: ConformanceManifest;
+  options: {
+    contexts: Record<string, ConformanceFamilyPlanContext>;
+    family_profiles: Record<string, NamedSuiteReportFixture['family_profile']>;
+  };
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_report: ConformanceManifestReport;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -409,6 +453,58 @@ function normalizeSuiteReportEnvelope(raw: {
   };
 }
 
+function normalizeDiagnostic(raw: Diagnostic): Diagnostic {
+  return {
+    severity: raw.severity,
+    category: raw.category,
+    message: raw.message,
+    path: raw.path
+  };
+}
+
+function normalizeManifestPlanningOptions(raw: {
+  contexts?: Record<string, ConformanceFamilyPlanContext>;
+  family_profiles?: Record<string, NamedSuiteReportFixture['family_profile']>;
+  require_explicit_contexts?: boolean;
+}): ConformanceManifestPlanningOptions {
+  return {
+    contexts: raw.contexts
+      ? Object.fromEntries(
+          Object.entries(raw.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      : undefined,
+    familyProfiles: raw.family_profiles
+      ? Object.fromEntries(
+          Object.entries(raw.family_profiles).map(([family, profile]) => [
+            family,
+            {
+              family: profile.family,
+              supportedDialects: profile.supported_dialects,
+              supportedPolicies: profile.supported_policies
+            }
+          ])
+        )
+      : undefined,
+    requireExplicitContexts: raw.require_explicit_contexts
+  };
+}
+
+function normalizeManifestReport(raw: {
+  report: {
+    entries: readonly NamedConformanceSuiteReport[];
+    summary: ConformanceSuiteSummary;
+  };
+  diagnostics: Diagnostic[];
+}): ConformanceManifestReport {
+  return {
+    report: normalizeSuiteReportEnvelope(raw.report),
+    diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic))
+  };
+}
+
 describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
     const fixture = readFixture<DiagnosticFixture>(
@@ -421,7 +517,9 @@ describe('ast-merge shared fixtures', () => {
       'destination_parse_error',
       'unsupported_feature',
       'fallback_applied',
-      'ambiguity'
+      'ambiguity',
+      'assumed_default',
+      'configuration_error'
     ];
 
     expect(severities).toEqual(fixture.severities);
@@ -1133,5 +1231,74 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(normalizeSuiteReportEnvelope(fixture.expected_report));
+  });
+
+  it('conforms to the slice-57 default family context fixture', () => {
+    const fixture = readFixture<DefaultFamilyContextFixture>(
+      ...diagnosticsFixturePath('default_family_context')
+    );
+
+    expect(
+      defaultConformanceFamilyContext({
+        family: fixture.family_profile.family,
+        supportedDialects: fixture.family_profile.supported_dialects,
+        supportedPolicies: fixture.family_profile.supported_policies
+      })
+    ).toEqual(normalizeFamilyPlanContext(fixture.expected_context as never));
+
+    expect(
+      resolveConformanceFamilyContext(fixture.family, {
+        familyProfiles: {
+          [fixture.family]: {
+            family: fixture.family_profile.family,
+            supportedDialects: fixture.family_profile.supported_dialects,
+            supportedPolicies: fixture.family_profile.supported_policies
+          }
+        }
+      }).diagnostics
+    ).toEqual([normalizeDiagnostic(fixture.expected_diagnostic)]);
+  });
+
+  it('conforms to the slice-58 explicit family context mode fixture', () => {
+    const fixture = readFixture<ExplicitFamilyContextModeFixture>(
+      ...diagnosticsFixturePath('explicit_family_context_mode')
+    );
+
+    expect(
+      resolveConformanceFamilyContext(
+        'text',
+        normalizeManifestPlanningOptions(fixture.options as never)
+      ).diagnostics
+    ).toEqual([normalizeDiagnostic(fixture.expected_diagnostic)]);
+  });
+
+  it('conforms to the slice-59 missing suite roles fixture', () => {
+    const fixture = readFixture<MissingSuiteRolesFixture>(
+      ...diagnosticsFixturePath('missing_suite_roles')
+    );
+
+    expect(
+      planNamedConformanceSuitesWithDiagnostics(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never)
+      ).diagnostics
+    ).toContainEqual(normalizeDiagnostic(fixture.expected_diagnostic));
+  });
+
+  it('conforms to the slice-60 conformance manifest diagnostics fixture', () => {
+    const fixture = readFixture<ConformanceManifestReportFixture>(
+      ...diagnosticsFixturePath('conformance_manifest_report')
+    );
+
+    expect(
+      reportConformanceManifest(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(fixture.expected_report as never));
   });
 });

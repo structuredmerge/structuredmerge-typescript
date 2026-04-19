@@ -5,7 +5,9 @@ export type DiagnosticCategory =
   | 'destination_parse_error'
   | 'unsupported_feature'
   | 'fallback_applied'
-  | 'ambiguity';
+  | 'ambiguity'
+  | 'assumed_default'
+  | 'configuration_error';
 
 export interface Diagnostic {
   readonly severity: DiagnosticSeverity;
@@ -132,6 +134,17 @@ export interface NamedConformanceSuiteReportEnvelope {
   readonly summary: ConformanceSuiteSummary;
 }
 
+export interface ConformanceManifestPlanningOptions {
+  readonly contexts?: Readonly<Record<string, ConformanceFamilyPlanContext>>;
+  readonly familyProfiles?: Readonly<Record<string, FamilyFeatureProfile>>;
+  readonly requireExplicitContexts?: boolean;
+}
+
+export interface ConformanceManifestReport {
+  readonly report: NamedConformanceSuiteReportEnvelope;
+  readonly diagnostics: readonly Diagnostic[];
+}
+
 export interface ConformanceSuiteSummary {
   readonly total: number;
   readonly passed: number;
@@ -201,6 +214,65 @@ export function conformanceSuiteDefinition(
 
 export function conformanceSuiteNames(manifest: ConformanceManifest): readonly string[] {
   return Object.keys(manifest.suites ?? {}).sort((left, right) => left.localeCompare(right));
+}
+
+export function defaultConformanceFamilyContext(
+  familyProfile: FamilyFeatureProfile
+): ConformanceFamilyPlanContext {
+  return {
+    familyProfile
+  };
+}
+
+export function resolveConformanceFamilyContext(
+  family: string,
+  options: ConformanceManifestPlanningOptions
+): { context?: ConformanceFamilyPlanContext; diagnostics: readonly Diagnostic[] } {
+  const explicitContext = options.contexts?.[family];
+
+  if (explicitContext) {
+    return {
+      context: explicitContext,
+      diagnostics: []
+    };
+  }
+
+  if (options.requireExplicitContexts) {
+    return {
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: `missing explicit family context for ${family}.`
+        }
+      ]
+    };
+  }
+
+  const familyProfile = options.familyProfiles?.[family];
+
+  if (!familyProfile) {
+    return {
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: `missing family context for ${family} and no default family profile is available.`
+        }
+      ]
+    };
+  }
+
+  return {
+    context: defaultConformanceFamilyContext(familyProfile),
+    diagnostics: [
+      {
+        severity: 'warning',
+        category: 'assumed_default',
+        message: `using default family context for ${family}.`
+      }
+    ]
+  };
 }
 
 export function summarizeConformanceResults(
@@ -552,6 +624,58 @@ export function planNamedConformanceSuiteEntry(
   };
 }
 
+export function planNamedConformanceSuitesWithDiagnostics(
+  manifest: ConformanceManifest,
+  options: ConformanceManifestPlanningOptions
+): { entries: readonly NamedConformanceSuitePlan[]; diagnostics: readonly Diagnostic[] } {
+  const entries: NamedConformanceSuitePlan[] = [];
+  const diagnostics: Diagnostic[] = [];
+  const resolvedContexts = new Map<string, ConformanceFamilyPlanContext | undefined>();
+
+  for (const suiteName of conformanceSuiteNames(manifest)) {
+    const definition = conformanceSuiteDefinition(manifest, suiteName);
+
+    if (!definition) {
+      continue;
+    }
+
+    let context = resolvedContexts.get(definition.family);
+
+    if (context === undefined && !resolvedContexts.has(definition.family)) {
+      const resolved = resolveConformanceFamilyContext(definition.family, options);
+      diagnostics.push(...resolved.diagnostics);
+      context = resolved.context;
+      resolvedContexts.set(definition.family, context);
+    }
+
+    if (!context) {
+      continue;
+    }
+
+    const plan = planNamedConformanceSuiteEntry(manifest, suiteName, context);
+
+    if (!plan) {
+      continue;
+    }
+
+    if (plan.plan.missingRoles.length > 0) {
+      diagnostics.push({
+        severity: 'error',
+        category: 'configuration_error',
+        message: `suite ${suiteName} declares missing roles: ${plan.plan.missingRoles.join(', ')}.`
+      });
+      continue;
+    }
+
+    entries.push(plan);
+  }
+
+  return {
+    entries,
+    diagnostics
+  };
+}
+
 export function planNamedConformanceSuites(
   manifest: ConformanceManifest,
   contexts: Readonly<Record<string, ConformanceFamilyPlanContext>>
@@ -573,4 +697,19 @@ export function planNamedConformanceSuites(
       return planNamedConformanceSuiteEntry(manifest, suiteName, context);
     })
     .filter((entry): entry is NamedConformanceSuitePlan => entry !== undefined);
+}
+
+export function reportConformanceManifest(
+  manifest: ConformanceManifest,
+  options: ConformanceManifestPlanningOptions,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): ConformanceManifestReport {
+  const planned = planNamedConformanceSuitesWithDiagnostics(manifest, options);
+
+  return {
+    report: reportNamedConformanceSuiteEnvelope(
+      reportPlannedNamedConformanceSuites(planned.entries, execute)
+    ),
+    diagnostics: planned.diagnostics
+  };
 }
