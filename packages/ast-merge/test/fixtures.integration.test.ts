@@ -10,6 +10,7 @@ import type {
   ConformanceCaseResult,
   ConformanceManifest,
   ConformanceOutcome,
+  ConformanceSuitePlan,
   ConformanceSuiteReport,
   ConformanceSuiteSummary,
   DiagnosticCategory,
@@ -21,8 +22,10 @@ import type {
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  planConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,
+  runPlannedConformanceSuite,
   runConformanceSuite,
   selectConformanceCase,
   summarizeConformanceResults
@@ -122,6 +125,49 @@ interface ConformanceSuiteRunnerFixture {
       supported_policies: PolicyReference[];
     };
   }>;
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_results: ConformanceCaseResult[];
+}
+
+interface ConformanceSuitePlanFixture {
+  family: string;
+  roles: string[];
+  family_profile: {
+    family: string;
+    supported_dialects: string[];
+    supported_policies: PolicyReference[];
+  };
+  feature_profile?: {
+    backend: string;
+    supports_dialects: boolean;
+    supported_policies: PolicyReference[];
+  };
+  expected: {
+    family: string;
+    entries: Array<{
+      ref: ConformanceCaseRef;
+      path: string[];
+      run: {
+        ref: ConformanceCaseRef;
+        requirements: ConformanceCaseRequirements;
+        family_profile: {
+          family: string;
+          supported_dialects: string[];
+          supported_policies: PolicyReference[];
+        };
+        feature_profile?: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: PolicyReference[];
+        };
+      };
+    }>;
+    missing_roles: string[];
+  };
+}
+
+interface PlannedConformanceSuiteRunnerFixture {
+  plan: ConformanceSuitePlanFixture['expected'];
   executions: Record<string, ConformanceCaseExecution>;
   expected_results: ConformanceCaseResult[];
 }
@@ -382,5 +428,99 @@ describe('ast-merge shared fixtures', () => {
     }>(...diagnosticsFixturePath('suite_report'));
 
     expect(reportConformanceSuite(fixture.results)).toEqual(fixture.report);
+  });
+
+  it('conforms to the slice-39 conformance suite-plan fixture', () => {
+    const fixture = readFixture<ConformanceSuitePlanFixture>(
+      ...diagnosticsFixturePath('suite_plan')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    const plan = planConformanceSuite(
+      manifest,
+      fixture.family,
+      fixture.roles,
+      {
+        family: fixture.family_profile.family,
+        supportedDialects: fixture.family_profile.supported_dialects,
+        supportedPolicies: fixture.family_profile.supported_policies
+      },
+      fixture.feature_profile
+        ? {
+            backend: fixture.feature_profile.backend,
+            supportsDialects: fixture.feature_profile.supports_dialects,
+            supportedPolicies: fixture.feature_profile.supported_policies
+          }
+        : undefined
+    );
+
+    const expected: ConformanceSuitePlan = {
+      family: fixture.expected.family,
+      entries: fixture.expected.entries.map((entry) => ({
+        ref: entry.ref,
+        path: entry.path,
+        run: {
+          ref: entry.run.ref,
+          requirements: entry.run.requirements,
+          familyProfile: {
+            family: entry.run.family_profile.family,
+            supportedDialects: entry.run.family_profile.supported_dialects,
+            supportedPolicies: entry.run.family_profile.supported_policies
+          },
+          featureProfile: entry.run.feature_profile
+            ? {
+                backend: entry.run.feature_profile.backend,
+                supportsDialects: entry.run.feature_profile.supports_dialects,
+                supportedPolicies: entry.run.feature_profile.supported_policies
+              }
+            : undefined
+        }
+      })),
+      missingRoles: fixture.expected.missing_roles
+    };
+
+    expect(plan).toEqual(expected);
+  });
+
+  it('conforms to the slice-40 planned conformance suite-runner fixture', () => {
+    const fixture = readFixture<PlannedConformanceSuiteRunnerFixture>(
+      ...diagnosticsFixturePath('planned_suite_runner')
+    );
+
+    const plan: ConformanceSuitePlan = {
+      family: fixture.plan.family,
+      entries: fixture.plan.entries.map((entry) => ({
+        ref: entry.ref,
+        path: entry.path,
+        run: {
+          ref: entry.run.ref,
+          requirements: entry.run.requirements,
+          familyProfile: {
+            family: entry.run.family_profile.family,
+            supportedDialects: entry.run.family_profile.supported_dialects,
+            supportedPolicies: entry.run.family_profile.supported_policies
+          },
+          featureProfile: entry.run.feature_profile
+            ? {
+                backend: entry.run.feature_profile.backend,
+                supportsDialects: entry.run.feature_profile.supports_dialects,
+                supportedPolicies: entry.run.feature_profile.supported_policies
+              }
+            : undefined
+        }
+      })),
+      missingRoles: fixture.plan.missing_roles
+    };
+
+    expect(
+      runPlannedConformanceSuite(plan, (run) => {
+        const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+        return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+      })
+    ).toEqual(fixture.expected_results);
   });
 });

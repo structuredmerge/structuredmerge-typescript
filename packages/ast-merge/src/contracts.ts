@@ -112,6 +112,18 @@ export interface ConformanceSuiteReport {
   readonly summary: ConformanceSuiteSummary;
 }
 
+export interface ConformanceSuitePlanEntry {
+  readonly ref: ConformanceCaseRef;
+  readonly path: readonly string[];
+  readonly run: ConformanceCaseRun;
+}
+
+export interface ConformanceSuitePlan {
+  readonly family: string;
+  readonly entries: readonly ConformanceSuitePlanEntry[];
+  readonly missingRoles: readonly string[];
+}
+
 function includesPolicy(
   supportedPolicies: readonly PolicyReference[],
   policy: PolicyReference
@@ -243,11 +255,64 @@ export function runConformanceSuite(
   return runs.map((run) => runConformanceCase(run, execute));
 }
 
+export function runPlannedConformanceSuite(
+  plan: ConformanceSuitePlan,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): readonly ConformanceCaseResult[] {
+  return runConformanceSuite(
+    plan.entries.map((entry) => entry.run),
+    execute
+  );
+}
+
 export function reportConformanceSuite(
   results: readonly ConformanceCaseResult[]
 ): ConformanceSuiteReport {
   return {
     results,
     summary: summarizeConformanceResults(results)
+  };
+}
+
+export function planConformanceSuite(
+  manifest: ConformanceManifest,
+  family: string,
+  roles: readonly string[],
+  familyProfile: FamilyFeatureProfile,
+  featureProfile?: ConformanceFeatureProfileView
+): ConformanceSuitePlan {
+  const entries: ConformanceSuitePlanEntry[] = [];
+  const missingRoles: string[] = [];
+
+  for (const role of roles) {
+    const path = conformanceFixturePath(manifest, family, role);
+
+    if (!path) {
+      missingRoles.push(role);
+      continue;
+    }
+
+    const ref: ConformanceCaseRef = {
+      family,
+      role,
+      case: role
+    };
+
+    entries.push({
+      ref,
+      path,
+      run: {
+        ref,
+        requirements: {},
+        familyProfile,
+        featureProfile
+      }
+    });
+  }
+
+  return {
+    family,
+    entries,
+    missingRoles
   };
 }
