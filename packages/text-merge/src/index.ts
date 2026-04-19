@@ -1,3 +1,14 @@
 export const packageName = "@structuredmerge/text-merge";
 
-export type { TextAnalysis, TextMerger, TextParserAdapter } from "./contracts";
+export {
+  analyzeText,
+  normalizeText
+} from "./contracts";
+export type {
+  TextAnalysis,
+  TextAnalyzer,
+  TextBlock,
+  TextMerger,
+  TextParserAdapter,
+  TextSpan
+} from "./contracts";
