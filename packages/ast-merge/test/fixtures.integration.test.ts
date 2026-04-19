@@ -36,6 +36,7 @@ import type {
 } from '../src/index';
 import {
   conformanceManifestReplayContext,
+  conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
@@ -444,6 +445,16 @@ interface ReviewReplayCompatibilityFixture {
     families: string[];
     require_explicit_contexts: boolean;
   };
+}
+
+interface ReviewRequestIdsFixture {
+  manifest: ConformanceManifest;
+  options: {
+    contexts?: Record<string, ConformanceFamilyPlanContext>;
+    family_profiles?: Record<string, NamedSuiteReportFixture['family_profile']>;
+    require_explicit_contexts?: boolean;
+  };
+  expected_request_ids: string[];
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -1620,6 +1631,36 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-66 review replay rejection fixture', () => {
     const fixture = readFixture<ConformanceManifestReviewStateFixture>(
       ...diagnosticsFixturePath('review_replay_rejection')
+    );
+
+    expect(
+      reviewConformanceManifest(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-67 review request ids fixture', () => {
+    const fixture = readFixture<ReviewRequestIdsFixture>(
+      ...diagnosticsFixturePath('review_request_ids')
+    );
+
+    expect(
+      conformanceManifestReviewRequestIds(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never)
+      )
+    ).toEqual(fixture.expected_request_ids);
+  });
+
+  it('conforms to the slice-68 stale review decision fixture', () => {
+    const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+      ...diagnosticsFixturePath('stale_review_decision')
     );
 
     expect(

@@ -45,6 +45,7 @@ export type {
 
 export {
   conformanceManifestReplayContext,
+  conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   conformanceFamilyEntries,
   conformanceFamilyFeatureProfilePath,
