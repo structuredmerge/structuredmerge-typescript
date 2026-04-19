@@ -205,6 +205,89 @@ function destinationParseError(message: string): Diagnostic {
   };
 }
 
+function fallbackApplied(message: string): Diagnostic {
+  return {
+    severity: 'warning',
+    category: 'fallback_applied',
+    message
+  };
+}
+
+function stripTrailingCommas(source: string): string {
+  let result = '';
+  let inString = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (inLineComment) {
+      result += char;
+      if (char === '\n') inLineComment = false;
+      continue;
+    }
+
+    if (inBlockComment) {
+      result += char;
+      if (char === '*' && next === '/') {
+        result += next;
+        inBlockComment = false;
+        i += 1;
+      }
+      continue;
+    }
+
+    if (inString) {
+      result += char;
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') inString = false;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      result += char;
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      inLineComment = true;
+      result += char;
+      result += next;
+      i += 1;
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      inBlockComment = true;
+      result += char;
+      result += next;
+      i += 1;
+      continue;
+    }
+
+    if (char === ',') {
+      let j = i + 1;
+      while (j < source.length && /\s/.test(source[j])) j += 1;
+      if (source[j] === ']' || source[j] === '}') continue;
+    }
+
+    result += char;
+  }
+
+  return result;
+}
+
 function escapePointerSegment(segment: string): string {
   return segment.replace(/~/g, '~0').replace(/\//g, '~1');
 }
@@ -375,12 +458,37 @@ export function mergeJson(
 ): MergeResult<string> {
   try {
     const template = parseNormalizedJson(templateSource, dialect, parseError);
-    const destination = parseNormalizedJson(destinationSource, dialect, destinationParseError);
+    const diagnostics: Diagnostic[] = [];
+    let destination: unknown;
+
+    try {
+      destination = parseNormalizedJson(destinationSource, dialect, destinationParseError);
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'category' in error &&
+        error.category === 'destination_parse_error' &&
+        detectTrailingComma(destinationSource)
+      ) {
+        const sanitizedDestination = stripTrailingCommas(destinationSource);
+        if (sanitizedDestination === destinationSource) {
+          throw error;
+        }
+        destination = parseNormalizedJson(sanitizedDestination, dialect, destinationParseError);
+        diagnostics.push(
+          fallbackApplied('Applied destination trailing-comma fallback during merge.')
+        );
+      } else {
+        throw error;
+      }
+    }
+
     const merged = mergeValues(template, destination);
 
     return {
       ok: true,
-      diagnostics: [],
+      diagnostics,
       output: canonicalJson(merged)
     };
   } catch (error) {

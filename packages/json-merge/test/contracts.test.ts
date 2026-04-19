@@ -50,4 +50,18 @@ describe('json-merge', () => {
     expect(result.ok).toBe(false);
     expect(result.diagnostics[0]?.category).toBe('destination_parse_error');
   });
+
+  it('applies trailing-comma fallback for destination merge input', () => {
+    const result = mergeJson('{"alpha":1}', '{"beta":[1,2,],}', 'json');
+
+    expect(result.ok).toBe(true);
+    expect(result.output).toBe('{"alpha":1,"beta":[1,2]}');
+    expect(result.diagnostics).toEqual([
+      {
+        severity: 'warning',
+        category: 'fallback_applied',
+        message: 'Applied destination trailing-comma fallback during merge.'
+      }
+    ]);
+  });
 });

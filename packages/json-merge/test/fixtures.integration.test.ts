@@ -192,4 +192,20 @@ describe('json-merge shared fixtures', () => {
       }))
     ).toEqual(invalidDestinationFixture.expected.diagnostics);
   });
+
+  it('conforms to the slice-14 fallback fixture', () => {
+    const fixture = readFixture<JsonMergeFixture>(
+      'json',
+      'slice-14-fallback',
+      'trailing-comma-destination.json'
+    );
+
+    const result = mergeJson(fixture.template, fixture.destination, 'json');
+
+    expect(result.ok).toBe(fixture.expected.ok);
+    expect(result.diagnostics.map(({ severity, category }) => ({ severity, category }))).toEqual(
+      fixture.expected.diagnostics
+    );
+    expect(result.output).toBe(fixture.expected.output);
+  });
 });
