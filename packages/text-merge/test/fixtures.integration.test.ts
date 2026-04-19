@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { analyzeText, matchTextBlocks, mergeText } from '../src/index';
+import { analyzeText, isSimilar, matchTextBlocks, mergeText, similarityScore } from '../src/index';
 
 interface TextAnalysisFixture {
   name: string;
@@ -40,6 +40,17 @@ interface TextRefinedFixture {
     unmatchedDestination: number[];
     output: string;
   };
+}
+
+interface TextSimilarityFixture {
+  cases: Array<{
+    name: string;
+    left: string;
+    right: string;
+    expected_score: number;
+    threshold: number;
+    expected_match: boolean;
+  }>;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -81,6 +92,25 @@ describe('text-merge shared fixtures', () => {
     ).toEqual(fixture.expected.matched);
     expect(result.unmatchedTemplate).toEqual(fixture.expected.unmatched_template);
     expect(result.unmatchedDestination).toEqual(fixture.expected.unmatched_destination);
+  });
+
+  it('conforms to the slice-05 similarity fixture', () => {
+    const fixture = readFixture<TextSimilarityFixture>(
+      'text',
+      'slice-05-similarity',
+      'similarity-cases.json'
+    );
+
+    for (const testCase of fixture.cases) {
+      expect(similarityScore(testCase.left, testCase.right), testCase.name).toBe(
+        testCase.expected_score
+      );
+      expect(isSimilar(testCase.left, testCase.right, testCase.threshold), testCase.name).toEqual({
+        score: testCase.expected_score,
+        threshold: testCase.threshold,
+        matched: testCase.expected_match
+      });
+    }
   });
 
   it('conforms to the slice-13 refined matching fixture', () => {

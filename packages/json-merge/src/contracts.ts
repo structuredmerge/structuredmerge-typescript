@@ -219,6 +219,7 @@ function analyzeValue(value: unknown, path = ''): { rootKind: JsonRootKind; owne
       owners.push({ path: childPath, ownerKind: 'member', matchKey: key });
       owners.push(...analyzeValue(child, childPath).owners);
     }
+    owners.sort((left, right) => left.path.localeCompare(right.path));
     return { rootKind: 'object', owners };
   }
 
