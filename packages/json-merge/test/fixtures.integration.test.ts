@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { jsonFeatureProfile, matchJsonOwners, mergeJson, parseJson } from '../src/index';
+import {
+  jsonFeatureProfile,
+  matchJsonOwners,
+  mergeJson,
+  parseJson,
+  parseJsonWithLanguagePack
+} from '../src/index';
 
 interface JsoncParseFixture {
   name: string;
@@ -76,6 +82,34 @@ interface JsonFeatureProfileFixture {
       name: string;
     }>;
   };
+}
+
+interface TreeSitterAdapterFixture {
+  name: string;
+  cases: Array<{
+    name: string;
+    dialect: 'json' | 'jsonc';
+    source: string;
+    expected: {
+      ok: boolean;
+      root_kind?: 'object' | 'array' | 'scalar';
+      owners?: Array<{
+        path: string;
+        owner_kind: 'member' | 'element';
+        match_key?: string;
+      }>;
+      diagnostics: Array<{
+        severity: 'info' | 'warning' | 'error';
+        category:
+          | 'parse_error'
+          | 'destination_parse_error'
+          | 'unsupported_feature'
+          | 'fallback_applied'
+          | 'ambiguity';
+        message?: string;
+      }>;
+    };
+  }>;
 }
 
 interface ConformanceManifest {
@@ -300,5 +334,31 @@ describe('json-merge shared fixtures', () => {
       supported_dialects: profile.supportedDialects,
       supported_policies: profile.supportedPolicies
     }).toEqual(fixture.feature_profile);
+  });
+
+  it('conforms to the slice-26 tree-sitter adapter fixture', () => {
+    const fixture = readFixture<TreeSitterAdapterFixture>(
+      ...jsonFixturePath('tree_sitter_adapter')
+    );
+
+    for (const testCase of fixture.cases) {
+      const result = parseJsonWithLanguagePack(testCase.source, testCase.dialect);
+
+      expect(result.ok).toBe(testCase.expected.ok);
+      expect(result.diagnostics).toEqual(testCase.expected.diagnostics);
+
+      if (testCase.expected.ok) {
+        expect(result.analysis?.rootKind).toBe(testCase.expected.root_kind);
+        expect(
+          result.analysis?.owners.map((owner) => ({
+            path: owner.path,
+            owner_kind: owner.ownerKind,
+            ...(owner.matchKey ? { match_key: owner.matchKey } : {})
+          }))
+        ).toEqual(testCase.expected.owners);
+      } else {
+        expect(result.analysis).toBeUndefined();
+      }
+    }
   });
 });
