@@ -2,12 +2,22 @@ import type { AnalysisHandle, ParserAdapter, ParserRequest } from "@structuredme
 import type { Diagnostic, MergeResult, ParseResult } from "@structuredmerge/ast-merge";
 
 export type JsonDialect = "json" | "jsonc";
+export type JsonRootKind = "object" | "array" | "scalar";
+export type JsonOwnerKind = "member" | "element";
+
+export interface JsonOwner {
+  readonly path: string;
+  readonly ownerKind: JsonOwnerKind;
+  readonly matchKey?: string;
+}
 
 export interface JsonAnalysis extends AnalysisHandle {
   readonly kind: "json";
   readonly dialect: JsonDialect;
   readonly allowsComments: boolean;
   readonly normalizedSource: string;
+  readonly rootKind: JsonRootKind;
+  readonly owners: readonly JsonOwner[];
 }
 
 export interface JsonMerger {
@@ -18,6 +28,10 @@ export interface JsonParserAdapter extends ParserAdapter<JsonAnalysis> {}
 
 export interface JsonAnalyzer {
   parse(source: string, dialect: JsonDialect): ParseResult<JsonAnalysis>;
+}
+
+export interface JsonStructureAnalyzer {
+  analyze(source: string, dialect: JsonDialect): ParseResult<JsonAnalysis>;
 }
 
 export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {
@@ -164,6 +178,34 @@ function parseError(message: string): Diagnostic {
   };
 }
 
+function escapePointerSegment(segment: string): string {
+  return segment.replace(/~/g, "~0").replace(/\//g, "~1");
+}
+
+function analyzeValue(value: unknown, path = ""): { rootKind: JsonRootKind; owners: JsonOwner[] } {
+  if (Array.isArray(value)) {
+    const owners: JsonOwner[] = [];
+    value.forEach((item, index) => {
+      const childPath = `${path}/${index}`;
+      owners.push({ path: childPath, ownerKind: "element" });
+      owners.push(...analyzeValue(item, childPath).owners);
+    });
+    return { rootKind: "array", owners };
+  }
+
+  if (value && typeof value === "object") {
+    const owners: JsonOwner[] = [];
+    for (const [key, child] of Object.entries(value)) {
+      const childPath = `${path}/${escapePointerSegment(key)}`;
+      owners.push({ path: childPath, ownerKind: "member", matchKey: key });
+      owners.push(...analyzeValue(child, childPath).owners);
+    }
+    return { rootKind: "object", owners };
+  }
+
+  return { rootKind: "scalar", owners: [] };
+}
+
 export function parseJson(source: string, dialect: JsonDialect): ParseResult<JsonAnalysis> {
   const diagnostics: Diagnostic[] = [];
 
@@ -180,20 +222,23 @@ export function parseJson(source: string, dialect: JsonDialect): ParseResult<Jso
   }
 
   try {
-    JSON.parse(normalizedSource);
+    const decoded = JSON.parse(normalizedSource) as unknown;
+    const structure = analyzeValue(decoded);
+
+    return {
+      ok: true,
+      diagnostics,
+      analysis: {
+        kind: "json",
+        dialect,
+        allowsComments: dialect === "jsonc",
+        normalizedSource,
+        rootKind: structure.rootKind,
+        owners: structure.owners
+      }
+    };
   } catch (error) {
     diagnostics.push(parseError(error instanceof Error ? error.message : "JSON parse failed."));
     return { ok: false, diagnostics };
   }
-
-  return {
-    ok: true,
-    diagnostics,
-    analysis: {
-      kind: "json",
-      dialect,
-      allowsComments: dialect === "jsonc",
-      normalizedSource
-    }
-  };
 }

@@ -6,5 +6,10 @@ export type {
   JsonAnalyzer,
   JsonDialect,
   JsonMerger,
+  JsonOwner,
+  JsonOwnerKind,
   JsonParserAdapter
+  ,
+  JsonRootKind,
+  JsonStructureAnalyzer
 } from "./contracts";
