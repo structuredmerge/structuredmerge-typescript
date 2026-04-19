@@ -1,6 +1,7 @@
 import type { AnalysisHandle, ParserAdapter, ParserRequest } from '@structuredmerge/tree-haver';
 import type {
   Diagnostic,
+  FamilyFeatureProfile,
   MergeResult,
   ParseResult,
   PolicyReference
@@ -58,7 +59,7 @@ export interface JsonMergeResolution {
   readonly output: string;
 }
 
-export interface JsonFeatureProfile {
+export interface JsonFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'json';
   readonly supportedDialects: readonly JsonDialect[];
   readonly supportedPolicies: readonly PolicyReference[];

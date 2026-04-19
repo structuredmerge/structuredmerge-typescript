@@ -1,7 +1,14 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { analyzeText, isSimilar, matchTextBlocks, mergeText, similarityScore } from '../src/index';
+import {
+  analyzeText,
+  isSimilar,
+  matchTextBlocks,
+  mergeText,
+  similarityScore,
+  textFeatureProfile
+} from '../src/index';
 
 interface TextAnalysisFixture {
   name: string;
@@ -53,10 +60,40 @@ interface TextSimilarityFixture {
   }>;
 }
 
+interface ConformanceManifest {
+  family_feature_profiles: Array<{
+    family: string;
+    path: string[];
+  }>;
+}
+
+interface TextFeatureProfileFixture {
+  feature_profile: {
+    family: 'text';
+    supported_dialects: [];
+    supported_policies: [];
+  };
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
+}
+
+function familyFeatureProfileFixturePath(family: string): string[] {
+  const manifest = readFixture<ConformanceManifest>(
+    'conformance',
+    'slice-24-manifest',
+    'family-feature-profiles.json'
+  );
+  const entry = manifest.family_feature_profiles.find((candidate) => candidate.family === family);
+
+  if (!entry) {
+    throw new Error(`missing family feature profile entry for ${family}`);
+  }
+
+  return entry.path;
 }
 
 describe('text-merge shared fixtures', () => {
@@ -134,5 +171,18 @@ describe('text-merge shared fixtures', () => {
 
     const merged = mergeText(fixture.template, fixture.destination);
     expect(merged.output).toBe(fixture.expected.output);
+  });
+
+  it('conforms to the slice-23 text family feature profile fixture via the conformance manifest', () => {
+    const fixture = readFixture<TextFeatureProfileFixture>(
+      ...familyFeatureProfileFixturePath('text')
+    );
+    const profile = textFeatureProfile();
+
+    expect({
+      family: profile.family,
+      supported_dialects: profile.supportedDialects,
+      supported_policies: profile.supportedPolicies
+    }).toEqual(fixture.feature_profile);
   });
 });

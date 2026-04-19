@@ -1,5 +1,5 @@
 import type { AnalysisHandle, ParserAdapter, ParserRequest } from '@structuredmerge/tree-haver';
-import type { MergeResult } from '@structuredmerge/ast-merge';
+import type { FamilyFeatureProfile, MergeResult } from '@structuredmerge/ast-merge';
 
 export interface TextSpan {
   readonly start: number;
@@ -66,6 +66,11 @@ export interface TextMergeResolution {
   readonly output: string;
 }
 
+export interface TextFeatureProfile extends FamilyFeatureProfile {
+  readonly family: 'text';
+  readonly supportedDialects: readonly [];
+}
+
 export interface TextBlockMatcher {
   match(template: TextAnalysis, destination: TextAnalysis): TextBlockMatchResult;
 }
@@ -77,6 +82,14 @@ export const DEFAULT_TEXT_REFINEMENT_WEIGHTS: TextRefinementWeights = {
   length: 0.15,
   position: 0.15
 };
+
+export function textFeatureProfile(): TextFeatureProfile {
+  return {
+    family: 'text',
+    supportedDialects: [],
+    supportedPolicies: []
+  };
+}
 
 export function normalizeText(source: string): string {
   return source

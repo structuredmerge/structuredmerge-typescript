@@ -78,10 +78,32 @@ interface JsonFeatureProfileFixture {
   };
 }
 
+interface ConformanceManifest {
+  family_feature_profiles: Array<{
+    family: string;
+    path: string[];
+  }>;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
+}
+
+function familyFeatureProfileFixturePath(family: string): string[] {
+  const manifest = readFixture<ConformanceManifest>(
+    'conformance',
+    'slice-24-manifest',
+    'family-feature-profiles.json'
+  );
+  const entry = manifest.family_feature_profiles.find((candidate) => candidate.family === family);
+
+  if (!entry) {
+    throw new Error(`missing family feature profile entry for ${family}`);
+  }
+
+  return entry.path;
 }
 
 describe('json-merge shared fixtures', () => {
@@ -278,11 +300,9 @@ describe('json-merge shared fixtures', () => {
     expect(result.diagnostics).toEqual([]);
   });
 
-  it('conforms to the slice-21 family feature profile fixture', () => {
+  it('conforms to the slice-21 family feature profile fixture via the conformance manifest', () => {
     const fixture = readFixture<JsonFeatureProfileFixture>(
-      'diagnostics',
-      'slice-21-family-feature-profile',
-      'json-feature-profile.json'
+      ...familyFeatureProfileFixturePath('json')
     );
 
     const profile = jsonFeatureProfile();

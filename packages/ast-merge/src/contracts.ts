@@ -34,3 +34,9 @@ export interface PolicyReference {
   readonly surface: PolicySurface;
   readonly name: string;
 }
+
+export interface FamilyFeatureProfile {
+  readonly family: string;
+  readonly supportedDialects: readonly string[];
+  readonly supportedPolicies: readonly PolicyReference[];
+}

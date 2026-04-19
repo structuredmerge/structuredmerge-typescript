@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   DiagnosticCategory,
   DiagnosticSeverity,
+  FamilyFeatureProfile,
   PolicyReference,
   PolicySurface
 } from '../src/index';
@@ -20,6 +21,14 @@ interface PolicyFixture {
 
 interface PolicyReportingFixture {
   merge_policies: PolicyReference[];
+}
+
+interface FamilyFeatureProfileFixture {
+  feature_profile: {
+    family: string;
+    supported_dialects: string[];
+    supported_policies: PolicyReference[];
+  };
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -91,5 +100,30 @@ describe('ast-merge shared fixtures', () => {
     ];
 
     expect(mergePolicies).toEqual(fixture.merge_policies);
+  });
+
+  it('conforms to the slice-22 shared family feature profile fixture', () => {
+    const fixture = readFixture<FamilyFeatureProfileFixture>(
+      'diagnostics',
+      'slice-22-shared-family-feature-profile',
+      'family-feature-profile.json'
+    );
+
+    const featureProfile: FamilyFeatureProfile = {
+      family: 'example',
+      supportedDialects: ['alpha', 'beta'],
+      supportedPolicies: [
+        {
+          surface: 'array',
+          name: 'destination_wins_array'
+        }
+      ]
+    };
+
+    expect({
+      family: featureProfile.family,
+      supported_dialects: featureProfile.supportedDialects,
+      supported_policies: featureProfile.supportedPolicies
+    }).toEqual(fixture.feature_profile);
   });
 });

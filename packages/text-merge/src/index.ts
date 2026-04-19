@@ -10,6 +10,7 @@ export {
   normalizeText,
   refinedTextSimilarity,
   similarityScore,
+  textFeatureProfile,
   textParseRequest
 } from './contracts';
 export type {
@@ -23,6 +24,7 @@ export type {
   TextMerger,
   TextMatchPhase,
   TextParserAdapter,
+  TextFeatureProfile,
   TextRefinementWeights,
   TextSimilarity,
   TextSpan

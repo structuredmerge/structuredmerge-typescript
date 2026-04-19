@@ -5,6 +5,7 @@ export type {
   DiagnosticCategory,
   DiagnosticSeverity,
   MergeResult,
+  FamilyFeatureProfile,
   PolicyReference,
   PolicySurface,
   ParseResult
