@@ -1,4 +1,4 @@
-import type { Diagnostic, ParseResult } from '@structuredmerge/ast-merge';
+import type { Diagnostic, ParseResult, PolicyReference } from '@structuredmerge/ast-merge';
 
 export interface AnalysisHandle {
   readonly kind: string;
@@ -13,6 +13,7 @@ export interface ParserRequest {
 export interface AdapterInfo {
   readonly backend: string;
   readonly supportsDialects: boolean;
+  readonly supportedPolicies?: readonly PolicyReference[];
 }
 
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
