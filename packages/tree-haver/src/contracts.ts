@@ -10,14 +10,21 @@ export interface ParserRequest {
   readonly dialect?: string;
 }
 
+export interface BackendReference {
+  readonly id: string;
+  readonly family: string;
+}
+
 export interface AdapterInfo {
   readonly backend: string;
+  readonly backendRef?: BackendReference;
   readonly supportsDialects: boolean;
   readonly supportedPolicies?: readonly PolicyReference[];
 }
 
 export interface FeatureProfile {
   readonly backend: string;
+  readonly backendRef?: BackendReference;
   readonly supportsDialects: boolean;
   readonly supportedPolicies?: readonly PolicyReference[];
 }
@@ -29,5 +36,6 @@ export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
 
 export interface ParserDiagnostics {
   readonly backend: string;
+  readonly backendRef?: BackendReference;
   readonly diagnostics: readonly Diagnostic[];
 }

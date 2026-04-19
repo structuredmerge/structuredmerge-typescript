@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { AdapterInfo, FeatureProfile, ParserRequest } from '../src/index';
+import type { AdapterInfo, BackendReference, FeatureProfile, ParserRequest } from '../src/index';
 import type { PolicyReference } from '@structuredmerge/ast-merge';
 
 interface ParserAdapterFixture {
@@ -23,6 +23,10 @@ interface FeatureProfileFixture {
     supports_dialects: boolean;
     supported_policies?: PolicyReference[];
   };
+}
+
+interface BackendRegistryFixture {
+  backends: BackendReference[];
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -95,5 +99,34 @@ describe('tree-haver shared fixtures', () => {
       supports_dialects: profile.supportsDialects,
       supported_policies: profile.supportedPolicies
     }).toEqual(fixture.feature_profile);
+  });
+
+  it('conforms to the slice-25 backend registry fixture', () => {
+    const fixture = readFixture<BackendRegistryFixture>(
+      'diagnostics',
+      'slice-25-backend-registry',
+      'backend-identities.json'
+    );
+
+    const backends: BackendReference[] = [
+      {
+        id: 'native',
+        family: 'builtin'
+      },
+      {
+        id: 'tree-sitter',
+        family: 'tree-sitter'
+      }
+    ];
+
+    const profile: FeatureProfile = {
+      backend: 'tree-sitter',
+      backendRef: backends[1],
+      supportsDialects: true,
+      supportedPolicies: []
+    };
+
+    expect(backends).toEqual(fixture.backends);
+    expect(profile.backendRef).toEqual(fixture.backends[1]);
   });
 });
