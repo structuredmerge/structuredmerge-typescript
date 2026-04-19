@@ -265,6 +265,13 @@ export function runPlannedConformanceSuite(
   );
 }
 
+export function reportPlannedConformanceSuite(
+  plan: ConformanceSuitePlan,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): ConformanceSuiteReport {
+  return reportConformanceSuite(runPlannedConformanceSuite(plan, execute));
+}
+
 export function reportConformanceSuite(
   results: readonly ConformanceCaseResult[]
 ): ConformanceSuiteReport {

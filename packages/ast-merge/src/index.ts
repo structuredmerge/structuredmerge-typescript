@@ -32,6 +32,7 @@ export {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   planConformanceSuite,
+  reportPlannedConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,
   runPlannedConformanceSuite,

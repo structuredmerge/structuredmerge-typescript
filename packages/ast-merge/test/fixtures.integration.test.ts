@@ -23,6 +23,7 @@ import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   planConformanceSuite,
+  reportPlannedConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,
   runPlannedConformanceSuite,
@@ -170,6 +171,12 @@ interface PlannedConformanceSuiteRunnerFixture {
   plan: ConformanceSuitePlanFixture['expected'];
   executions: Record<string, ConformanceCaseExecution>;
   expected_results: ConformanceCaseResult[];
+}
+
+interface PlannedConformanceSuiteReportFixture {
+  plan: ConformanceSuitePlanFixture['expected'];
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_report: ConformanceSuiteReport;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -522,5 +529,43 @@ describe('ast-merge shared fixtures', () => {
         return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
       })
     ).toEqual(fixture.expected_results);
+  });
+
+  it('conforms to the slice-41 planned conformance suite-report fixture', () => {
+    const fixture = readFixture<PlannedConformanceSuiteReportFixture>(
+      ...diagnosticsFixturePath('planned_suite_report')
+    );
+
+    const plan: ConformanceSuitePlan = {
+      family: fixture.plan.family,
+      entries: fixture.plan.entries.map((entry) => ({
+        ref: entry.ref,
+        path: entry.path,
+        run: {
+          ref: entry.run.ref,
+          requirements: entry.run.requirements,
+          familyProfile: {
+            family: entry.run.family_profile.family,
+            supportedDialects: entry.run.family_profile.supported_dialects,
+            supportedPolicies: entry.run.family_profile.supported_policies
+          },
+          featureProfile: entry.run.feature_profile
+            ? {
+                backend: entry.run.feature_profile.backend,
+                supportsDialects: entry.run.feature_profile.supports_dialects,
+                supportedPolicies: entry.run.feature_profile.supported_policies
+              }
+            : undefined
+        }
+      })),
+      missingRoles: fixture.plan.missing_roles
+    };
+
+    expect(
+      reportPlannedConformanceSuite(plan, (run) => {
+        const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+        return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+      })
+    ).toEqual(fixture.expected_report);
   });
 });
