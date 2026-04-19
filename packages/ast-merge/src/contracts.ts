@@ -127,6 +127,11 @@ export interface NamedConformanceSuiteResults {
   readonly results: readonly ConformanceCaseResult[];
 }
 
+export interface NamedConformanceSuiteReportEnvelope {
+  readonly entries: readonly NamedConformanceSuiteReport[];
+  readonly summary: ConformanceSuiteSummary;
+}
+
 export interface ConformanceSuiteSummary {
   readonly total: number;
   readonly passed: number;
@@ -410,6 +415,44 @@ export function reportPlannedNamedConformanceSuites(
     suite: entry.suite,
     report: reportPlannedConformanceSuite(entry.plan, execute)
   }));
+}
+
+export function summarizeNamedConformanceSuiteReports(
+  entries: readonly NamedConformanceSuiteReport[]
+): ConformanceSuiteSummary {
+  return entries.reduce<ConformanceSuiteSummary>(
+    (summary, entry) => ({
+      total: summary.total + entry.report.summary.total,
+      passed: summary.passed + entry.report.summary.passed,
+      failed: summary.failed + entry.report.summary.failed,
+      skipped: summary.skipped + entry.report.summary.skipped
+    }),
+    {
+      total: 0,
+      passed: 0,
+      failed: 0,
+      skipped: 0
+    }
+  );
+}
+
+export function reportNamedConformanceSuiteEnvelope(
+  entries: readonly NamedConformanceSuiteReport[]
+): NamedConformanceSuiteReportEnvelope {
+  return {
+    entries,
+    summary: summarizeNamedConformanceSuiteReports(entries)
+  };
+}
+
+export function reportNamedConformanceSuiteManifest(
+  manifest: ConformanceManifest,
+  contexts: Readonly<Record<string, ConformanceFamilyPlanContext>>,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): NamedConformanceSuiteReportEnvelope {
+  return reportNamedConformanceSuiteEnvelope(
+    reportPlannedNamedConformanceSuites(planNamedConformanceSuites(manifest, contexts), execute)
+  );
 }
 
 export function reportConformanceSuite(

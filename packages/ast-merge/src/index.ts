@@ -13,6 +13,7 @@ export type {
   NamedConformanceSuiteReport,
   NamedConformanceSuitePlan,
   NamedConformanceSuiteResults,
+  NamedConformanceSuiteReportEnvelope,
   ConformanceSuitePlan,
   ConformanceSuitePlanEntry,
   ConformanceFamilyFeatureProfileEntry,
@@ -42,6 +43,8 @@ export {
   planNamedConformanceSuiteEntry,
   planNamedConformanceSuites,
   planNamedConformanceSuite,
+  reportNamedConformanceSuiteEnvelope,
+  reportNamedConformanceSuiteManifest,
   reportPlannedNamedConformanceSuites,
   reportNamedConformanceSuiteEntry,
   reportNamedConformanceSuite,
@@ -54,5 +57,6 @@ export {
   runPlannedConformanceSuite,
   runConformanceSuite,
   selectConformanceCase,
+  summarizeNamedConformanceSuiteReports,
   summarizeConformanceResults
 } from './contracts';
