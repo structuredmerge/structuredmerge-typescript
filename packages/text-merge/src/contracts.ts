@@ -41,9 +41,19 @@ export interface TextSimilarity {
   readonly matched: boolean;
 }
 
+export interface TextRefinementWeights {
+  readonly content: number;
+  readonly length: number;
+  readonly position: number;
+}
+
+export type TextMatchPhase = "exact" | "refined";
+
 export interface TextBlockMatch {
   readonly templateIndex: number;
   readonly destinationIndex: number;
+  readonly phase: TextMatchPhase;
+  readonly score: number;
 }
 
 export interface TextBlockMatchResult {
@@ -59,6 +69,14 @@ export interface TextMergeResolution {
 export interface TextBlockMatcher {
   match(template: TextAnalysis, destination: TextAnalysis): TextBlockMatchResult;
 }
+
+export const DEFAULT_TEXT_REFINEMENT_THRESHOLD = 0.7;
+
+export const DEFAULT_TEXT_REFINEMENT_WEIGHTS: TextRefinementWeights = {
+  content: 0.7,
+  length: 0.15,
+  position: 0.15
+};
 
 export function normalizeText(source: string): string {
   return source
@@ -98,6 +116,68 @@ function tokenSet(normalized: string): Set<string> {
   return new Set(normalized.split(/\s+/).filter((token) => token.length > 0));
 }
 
+function levenshteinDistance(left: string, right: string): number {
+  if (left === right) return 0;
+  if (left.length === 0) return right.length;
+  if (right.length === 0) return left.length;
+
+  const previous = Array.from({ length: left.length + 1 }, (_, index) => index);
+  const current = new Array<number>(left.length + 1).fill(0);
+
+  for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+    current[0] = rightIndex;
+
+    for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+      const cost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+      current[leftIndex] = Math.min(
+        current[leftIndex - 1] + 1,
+        previous[leftIndex] + 1,
+        previous[leftIndex - 1] + cost
+      );
+    }
+
+    for (let index = 0; index < previous.length; index += 1) {
+      previous[index] = current[index];
+    }
+  }
+
+  return previous[left.length];
+}
+
+function stringSimilarity(left: string, right: string): number {
+  if (left === right) return 1;
+  if (left.length === 0 || right.length === 0) return 0;
+
+  const distance = levenshteinDistance(left, right);
+  return 1 - distance / Math.max(left.length, right.length);
+}
+
+function lengthSimilarity(left: string, right: string): number {
+  if (left.length === right.length) return 1;
+  const maxLength = Math.max(left.length, right.length);
+  if (maxLength === 0) return 1;
+  return Math.min(left.length, right.length) / maxLength;
+}
+
+function relativePosition(index: number, total: number): number {
+  return total > 1 ? index / (total - 1) : 0.5;
+}
+
+function positionSimilarity(
+  templateIndex: number,
+  destinationIndex: number,
+  templateTotal: number,
+  destinationTotal: number
+): number {
+  return (
+    1 -
+    Math.abs(
+      relativePosition(templateIndex, templateTotal) -
+        relativePosition(destinationIndex, destinationTotal)
+    )
+  );
+}
+
 function jaccard(left: string, right: string): number {
   const leftTokens = tokenSet(left);
   const rightTokens = tokenSet(right);
@@ -129,6 +209,25 @@ export function similarityScore(leftSource: string, rightSource: string): number
   }
 
   return sum / total;
+}
+
+export function refinedTextSimilarity(
+  templateBlock: TextBlock,
+  destinationBlock: TextBlock,
+  templateTotal: number,
+  destinationTotal: number,
+  weights: TextRefinementWeights = DEFAULT_TEXT_REFINEMENT_WEIGHTS
+): number {
+  const content = stringSimilarity(templateBlock.normalized, destinationBlock.normalized);
+  const length = lengthSimilarity(templateBlock.normalized, destinationBlock.normalized);
+  const position = positionSimilarity(
+    templateBlock.index,
+    destinationBlock.index,
+    templateTotal,
+    destinationTotal
+  );
+
+  return weights.content * content + weights.length * length + weights.position * position;
 }
 
 export function isSimilar(
@@ -188,9 +287,45 @@ export function matchTextBlocks(
     if (templateIndex >= 0) {
       matchedTemplate.add(templateIndex);
       matchedDestination.add(destinationIndex);
-      matched.push({ templateIndex, destinationIndex });
+      matched.push({ templateIndex, destinationIndex, phase: "exact", score: 1 });
     }
   });
+
+  destination.blocks.forEach((destinationBlock, destinationIndex) => {
+    if (matchedDestination.has(destinationIndex)) return;
+
+    let bestTemplateIndex = -1;
+    let bestScore = 0;
+
+    template.blocks.forEach((templateBlock, templateIndex) => {
+      if (matchedTemplate.has(templateIndex)) return;
+
+      const score = refinedTextSimilarity(
+        templateBlock,
+        destinationBlock,
+        template.blocks.length,
+        destination.blocks.length
+      );
+
+      if (score >= DEFAULT_TEXT_REFINEMENT_THRESHOLD && score > bestScore) {
+        bestTemplateIndex = templateIndex;
+        bestScore = score;
+      }
+    });
+
+    if (bestTemplateIndex >= 0) {
+      matchedTemplate.add(bestTemplateIndex);
+      matchedDestination.add(destinationIndex);
+      matched.push({
+        templateIndex: bestTemplateIndex,
+        destinationIndex,
+        phase: "refined",
+        score: bestScore
+      });
+    }
+  });
+
+  matched.sort((left, right) => left.destinationIndex - right.destinationIndex);
 
   return {
     matched,
