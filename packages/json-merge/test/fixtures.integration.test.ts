@@ -208,4 +208,32 @@ describe('json-merge shared fixtures', () => {
     );
     expect(result.output).toBe(fixture.expected.output);
   });
+
+  it('conforms to the slice-15 fallback boundary fixtures', () => {
+    const templateFixture = readFixture<JsonMergeFixture>(
+      'json',
+      'slice-15-fallback-boundaries',
+      'template-trailing-comma-not-recovered.json'
+    );
+    const templateResult = mergeJson(templateFixture.template, templateFixture.destination, 'json');
+
+    expect(templateResult.ok).toBe(templateFixture.expected.ok);
+    expect(
+      templateResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
+    ).toEqual(templateFixture.expected.diagnostics);
+    expect(templateResult.output).toBeUndefined();
+
+    const commentsFixture = readFixture<JsonMergeFixture>(
+      'json',
+      'slice-15-fallback-boundaries',
+      'strict-json-comments-not-recovered.json'
+    );
+    const commentsResult = mergeJson(commentsFixture.template, commentsFixture.destination, 'json');
+
+    expect(commentsResult.ok).toBe(commentsFixture.expected.ok);
+    expect(
+      commentsResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
+    ).toEqual(commentsFixture.expected.diagnostics);
+    expect(commentsResult.output).toBeUndefined();
+  });
 });

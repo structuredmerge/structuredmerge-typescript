@@ -64,4 +64,18 @@ describe('json-merge', () => {
       }
     ]);
   });
+
+  it('does not apply fallback to template trailing-comma input', () => {
+    const result = mergeJson('{"alpha":1,}', '{"beta":2}', 'json');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.category).toBe('parse_error');
+  });
+
+  it('does not apply fallback to strict-json comment violations', () => {
+    const result = mergeJson('{"alpha":1}', '{\n  // note\n  "beta":2\n}', 'json');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.category).toBe('destination_parse_error');
+  });
 });
