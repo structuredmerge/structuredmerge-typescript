@@ -12,6 +12,8 @@ import type {
   ConformanceManifest,
   ConformanceManifestPlanningOptions,
   ConformanceManifestReport,
+  ConformanceManifestReviewOptions,
+  ConformanceManifestReviewState,
   NamedConformanceSuiteReport,
   NamedConformanceSuitePlan,
   NamedConformanceSuiteResults,
@@ -26,9 +28,15 @@ import type {
   FamilyFeatureProfile,
   PolicyReference,
   PolicySurface,
-  Diagnostic
+  Diagnostic,
+  ReviewDecision,
+  ReviewHostHints,
+  ReviewReplayContext,
+  ReviewRequest
 } from '../src/index';
 import {
+  conformanceManifestReplayContext,
+  conformanceReviewHostHints,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   conformanceSuiteDefinition,
@@ -47,6 +55,9 @@ import {
   reportPlannedNamedConformanceSuites,
   reportPlannedConformanceSuite,
   reportConformanceSuite,
+  reviewConformanceFamilyContext,
+  reviewConformanceManifest,
+  reviewRequestIdForFamilyContext,
   runConformanceCase,
   runNamedConformanceSuiteEntry,
   runNamedConformanceSuite,
@@ -338,6 +349,79 @@ interface ConformanceManifestReportFixture {
   expected_report: ConformanceManifestReport;
 }
 
+interface ReviewHostHintsFixture {
+  options: {
+    require_explicit_contexts?: boolean;
+    interactive?: boolean;
+  };
+  expected_hints: {
+    interactive: boolean;
+    require_explicit_contexts: boolean;
+  };
+}
+
+interface FamilyContextReviewRequestFixture {
+  family: string;
+  options: {
+    family_profiles: Record<string, NamedSuiteReportFixture['family_profile']>;
+    require_explicit_contexts: boolean;
+  };
+  expected_diagnostic: Diagnostic;
+  expected_request: {
+    id: string;
+    kind: ReviewRequest['kind'];
+    family: string;
+    message: string;
+    blocking: boolean;
+    available_actions: ReviewRequest['availableActions'];
+    default_action?: ReviewRequest['defaultAction'];
+  };
+}
+
+interface ConformanceManifestReviewStateFixture {
+  manifest: ConformanceManifest;
+  options: {
+    contexts?: Record<string, ConformanceFamilyPlanContext>;
+    family_profiles?: Record<string, NamedSuiteReportFixture['family_profile']>;
+    require_explicit_contexts?: boolean;
+    interactive?: boolean;
+    review_decisions?: Array<{
+      request_id: string;
+      action: ReviewDecision['action'];
+    }>;
+  };
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_state: {
+    report: {
+      entries: readonly NamedConformanceSuiteReport[];
+      summary: ConformanceSuiteSummary;
+    };
+    diagnostics: Diagnostic[];
+    requests: Array<{
+      id: string;
+      kind: ReviewRequest['kind'];
+      family: string;
+      message: string;
+      blocking: boolean;
+      available_actions: ReviewRequest['availableActions'];
+      default_action?: ReviewRequest['defaultAction'];
+    }>;
+    applied_decisions: Array<{
+      request_id: string;
+      action: ReviewDecision['action'];
+    }>;
+    host_hints: {
+      interactive: boolean;
+      require_explicit_contexts: boolean;
+    };
+    replay_context: {
+      surface: 'conformance_manifest';
+      families: string[];
+      require_explicit_contexts: boolean;
+    };
+  };
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -492,6 +576,26 @@ function normalizeManifestPlanningOptions(raw: {
   };
 }
 
+function normalizeManifestReviewOptions(raw: {
+  contexts?: Record<string, ConformanceFamilyPlanContext>;
+  family_profiles?: Record<string, NamedSuiteReportFixture['family_profile']>;
+  require_explicit_contexts?: boolean;
+  interactive?: boolean;
+  review_decisions?: Array<{
+    request_id: string;
+    action: ReviewDecision['action'];
+  }>;
+}): ConformanceManifestReviewOptions {
+  return {
+    ...normalizeManifestPlanningOptions(raw),
+    interactive: raw.interactive,
+    reviewDecisions: raw.review_decisions?.map((decision) => ({
+      requestId: decision.request_id,
+      action: decision.action
+    }))
+  };
+}
+
 function normalizeManifestReport(raw: {
   report: {
     entries: readonly NamedConformanceSuiteReport[];
@@ -502,6 +606,97 @@ function normalizeManifestReport(raw: {
   return {
     report: normalizeSuiteReportEnvelope(raw.report),
     diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic))
+  };
+}
+
+function normalizeReviewRequest(raw: {
+  id: string;
+  kind: ReviewRequest['kind'];
+  family: string;
+  message: string;
+  blocking: boolean;
+  available_actions: ReviewRequest['availableActions'];
+  default_action?: ReviewRequest['defaultAction'];
+}): ReviewRequest {
+  return {
+    id: raw.id,
+    kind: raw.kind,
+    family: raw.family,
+    message: raw.message,
+    blocking: raw.blocking,
+    availableActions: raw.available_actions,
+    defaultAction: raw.default_action
+  };
+}
+
+function normalizeReviewDecision(raw: {
+  request_id: string;
+  action: ReviewDecision['action'];
+}): ReviewDecision {
+  return {
+    requestId: raw.request_id,
+    action: raw.action
+  };
+}
+
+function normalizeReviewHostHints(raw: {
+  interactive: boolean;
+  require_explicit_contexts: boolean;
+}): ReviewHostHints {
+  return {
+    interactive: raw.interactive,
+    requireExplicitContexts: raw.require_explicit_contexts
+  };
+}
+
+function normalizeReviewReplayContext(raw: {
+  surface: 'conformance_manifest';
+  families: string[];
+  require_explicit_contexts: boolean;
+}): ReviewReplayContext {
+  return {
+    surface: raw.surface,
+    families: raw.families,
+    requireExplicitContexts: raw.require_explicit_contexts
+  };
+}
+
+function normalizeManifestReviewState(raw: {
+  report: {
+    entries: readonly NamedConformanceSuiteReport[];
+    summary: ConformanceSuiteSummary;
+  };
+  diagnostics: Diagnostic[];
+  requests: Array<{
+    id: string;
+    kind: ReviewRequest['kind'];
+    family: string;
+    message: string;
+    blocking: boolean;
+    available_actions: ReviewRequest['availableActions'];
+    default_action?: ReviewRequest['defaultAction'];
+  }>;
+  applied_decisions: Array<{
+    request_id: string;
+    action: ReviewDecision['action'];
+  }>;
+  host_hints: {
+    interactive: boolean;
+    require_explicit_contexts: boolean;
+  };
+  replay_context: {
+    surface: 'conformance_manifest';
+    families: string[];
+    require_explicit_contexts: boolean;
+  };
+}): ConformanceManifestReviewState {
+  return {
+    report: normalizeSuiteReportEnvelope(raw.report),
+    diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+    requests: raw.requests.map((request) => normalizeReviewRequest(request)),
+    appliedDecisions: raw.applied_decisions.map((decision) => normalizeReviewDecision(decision)),
+    hostHints: normalizeReviewHostHints(raw.host_hints),
+    replayContext: normalizeReviewReplayContext(raw.replay_context)
   };
 }
 
@@ -1300,5 +1495,71 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+  });
+
+  it('conforms to the slice-61 review host hints fixture', () => {
+    const fixture = readFixture<ReviewHostHintsFixture>(
+      ...diagnosticsFixturePath('review_host_hints')
+    );
+
+    expect(
+      conformanceReviewHostHints(normalizeManifestReviewOptions(fixture.options as never))
+    ).toEqual(normalizeReviewHostHints(fixture.expected_hints));
+  });
+
+  it('conforms to the slice-62 family-context review request fixture', () => {
+    const fixture = readFixture<FamilyContextReviewRequestFixture>(
+      ...diagnosticsFixturePath('family_context_review_request')
+    );
+
+    const reviewed = reviewConformanceFamilyContext(
+      fixture.family,
+      normalizeManifestReviewOptions(fixture.options as never)
+    );
+
+    expect(reviewRequestIdForFamilyContext(fixture.family)).toEqual(fixture.expected_request.id);
+    expect(reviewed.diagnostics).toEqual([normalizeDiagnostic(fixture.expected_diagnostic)]);
+    expect(reviewed.requests).toEqual([normalizeReviewRequest(fixture.expected_request)]);
+  });
+
+  it('conforms to the slice-63 conformance manifest review-state fixture', () => {
+    const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+      ...diagnosticsFixturePath('conformance_manifest_review_state')
+    );
+
+    expect(
+      reviewConformanceManifest(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+
+    expect(
+      conformanceManifestReplayContext(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never)
+      )
+    ).toEqual(normalizeReviewReplayContext(fixture.expected_state.replay_context));
+  });
+
+  it('conforms to the slice-64 reviewed default-context fixture', () => {
+    const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+      ...diagnosticsFixturePath('reviewed_default_context')
+    );
+
+    expect(
+      reviewConformanceManifest(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
   });
 });

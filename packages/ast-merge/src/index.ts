@@ -21,6 +21,8 @@ export type {
   ConformanceManifestEntry,
   ConformanceManifestPlanningOptions,
   ConformanceManifestReport,
+  ConformanceManifestReviewOptions,
+  ConformanceManifestReviewState,
   ConformanceOutcome,
   ConformanceSelectionStatus,
   ConformanceSuiteReport,
@@ -32,10 +34,18 @@ export type {
   FamilyFeatureProfile,
   PolicyReference,
   PolicySurface,
-  ParseResult
+  ParseResult,
+  ReviewDecision,
+  ReviewDecisionAction,
+  ReviewHostHints,
+  ReviewReplayContext,
+  ReviewRequest,
+  ReviewRequestKind
 } from './contracts';
 
 export {
+  conformanceManifestReplayContext,
+  conformanceReviewHostHints,
   conformanceFamilyEntries,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
@@ -55,6 +65,9 @@ export {
   reportNamedConformanceSuite,
   reportPlannedConformanceSuite,
   reportConformanceSuite,
+  reviewConformanceFamilyContext,
+  reviewConformanceManifest,
+  reviewRequestIdForFamilyContext,
   runConformanceCase,
   runNamedConformanceSuiteEntry,
   runNamedConformanceSuite,

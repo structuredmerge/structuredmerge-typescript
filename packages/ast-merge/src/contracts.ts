@@ -145,6 +145,50 @@ export interface ConformanceManifestReport {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export type ReviewRequestKind = 'family_context';
+
+export type ReviewDecisionAction = 'accept_default_context';
+
+export interface ReviewRequest {
+  readonly id: string;
+  readonly kind: ReviewRequestKind;
+  readonly family: string;
+  readonly message: string;
+  readonly blocking: boolean;
+  readonly availableActions: readonly ReviewDecisionAction[];
+  readonly defaultAction?: ReviewDecisionAction;
+}
+
+export interface ReviewDecision {
+  readonly requestId: string;
+  readonly action: ReviewDecisionAction;
+}
+
+export interface ReviewHostHints {
+  readonly interactive: boolean;
+  readonly requireExplicitContexts: boolean;
+}
+
+export interface ReviewReplayContext {
+  readonly surface: 'conformance_manifest';
+  readonly families: readonly string[];
+  readonly requireExplicitContexts: boolean;
+}
+
+export interface ConformanceManifestReviewOptions extends ConformanceManifestPlanningOptions {
+  readonly reviewDecisions?: readonly ReviewDecision[];
+  readonly interactive?: boolean;
+}
+
+export interface ConformanceManifestReviewState {
+  readonly report: NamedConformanceSuiteReportEnvelope;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly requests: readonly ReviewRequest[];
+  readonly appliedDecisions: readonly ReviewDecision[];
+  readonly hostHints: ReviewHostHints;
+  readonly replayContext: ReviewReplayContext;
+}
+
 export interface ConformanceSuiteSummary {
   readonly total: number;
   readonly passed: number;
@@ -224,6 +268,38 @@ export function defaultConformanceFamilyContext(
   };
 }
 
+export function reviewRequestIdForFamilyContext(family: string): string {
+  return `family_context:${family}`;
+}
+
+export function conformanceReviewHostHints(
+  options: ConformanceManifestReviewOptions
+): ReviewHostHints {
+  return {
+    interactive: options.interactive ?? false,
+    requireExplicitContexts: options.requireExplicitContexts ?? false
+  };
+}
+
+export function conformanceManifestReplayContext(
+  manifest: ConformanceManifest,
+  options: ConformanceManifestReviewOptions
+): ReviewReplayContext {
+  const families = Array.from(
+    new Set(
+      conformanceSuiteNames(manifest)
+        .map((suiteName) => conformanceSuiteDefinition(manifest, suiteName)?.family)
+        .filter((family): family is string => family !== undefined)
+    )
+  ).sort((left, right) => left.localeCompare(right));
+
+  return {
+    surface: 'conformance_manifest',
+    families,
+    requireExplicitContexts: options.requireExplicitContexts ?? false
+  };
+}
+
 export function resolveConformanceFamilyContext(
   family: string,
   options: ConformanceManifestPlanningOptions
@@ -272,6 +348,102 @@ export function resolveConformanceFamilyContext(
         message: `using default family context for ${family}.`
       }
     ]
+  };
+}
+
+function reviewDecisionForFamilyContext(
+  family: string,
+  options: ConformanceManifestReviewOptions
+): ReviewDecision | undefined {
+  const requestId = reviewRequestIdForFamilyContext(family);
+  return options.reviewDecisions?.find(
+    (decision) => decision.requestId === requestId && decision.action === 'accept_default_context'
+  );
+}
+
+export function reviewConformanceFamilyContext(
+  family: string,
+  options: ConformanceManifestReviewOptions
+): {
+  context?: ConformanceFamilyPlanContext;
+  diagnostics: readonly Diagnostic[];
+  requests: readonly ReviewRequest[];
+  appliedDecisions: readonly ReviewDecision[];
+} {
+  const explicitContext = options.contexts?.[family];
+
+  if (explicitContext) {
+    return {
+      context: explicitContext,
+      diagnostics: [],
+      requests: [],
+      appliedDecisions: []
+    };
+  }
+
+  const familyProfile = options.familyProfiles?.[family];
+
+  if (!(options.requireExplicitContexts ?? false)) {
+    const resolved = resolveConformanceFamilyContext(family, options);
+    return {
+      context: resolved.context,
+      diagnostics: resolved.diagnostics,
+      requests: [],
+      appliedDecisions: []
+    };
+  }
+
+  if (!familyProfile) {
+    return {
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: `missing family context for ${family} and no default family profile is available.`
+        }
+      ],
+      requests: [],
+      appliedDecisions: []
+    };
+  }
+
+  const decision = reviewDecisionForFamilyContext(family, options);
+
+  if (decision) {
+    return {
+      context: defaultConformanceFamilyContext(familyProfile),
+      diagnostics: [
+        {
+          severity: 'warning',
+          category: 'assumed_default',
+          message: `using default family context for ${family}.`
+        }
+      ],
+      requests: [],
+      appliedDecisions: [decision]
+    };
+  }
+
+  return {
+    diagnostics: [
+      {
+        severity: 'error',
+        category: 'configuration_error',
+        message: `missing explicit family context for ${family}.`
+      }
+    ],
+    requests: [
+      {
+        id: reviewRequestIdForFamilyContext(family),
+        kind: 'family_context',
+        family,
+        message: `explicit family context is required for ${family}; a synthesized default may be accepted by review.`,
+        blocking: true,
+        availableActions: ['accept_default_context'],
+        defaultAction: 'accept_default_context'
+      }
+    ],
+    appliedDecisions: []
   };
 }
 
@@ -711,5 +883,68 @@ export function reportConformanceManifest(
       reportPlannedNamedConformanceSuites(planned.entries, execute)
     ),
     diagnostics: planned.diagnostics
+  };
+}
+
+export function reviewConformanceManifest(
+  manifest: ConformanceManifest,
+  options: ConformanceManifestReviewOptions,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): ConformanceManifestReviewState {
+  const entries: NamedConformanceSuitePlan[] = [];
+  const diagnostics: Diagnostic[] = [];
+  const requests: ReviewRequest[] = [];
+  const appliedDecisions: ReviewDecision[] = [];
+  const resolvedContexts = new Map<string, ConformanceFamilyPlanContext | undefined>();
+
+  for (const suiteName of conformanceSuiteNames(manifest)) {
+    const definition = conformanceSuiteDefinition(manifest, suiteName);
+
+    if (!definition) {
+      continue;
+    }
+
+    let context = resolvedContexts.get(definition.family);
+
+    if (context === undefined && !resolvedContexts.has(definition.family)) {
+      const reviewed = reviewConformanceFamilyContext(definition.family, options);
+      diagnostics.push(...reviewed.diagnostics);
+      requests.push(...reviewed.requests);
+      appliedDecisions.push(...reviewed.appliedDecisions);
+      context = reviewed.context;
+      resolvedContexts.set(definition.family, context);
+    }
+
+    if (!context) {
+      continue;
+    }
+
+    const plan = planNamedConformanceSuiteEntry(manifest, suiteName, context);
+
+    if (!plan) {
+      continue;
+    }
+
+    if (plan.plan.missingRoles.length > 0) {
+      diagnostics.push({
+        severity: 'error',
+        category: 'configuration_error',
+        message: `suite ${suiteName} declares missing roles: ${plan.plan.missingRoles.join(', ')}.`
+      });
+      continue;
+    }
+
+    entries.push(plan);
+  }
+
+  return {
+    report: reportNamedConformanceSuiteEnvelope(
+      reportPlannedNamedConformanceSuites(entries, execute)
+    ),
+    diagnostics,
+    requests,
+    appliedDecisions,
+    hostHints: conformanceReviewHostHints(options),
+    replayContext: conformanceManifestReplayContext(manifest, options)
   };
 }
