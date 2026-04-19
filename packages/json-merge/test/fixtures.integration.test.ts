@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { matchJsonOwners, mergeJson, parseJson } from '../src/index';
+import { jsonFeatureProfile, matchJsonOwners, mergeJson, parseJson } from '../src/index';
 
 interface JsoncParseFixture {
   name: string;
@@ -64,6 +64,17 @@ interface JsonMatchFixture {
     matched: Array<[string, string]>;
     unmatched_template: string[];
     unmatched_destination: string[];
+  };
+}
+
+interface JsonFeatureProfileFixture {
+  feature_profile: {
+    family: 'json';
+    supported_dialects: Array<'json' | 'jsonc'>;
+    supported_policies: Array<{
+      surface: 'fallback' | 'array';
+      name: string;
+    }>;
   };
 }
 
@@ -265,5 +276,21 @@ describe('json-merge shared fixtures', () => {
     ]);
     expect(result.output).toBe(fixture.expected.output);
     expect(result.diagnostics).toEqual([]);
+  });
+
+  it('conforms to the slice-21 family feature profile fixture', () => {
+    const fixture = readFixture<JsonFeatureProfileFixture>(
+      'diagnostics',
+      'slice-21-family-feature-profile',
+      'json-feature-profile.json'
+    );
+
+    const profile = jsonFeatureProfile();
+
+    expect({
+      family: profile.family,
+      supported_dialects: profile.supportedDialects,
+      supported_policies: profile.supportedPolicies
+    }).toEqual(fixture.feature_profile);
   });
 });

@@ -58,6 +58,12 @@ export interface JsonMergeResolution {
   readonly output: string;
 }
 
+export interface JsonFeatureProfile {
+  readonly family: 'json';
+  readonly supportedDialects: readonly JsonDialect[];
+  readonly supportedPolicies: readonly PolicyReference[];
+}
+
 const destinationWinsArrayPolicy: PolicyReference = {
   surface: 'array',
   name: 'destination_wins_array'
@@ -67,6 +73,14 @@ const trailingCommaFallbackPolicy: PolicyReference = {
   surface: 'fallback',
   name: 'trailing_comma_destination_fallback'
 };
+
+export function jsonFeatureProfile(): JsonFeatureProfile {
+  return {
+    family: 'json',
+    supportedDialects: ['json', 'jsonc'],
+    supportedPolicies: [destinationWinsArrayPolicy, trailingCommaFallbackPolicy]
+  };
+}
 
 export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {
   return {
