@@ -41,6 +41,10 @@ export interface TextSimilarity {
   readonly matched: boolean;
 }
 
+export interface TextMergeResolution {
+  readonly output: string;
+}
+
 export function normalizeText(source: string): string {
   return source
     .replace(/\r\n?/g, "\n")
@@ -122,5 +126,29 @@ export function isSimilar(
     score,
     threshold,
     matched: score >= threshold
+  };
+}
+
+export function mergeText(templateSource: string, destinationSource: string): MergeResult<string> {
+  const template = analyzeText(templateSource);
+  const destination = analyzeText(destinationSource);
+  const total = Math.max(template.blocks.length, destination.blocks.length);
+  const mergedBlocks: string[] = [];
+
+  for (let index = 0; index < total; index += 1) {
+    const templateBlock = template.blocks[index];
+    const destinationBlock = destination.blocks[index];
+
+    if (destinationBlock) {
+      mergedBlocks.push(destinationBlock.normalized);
+    } else if (templateBlock) {
+      mergedBlocks.push(templateBlock.normalized);
+    }
+  }
+
+  return {
+    ok: true,
+    diagnostics: [],
+    output: mergedBlocks.join("\n\n")
   };
 }

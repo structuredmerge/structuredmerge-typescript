@@ -3,6 +3,7 @@ export const packageName = "@structuredmerge/text-merge";
 export {
   analyzeText,
   isSimilar,
+  mergeText,
   normalizeText,
   similarityScore,
   textParseRequest
@@ -11,6 +12,7 @@ export type {
   TextAnalysis,
   TextAnalyzer,
   TextBlock,
+  TextMergeResolution,
   TextMerger,
   TextParserAdapter,
   TextSimilarity,
