@@ -26,6 +26,7 @@ import {
   conformanceSuiteDefinition,
   planConformanceSuite,
   planNamedConformanceSuite,
+  reportNamedConformanceSuite,
   reportPlannedConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,
@@ -196,6 +197,17 @@ interface ManifestRequirementsFixture {
 interface SuiteDefinitionsFixture {
   suite_name: string;
   expected: ConformanceSuiteDefinition;
+}
+
+interface NamedSuiteReportFixture {
+  suite_name: string;
+  family_profile: {
+    family: string;
+    supported_dialects: string[];
+    supported_policies: PolicyReference[];
+  };
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_report: ConformanceSuiteReport;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -639,5 +651,37 @@ describe('ast-merge shared fixtures', () => {
         ]
       })
     );
+  });
+
+  it('conforms to the slice-44 named conformance suite-report fixture', () => {
+    const fixture = readFixture<NamedSuiteReportFixture>(
+      ...diagnosticsFixturePath('named_suite_report')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(
+      reportNamedConformanceSuite(
+        manifest,
+        fixture.suite_name,
+        {
+          family: fixture.family_profile.family,
+          supportedDialects: fixture.family_profile.supported_dialects,
+          supportedPolicies: fixture.family_profile.supported_policies
+        },
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        },
+        {
+          backend: 'kreuzberg-language-pack',
+          supportsDialects: false,
+          supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
+        }
+      )
+    ).toEqual(fixture.expected_report);
   });
 });

@@ -35,6 +35,7 @@ export {
   conformanceSuiteDefinition,
   planConformanceSuite,
   planNamedConformanceSuite,
+  reportNamedConformanceSuite,
   reportPlannedConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,

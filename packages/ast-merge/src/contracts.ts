@@ -286,6 +286,22 @@ export function reportPlannedConformanceSuite(
   return reportConformanceSuite(runPlannedConformanceSuite(plan, execute));
 }
 
+export function reportNamedConformanceSuite(
+  manifest: ConformanceManifest,
+  suiteName: string,
+  familyProfile: FamilyFeatureProfile,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
+  featureProfile?: ConformanceFeatureProfileView
+): ConformanceSuiteReport | undefined {
+  const plan = planNamedConformanceSuite(manifest, suiteName, familyProfile, featureProfile);
+
+  if (!plan) {
+    return undefined;
+  }
+
+  return reportPlannedConformanceSuite(plan, execute);
+}
+
 export function reportConformanceSuite(
   results: readonly ConformanceCaseResult[]
 ): ConformanceSuiteReport {
