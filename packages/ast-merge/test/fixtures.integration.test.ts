@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
+  ConformanceCaseRef,
+  ConformanceCaseResult,
+  ConformanceOutcome,
   DiagnosticCategory,
   DiagnosticSeverity,
   FamilyFeatureProfile,
@@ -28,6 +31,15 @@ interface FamilyFeatureProfileFixture {
     family: string;
     supported_dialects: string[];
     supported_policies: PolicyReference[];
+  };
+}
+
+interface ConformanceRunnerFixture {
+  case_ref: ConformanceCaseRef;
+  result: {
+    ref: ConformanceCaseRef;
+    outcome: ConformanceOutcome;
+    messages: string[];
   };
 }
 
@@ -137,5 +149,25 @@ describe('ast-merge shared fixtures', () => {
       supported_dialects: featureProfile.supportedDialects,
       supported_policies: featureProfile.supportedPolicies
     }).toEqual(fixture.feature_profile);
+  });
+
+  it('conforms to the slice-28 conformance runner shape fixture', () => {
+    const fixture = readFixture<ConformanceRunnerFixture>(
+      ...diagnosticsFixturePath('runner_shape')
+    );
+
+    const caseRef: ConformanceCaseRef = {
+      family: 'json',
+      role: 'tree_sitter_adapter',
+      case: 'valid_strict_json'
+    };
+    const result: ConformanceCaseResult = {
+      ref: caseRef,
+      outcome: 'passed',
+      messages: []
+    };
+
+    expect(caseRef).toEqual(fixture.case_ref);
+    expect(result).toEqual(fixture.result);
   });
 });

@@ -40,3 +40,17 @@ export interface FamilyFeatureProfile {
   readonly supportedDialects: readonly string[];
   readonly supportedPolicies: readonly PolicyReference[];
 }
+
+export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
+
+export interface ConformanceCaseRef {
+  readonly family: string;
+  readonly role: string;
+  readonly case: string;
+}
+
+export interface ConformanceCaseResult {
+  readonly ref: ConformanceCaseRef;
+  readonly outcome: ConformanceOutcome;
+  readonly messages: readonly string[];
+}
