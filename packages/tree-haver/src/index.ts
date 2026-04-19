@@ -1,4 +1,4 @@
-export const packageName = "@structuredmerge/tree-haver";
+export const packageName = '@structuredmerge/tree-haver';
 
 export type {
   AdapterInfo,
@@ -6,4 +6,4 @@ export type {
   ParserAdapter,
   ParserDiagnostics,
   ParserRequest
-} from "./contracts";
+} from './contracts';

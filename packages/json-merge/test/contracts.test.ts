@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+import { matchJsonOwners, mergeJson, parseJson } from '../src/index';
+
+describe('json-merge', () => {
+  it('rejects trailing commas in jsonc', () => {
+    const result = parseJson('{\n  // note\n  "alpha": 1,\n}\n', 'jsonc');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toEqual([
+      {
+        severity: 'error',
+        category: 'parse_error',
+        message: 'Trailing commas are not supported.'
+      }
+    ]);
+  });
+
+  it('matches owners by stable path equality', () => {
+    const template = parseJson('{"alpha":{"beta":1},"gamma":[true]}', 'json');
+    const destination = parseJson('{"alpha":{"beta":2},"gamma":[false],"delta":3}', 'json');
+
+    expect(template.ok).toBe(true);
+    expect(destination.ok).toBe(true);
+
+    const result = matchJsonOwners(template.analysis!, destination.analysis!);
+    expect(result.matched).toEqual([
+      { templatePath: '/alpha', destinationPath: '/alpha' },
+      { templatePath: '/alpha/beta', destinationPath: '/alpha/beta' },
+      { templatePath: '/gamma', destinationPath: '/gamma' },
+      { templatePath: '/gamma/0', destinationPath: '/gamma/0' }
+    ]);
+    expect(result.unmatchedTemplate).toEqual([]);
+    expect(result.unmatchedDestination).toEqual(['/delta']);
+  });
+
+  it('merges objects with destination-preferred scalar values', () => {
+    const result = mergeJson(
+      '{"alpha":{"beta":1,"gamma":2},"delta":4}',
+      '{"alpha":{"beta":9},"epsilon":5}',
+      'json'
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.output).toBe('{"alpha":{"beta":9,"gamma":2},"delta":4,"epsilon":5}');
+  });
+});

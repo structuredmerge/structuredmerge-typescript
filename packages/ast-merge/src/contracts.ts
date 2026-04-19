@@ -1,11 +1,11 @@
-export type DiagnosticSeverity = "info" | "warning" | "error";
+export type DiagnosticSeverity = 'info' | 'warning' | 'error';
 
 export type DiagnosticCategory =
-  | "parse_error"
-  | "destination_parse_error"
-  | "unsupported_feature"
-  | "fallback_applied"
-  | "ambiguity";
+  | 'parse_error'
+  | 'destination_parse_error'
+  | 'unsupported_feature'
+  | 'fallback_applied'
+  | 'ambiguity';
 
 export interface Diagnostic {
   readonly severity: DiagnosticSeverity;

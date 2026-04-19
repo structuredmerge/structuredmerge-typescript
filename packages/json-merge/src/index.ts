@@ -1,6 +1,6 @@
-export const packageName = "@structuredmerge/json-merge";
+export const packageName = '@structuredmerge/json-merge';
 
-export { jsonParseRequest, matchJsonOwners, mergeJson, parseJson } from "./contracts";
+export { jsonParseRequest, matchJsonOwners, mergeJson, parseJson } from './contracts';
 export type {
   JsonAnalysis,
   JsonAnalyzer,
@@ -12,8 +12,7 @@ export type {
   JsonOwnerMatcher,
   JsonOwner,
   JsonOwnerKind,
-  JsonParserAdapter
-  ,
+  JsonParserAdapter,
   JsonRootKind,
   JsonStructureAnalyzer
-} from "./contracts";
+} from './contracts';

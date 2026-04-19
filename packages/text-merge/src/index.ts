@@ -1,4 +1,4 @@
-export const packageName = "@structuredmerge/text-merge";
+export const packageName = '@structuredmerge/text-merge';
 
 export {
   analyzeText,
@@ -11,7 +11,7 @@ export {
   refinedTextSimilarity,
   similarityScore,
   textParseRequest
-} from "./contracts";
+} from './contracts';
 export type {
   TextAnalysis,
   TextAnalyzer,
@@ -26,4 +26,4 @@ export type {
   TextRefinementWeights,
   TextSimilarity,
   TextSpan
-} from "./contracts";
+} from './contracts';

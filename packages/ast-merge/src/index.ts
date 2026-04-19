@@ -1,4 +1,4 @@
-export const packageName = "@structuredmerge/ast-merge";
+export const packageName = '@structuredmerge/ast-merge';
 
 export type {
   Diagnostic,
@@ -6,4 +6,4 @@ export type {
   DiagnosticSeverity,
   MergeResult,
   ParseResult
-} from "./contracts";
+} from './contracts';

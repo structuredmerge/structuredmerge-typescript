@@ -1,0 +1,24 @@
+[tools]
+node = "22"
+pnpm = "10.19.0"
+
+[tasks.install]
+run = "pnpm install"
+
+[tasks.format]
+run = "pnpm run format"
+
+[tasks.format-check]
+run = "pnpm run format:check"
+
+[tasks.lint]
+run = "pnpm run lint"
+
+[tasks.typecheck]
+run = "pnpm run typecheck"
+
+[tasks.test]
+run = "pnpm run test"
+
+[tasks.check]
+run = "pnpm run check"

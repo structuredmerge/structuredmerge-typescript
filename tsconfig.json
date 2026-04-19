@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "@structuredmerge/ast-merge": ["./packages/ast-merge/src/index.ts"],
+      "@structuredmerge/tree-haver": ["./packages/tree-haver/src/index.ts"],
+      "@structuredmerge/text-merge": ["./packages/text-merge/src/index.ts"],
+      "@structuredmerge/json-merge": ["./packages/json-merge/src/index.ts"]
+    },
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["packages/**/*.ts", "vitest.config.ts"]
+}

@@ -1,9 +1,9 @@
-import type { AnalysisHandle, ParserAdapter, ParserRequest } from "@structuredmerge/tree-haver";
-import type { Diagnostic, MergeResult, ParseResult } from "@structuredmerge/ast-merge";
+import type { AnalysisHandle, ParserAdapter, ParserRequest } from '@structuredmerge/tree-haver';
+import type { Diagnostic, MergeResult, ParseResult } from '@structuredmerge/ast-merge';
 
-export type JsonDialect = "json" | "jsonc";
-export type JsonRootKind = "object" | "array" | "scalar";
-export type JsonOwnerKind = "member" | "element";
+export type JsonDialect = 'json' | 'jsonc';
+export type JsonRootKind = 'object' | 'array' | 'scalar';
+export type JsonOwnerKind = 'member' | 'element';
 
 export interface JsonOwner {
   readonly path: string;
@@ -23,7 +23,7 @@ export interface JsonOwnerMatchResult {
 }
 
 export interface JsonAnalysis extends AnalysisHandle {
-  readonly kind: "json";
+  readonly kind: 'json';
   readonly dialect: JsonDialect;
   readonly allowsComments: boolean;
   readonly normalizedSource: string;
@@ -35,7 +35,7 @@ export interface JsonMerger {
   merge(template: JsonAnalysis, destination: JsonAnalysis): MergeResult<string>;
 }
 
-export interface JsonParserAdapter extends ParserAdapter<JsonAnalysis> {}
+export type JsonParserAdapter = ParserAdapter<JsonAnalysis>;
 
 export interface JsonAnalyzer {
   parse(source: string, dialect: JsonDialect): ParseResult<JsonAnalysis>;
@@ -56,7 +56,7 @@ export interface JsonMergeResolution {
 export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {
   return {
     source,
-    language: "json",
+    language: 'json',
     dialect
   };
 }
@@ -72,12 +72,12 @@ function detectTrailingComma(source: string): boolean {
     const next = source[i + 1];
 
     if (inLineComment) {
-      if (char === "\n") inLineComment = false;
+      if (char === '\n') inLineComment = false;
       continue;
     }
 
     if (inBlockComment) {
-      if (char === "*" && next === "/") {
+      if (char === '*' && next === '/') {
         inBlockComment = false;
         i += 1;
       }
@@ -89,35 +89,35 @@ function detectTrailingComma(source: string): boolean {
         escaped = false;
         continue;
       }
-      if (char === "\\") {
+      if (char === '\\') {
         escaped = true;
         continue;
       }
-      if (char === "\"") inString = false;
+      if (char === '"') inString = false;
       continue;
     }
 
-    if (char === "\"") {
+    if (char === '"') {
       inString = true;
       continue;
     }
 
-    if (char === "/" && next === "/") {
+    if (char === '/' && next === '/') {
       inLineComment = true;
       i += 1;
       continue;
     }
 
-    if (char === "/" && next === "*") {
+    if (char === '/' && next === '*') {
       inBlockComment = true;
       i += 1;
       continue;
     }
 
-    if (char === ",") {
+    if (char === ',') {
       let j = i + 1;
       while (j < source.length && /\s/.test(source[j])) j += 1;
-      if (source[j] === "]" || source[j] === "}") return true;
+      if (source[j] === ']' || source[j] === '}') return true;
     }
   }
 
@@ -125,7 +125,7 @@ function detectTrailingComma(source: string): boolean {
 }
 
 function stripJsonComments(source: string): string {
-  let result = "";
+  let result = '';
   let inString = false;
   let inLineComment = false;
   let inBlockComment = false;
@@ -136,15 +136,15 @@ function stripJsonComments(source: string): string {
     const next = source[i + 1];
 
     if (inLineComment) {
-      if (char === "\n") {
+      if (char === '\n') {
         inLineComment = false;
-        result += "\n";
+        result += '\n';
       }
       continue;
     }
 
     if (inBlockComment) {
-      if (char === "*" && next === "/") {
+      if (char === '*' && next === '/') {
         inBlockComment = false;
         i += 1;
       }
@@ -157,27 +157,27 @@ function stripJsonComments(source: string): string {
         escaped = false;
         continue;
       }
-      if (char === "\\") {
+      if (char === '\\') {
         escaped = true;
         continue;
       }
-      if (char === "\"") inString = false;
+      if (char === '"') inString = false;
       continue;
     }
 
-    if (char === "\"") {
+    if (char === '"') {
       inString = true;
       result += char;
       continue;
     }
 
-    if (char === "/" && next === "/") {
+    if (char === '/' && next === '/') {
       inLineComment = true;
       i += 1;
       continue;
     }
 
-    if (char === "/" && next === "*") {
+    if (char === '/' && next === '*') {
       inBlockComment = true;
       i += 1;
       continue;
@@ -191,52 +191,52 @@ function stripJsonComments(source: string): string {
 
 function parseError(message: string): Diagnostic {
   return {
-    severity: "error",
-    category: "parse_error",
+    severity: 'error',
+    category: 'parse_error',
     message
   };
 }
 
 function escapePointerSegment(segment: string): string {
-  return segment.replace(/~/g, "~0").replace(/\//g, "~1");
+  return segment.replace(/~/g, '~0').replace(/\//g, '~1');
 }
 
-function analyzeValue(value: unknown, path = ""): { rootKind: JsonRootKind; owners: JsonOwner[] } {
+function analyzeValue(value: unknown, path = ''): { rootKind: JsonRootKind; owners: JsonOwner[] } {
   if (Array.isArray(value)) {
     const owners: JsonOwner[] = [];
     value.forEach((item, index) => {
       const childPath = `${path}/${index}`;
-      owners.push({ path: childPath, ownerKind: "element" });
+      owners.push({ path: childPath, ownerKind: 'element' });
       owners.push(...analyzeValue(item, childPath).owners);
     });
-    return { rootKind: "array", owners };
+    return { rootKind: 'array', owners };
   }
 
-  if (value && typeof value === "object") {
+  if (value && typeof value === 'object') {
     const owners: JsonOwner[] = [];
     for (const [key, child] of Object.entries(value)) {
       const childPath = `${path}/${escapePointerSegment(key)}`;
-      owners.push({ path: childPath, ownerKind: "member", matchKey: key });
+      owners.push({ path: childPath, ownerKind: 'member', matchKey: key });
       owners.push(...analyzeValue(child, childPath).owners);
     }
-    return { rootKind: "object", owners };
+    return { rootKind: 'object', owners };
   }
 
-  return { rootKind: "scalar", owners: [] };
+  return { rootKind: 'scalar', owners: [] };
 }
 
 export function parseJson(source: string, dialect: JsonDialect): ParseResult<JsonAnalysis> {
   const diagnostics: Diagnostic[] = [];
 
   if (detectTrailingComma(source)) {
-    diagnostics.push(parseError("Trailing commas are not supported."));
+    diagnostics.push(parseError('Trailing commas are not supported.'));
     return { ok: false, diagnostics };
   }
 
-  const normalizedSource = dialect === "jsonc" ? stripJsonComments(source) : source;
+  const normalizedSource = dialect === 'jsonc' ? stripJsonComments(source) : source;
 
-  if (dialect === "json" && normalizedSource !== stripJsonComments(source)) {
-    diagnostics.push(parseError("Comments are not supported in strict JSON."));
+  if (dialect === 'json' && normalizedSource !== stripJsonComments(source)) {
+    diagnostics.push(parseError('Comments are not supported in strict JSON.'));
     return { ok: false, diagnostics };
   }
 
@@ -248,16 +248,16 @@ export function parseJson(source: string, dialect: JsonDialect): ParseResult<Jso
       ok: true,
       diagnostics,
       analysis: {
-        kind: "json",
+        kind: 'json',
         dialect,
-        allowsComments: dialect === "jsonc",
+        allowsComments: dialect === 'jsonc',
         normalizedSource,
         rootKind: structure.rootKind,
         owners: structure.owners
       }
     };
   } catch (error) {
-    diagnostics.push(parseError(error instanceof Error ? error.message : "JSON parse failed."));
+    diagnostics.push(parseError(error instanceof Error ? error.message : 'JSON parse failed.'));
     return { ok: false, diagnostics };
   }
 }
@@ -292,7 +292,7 @@ export function matchJsonOwners(
 function parseNormalizedJson(source: string, dialect: JsonDialect): unknown {
   const result = parseJson(source, dialect);
   if (!result.ok || !result.analysis) {
-    throw new Error(result.diagnostics[0]?.message ?? "JSON parse failed.");
+    throw new Error(result.diagnostics[0]?.message ?? 'JSON parse failed.');
   }
   return JSON.parse(result.analysis.normalizedSource) as unknown;
 }
@@ -303,9 +303,10 @@ function mergeValues(template: unknown, destination: unknown): unknown {
   }
 
   if (
-    template && destination &&
-    typeof template === "object" &&
-    typeof destination === "object" &&
+    template &&
+    destination &&
+    typeof template === 'object' &&
+    typeof destination === 'object' &&
     !Array.isArray(template) &&
     !Array.isArray(destination)
   ) {
@@ -336,15 +337,15 @@ function mergeValues(template: unknown, destination: unknown): unknown {
 
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) {
-    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
+    return `[${value.map((item) => canonicalJson(item)).join(',')}]`;
   }
 
-  if (value && typeof value === "object") {
+  if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
     const entries = Object.keys(record)
       .sort()
       .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`);
-    return `{${entries.join(",")}}`;
+    return `{${entries.join(',')}}`;
   }
 
   return JSON.stringify(value);
@@ -368,7 +369,7 @@ export function mergeJson(
   } catch (error) {
     return {
       ok: false,
-      diagnostics: [parseError(error instanceof Error ? error.message : "JSON merge failed.")]
+      diagnostics: [parseError(error instanceof Error ? error.message : 'JSON merge failed.')]
     };
   }
 }

@@ -1,5 +1,5 @@
-import type { AnalysisHandle, ParserAdapter, ParserRequest } from "@structuredmerge/tree-haver";
-import type { MergeResult } from "@structuredmerge/ast-merge";
+import type { AnalysisHandle, ParserAdapter, ParserRequest } from '@structuredmerge/tree-haver';
+import type { MergeResult } from '@structuredmerge/ast-merge';
 
 export interface TextSpan {
   readonly start: number;
@@ -13,7 +13,7 @@ export interface TextBlock {
 }
 
 export interface TextAnalysis extends AnalysisHandle {
-  readonly kind: "text";
+  readonly kind: 'text';
   readonly normalizedSource: string;
   readonly blocks: readonly TextBlock[];
 }
@@ -22,12 +22,12 @@ export interface TextMerger {
   merge(template: TextAnalysis, destination: TextAnalysis): MergeResult<string>;
 }
 
-export interface TextParserAdapter extends ParserAdapter<TextAnalysis> {}
+export type TextParserAdapter = ParserAdapter<TextAnalysis>;
 
 export function textParseRequest(source: string): ParserRequest {
   return {
     source,
-    language: "text"
+    language: 'text'
   };
 }
 
@@ -47,7 +47,7 @@ export interface TextRefinementWeights {
   readonly position: number;
 }
 
-export type TextMatchPhase = "exact" | "refined";
+export type TextMatchPhase = 'exact' | 'refined';
 
 export interface TextBlockMatch {
   readonly templateIndex: number;
@@ -80,17 +80,17 @@ export const DEFAULT_TEXT_REFINEMENT_WEIGHTS: TextRefinementWeights = {
 
 export function normalizeText(source: string): string {
   return source
-    .replace(/\r\n?/g, "\n")
+    .replace(/\r\n?/g, '\n')
     .trim()
     .split(/\n\s*\n+/)
-    .map((block) => block.trim().replace(/\s+/g, " "))
+    .map((block) => block.trim().replace(/\s+/g, ' '))
     .filter((block) => block.length > 0)
-    .join("\n\n");
+    .join('\n\n');
 }
 
 export function analyzeText(source: string): TextAnalysis {
   const normalizedSource = normalizeText(source);
-  const parts = normalizedSource.length === 0 ? [] : normalizedSource.split("\n\n");
+  const parts = normalizedSource.length === 0 ? [] : normalizedSource.split('\n\n');
   let cursor = 0;
 
   const blocks = parts.map((normalized, index) => {
@@ -106,7 +106,7 @@ export function analyzeText(source: string): TextAnalysis {
   });
 
   return {
-    kind: "text",
+    kind: 'text',
     normalizedSource,
     blocks
   };
@@ -263,7 +263,7 @@ export function mergeText(templateSource: string, destinationSource: string): Me
   return {
     ok: true,
     diagnostics: [],
-    output: mergedBlocks.join("\n\n")
+    output: mergedBlocks.join('\n\n')
   };
 }
 
@@ -287,7 +287,7 @@ export function matchTextBlocks(
     if (templateIndex >= 0) {
       matchedTemplate.add(templateIndex);
       matchedDestination.add(destinationIndex);
-      matched.push({ templateIndex, destinationIndex, phase: "exact", score: 1 });
+      matched.push({ templateIndex, destinationIndex, phase: 'exact', score: 1 });
     }
   });
 
@@ -319,7 +319,7 @@ export function matchTextBlocks(
       matched.push({
         templateIndex: bestTemplateIndex,
         destinationIndex,
-        phase: "refined",
+        phase: 'refined',
         score: bestScore
       });
     }

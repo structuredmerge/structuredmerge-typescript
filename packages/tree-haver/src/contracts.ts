@@ -1,4 +1,4 @@
-import type { Diagnostic, ParseResult } from "@structuredmerge/ast-merge";
+import type { Diagnostic, ParseResult } from '@structuredmerge/ast-merge';
 
 export interface AnalysisHandle {
   readonly kind: string;
