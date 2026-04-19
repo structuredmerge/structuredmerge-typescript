@@ -11,6 +11,17 @@ export interface JsonOwner {
   readonly matchKey?: string;
 }
 
+export interface JsonOwnerMatch {
+  readonly templatePath: string;
+  readonly destinationPath: string;
+}
+
+export interface JsonOwnerMatchResult {
+  readonly matched: readonly JsonOwnerMatch[];
+  readonly unmatchedTemplate: readonly string[];
+  readonly unmatchedDestination: readonly string[];
+}
+
 export interface JsonAnalysis extends AnalysisHandle {
   readonly kind: "json";
   readonly dialect: JsonDialect;
@@ -32,6 +43,10 @@ export interface JsonAnalyzer {
 
 export interface JsonStructureAnalyzer {
   analyze(source: string, dialect: JsonDialect): ParseResult<JsonAnalysis>;
+}
+
+export interface JsonOwnerMatcher {
+  match(template: JsonAnalysis, destination: JsonAnalysis): JsonOwnerMatchResult;
 }
 
 export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {
@@ -241,4 +256,31 @@ export function parseJson(source: string, dialect: JsonDialect): ParseResult<Jso
     diagnostics.push(parseError(error instanceof Error ? error.message : "JSON parse failed."));
     return { ok: false, diagnostics };
   }
+}
+
+export function matchJsonOwners(
+  template: JsonAnalysis,
+  destination: JsonAnalysis
+): JsonOwnerMatchResult {
+  const destinationPaths = new Set(destination.owners.map((owner) => owner.path));
+  const templatePaths = new Set(template.owners.map((owner) => owner.path));
+
+  const matched = template.owners
+    .map((owner) => owner.path)
+    .filter((path) => destinationPaths.has(path))
+    .map((path) => ({ templatePath: path, destinationPath: path }));
+
+  const unmatchedTemplate = template.owners
+    .map((owner) => owner.path)
+    .filter((path) => !destinationPaths.has(path));
+
+  const unmatchedDestination = destination.owners
+    .map((owner) => owner.path)
+    .filter((path) => !templatePaths.has(path));
+
+  return {
+    matched,
+    unmatchedTemplate,
+    unmatchedDestination
+  };
 }
