@@ -4,8 +4,10 @@ import { describe, expect, it } from 'vitest';
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  selectConformanceCase,
   type ConformanceManifest
 } from '@structuredmerge/ast-merge';
+import { languagePackAdapterInfo } from '@structuredmerge/tree-haver';
 import {
   jsonFeatureProfile,
   matchJsonOwners,
@@ -353,5 +355,53 @@ describe('json-merge shared fixtures', () => {
         expect(result.analysis).toBeUndefined();
       }
     }
+  });
+
+  it('selects backend-limited tree-sitter cases through the slice-33 capability contract', () => {
+    const selectedCase = selectConformanceCase(
+      {
+        family: 'json',
+        role: 'tree_sitter_adapter',
+        case: 'valid_strict_json'
+      },
+      {
+        dialect: 'json'
+      },
+      jsonFeatureProfile(),
+      languagePackAdapterInfo
+    );
+
+    expect(selectedCase).toEqual({
+      ref: {
+        family: 'json',
+        role: 'tree_sitter_adapter',
+        case: 'valid_strict_json'
+      },
+      status: 'selected',
+      messages: []
+    });
+
+    const skippedCase = selectConformanceCase(
+      {
+        family: 'json',
+        role: 'tree_sitter_adapter',
+        case: 'jsonc_unsupported'
+      },
+      {
+        dialect: 'jsonc'
+      },
+      jsonFeatureProfile(),
+      languagePackAdapterInfo
+    );
+
+    expect(skippedCase).toEqual({
+      ref: {
+        family: 'json',
+        role: 'tree_sitter_adapter',
+        case: 'jsonc_unsupported'
+      },
+      status: 'skipped',
+      messages: ['backend kreuzberg-language-pack does not support dialect jsonc for family json.']
+    });
   });
 });

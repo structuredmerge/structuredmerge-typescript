@@ -3,6 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
   ConformanceCaseRef,
+  ConformanceCaseRequirements,
+  ConformanceCaseSelection,
   ConformanceCaseResult,
   ConformanceManifest,
   ConformanceOutcome,
@@ -16,6 +18,7 @@ import type {
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  selectConformanceCase,
   summarizeConformanceResults
 } from '../src/index';
 
@@ -53,6 +56,26 @@ interface ConformanceRunnerFixture {
 interface ConformanceSummaryFixture {
   results: ConformanceCaseResult[];
   summary: ConformanceSuiteSummary;
+}
+
+interface ConformanceSelectionFixtureCase {
+  ref: ConformanceCaseRef;
+  family_profile: {
+    family: string;
+    supported_dialects: string[];
+    supported_policies: PolicyReference[];
+  };
+  feature_profile: {
+    backend: string;
+    supports_dialects: boolean;
+    supported_policies: PolicyReference[];
+  };
+  requirements: ConformanceCaseRequirements;
+  expected: ConformanceCaseSelection;
+}
+
+interface ConformanceSelectionFixture {
+  cases: ConformanceSelectionFixtureCase[];
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -212,5 +235,34 @@ describe('ast-merge shared fixtures', () => {
     );
 
     expect(summarizeConformanceResults(fixture.results)).toEqual(fixture.summary);
+  });
+
+  it('conforms to the slice-33 capability-aware selection fixture', () => {
+    const fixture = readFixture<ConformanceSelectionFixture>(
+      ...diagnosticsFixturePath('capability_selection')
+    );
+
+    for (const testCase of fixture.cases) {
+      const selection = selectConformanceCase(
+        testCase.ref,
+        testCase.requirements,
+        {
+          family: testCase.family_profile.family,
+          supportedDialects: testCase.family_profile.supported_dialects,
+          supportedPolicies: testCase.family_profile.supported_policies
+        },
+        {
+          backend: testCase.feature_profile.backend,
+          supportsDialects: testCase.feature_profile.supports_dialects,
+          supportedPolicies: testCase.feature_profile.supported_policies
+        }
+      );
+
+      expect(selection.ref).toEqual(testCase.ref);
+      expect({
+        status: selection.status,
+        messages: selection.messages
+      }).toEqual(testCase.expected);
+    }
   });
 });

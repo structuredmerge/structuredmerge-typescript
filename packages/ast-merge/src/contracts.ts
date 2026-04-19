@@ -55,6 +55,19 @@ export interface ConformanceCaseResult {
   readonly messages: readonly string[];
 }
 
+export interface ConformanceCaseRequirements {
+  readonly dialect?: string;
+  readonly policies?: readonly PolicyReference[];
+}
+
+export type ConformanceSelectionStatus = 'selected' | 'skipped';
+
+export interface ConformanceCaseSelection {
+  readonly ref: ConformanceCaseRef;
+  readonly status: ConformanceSelectionStatus;
+  readonly messages: readonly string[];
+}
+
 export interface ConformanceManifestEntry {
   readonly role: string;
   readonly path: readonly string[];
@@ -74,6 +87,20 @@ export interface ConformanceSuiteSummary {
   readonly passed: number;
   readonly failed: number;
   readonly skipped: number;
+}
+
+function includesPolicy(
+  supportedPolicies: readonly PolicyReference[],
+  policy: PolicyReference
+): boolean {
+  return supportedPolicies.some(
+    (supportedPolicy) =>
+      supportedPolicy.surface === policy.surface && supportedPolicy.name === policy.name
+  );
+}
+
+function isDefaultDialect(familyProfile: FamilyFeatureProfile, dialect: string): boolean {
+  return dialect === familyProfile.family;
 }
 
 export function conformanceFamilyEntries(
@@ -115,4 +142,50 @@ export function summarizeConformanceResults(
       skipped: 0
     }
   );
+}
+
+export function selectConformanceCase(
+  ref: ConformanceCaseRef,
+  requirements: ConformanceCaseRequirements,
+  familyProfile: FamilyFeatureProfile,
+  featureProfile?: {
+    readonly backend: string;
+    readonly supportsDialects: boolean;
+    readonly supportedPolicies?: readonly PolicyReference[];
+  }
+): ConformanceCaseSelection {
+  const messages: string[] = [];
+
+  if (requirements.dialect) {
+    const { dialect } = requirements;
+
+    if (!familyProfile.supportedDialects.includes(dialect)) {
+      messages.push(`family ${familyProfile.family} does not support dialect ${dialect}.`);
+    } else if (
+      featureProfile &&
+      !featureProfile.supportsDialects &&
+      !isDefaultDialect(familyProfile, dialect)
+    ) {
+      messages.push(
+        `backend ${featureProfile.backend} does not support dialect ${dialect} for family ${familyProfile.family}.`
+      );
+    }
+  }
+
+  for (const policy of requirements.policies ?? []) {
+    if (!includesPolicy(familyProfile.supportedPolicies, policy)) {
+      messages.push(`family ${familyProfile.family} does not support policy ${policy.name}.`);
+      continue;
+    }
+
+    if (featureProfile && !includesPolicy(featureProfile.supportedPolicies ?? [], policy)) {
+      messages.push(`backend ${featureProfile.backend} does not support policy ${policy.name}.`);
+    }
+  }
+
+  return {
+    ref,
+    status: messages.length === 0 ? 'selected' : 'skipped',
+    messages
+  };
 }
