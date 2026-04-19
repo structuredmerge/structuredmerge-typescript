@@ -18,6 +18,10 @@ interface PolicyFixture {
   policies: PolicyReference[];
 }
 
+interface PolicyReportingFixture {
+  merge_policies: PolicyReference[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -66,5 +70,26 @@ describe('ast-merge shared fixtures', () => {
 
     expect(surfaces).toEqual(fixture.surfaces);
     expect(policies).toEqual(fixture.policies);
+  });
+
+  it('conforms to the slice-18 policy reporting fixture', () => {
+    const fixture = readFixture<PolicyReportingFixture>(
+      'diagnostics',
+      'slice-18-policy-reporting',
+      'result-policies.json'
+    );
+
+    const mergePolicies: PolicyReference[] = [
+      {
+        surface: 'array',
+        name: 'destination_wins_array'
+      },
+      {
+        surface: 'fallback',
+        name: 'trailing_comma_destination_fallback'
+      }
+    ];
+
+    expect(mergePolicies).toEqual(fixture.merge_policies);
   });
 });

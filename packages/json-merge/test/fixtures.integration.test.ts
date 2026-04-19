@@ -206,6 +206,16 @@ describe('json-merge shared fixtures', () => {
     expect(result.diagnostics.map(({ severity, category }) => ({ severity, category }))).toEqual(
       fixture.expected.diagnostics
     );
+    expect(result.policies).toEqual([
+      {
+        surface: 'array',
+        name: 'destination_wins_array'
+      },
+      {
+        surface: 'fallback',
+        name: 'trailing_comma_destination_fallback'
+      }
+    ]);
     expect(result.output).toBe(fixture.expected.output);
   });
 
@@ -247,6 +257,12 @@ describe('json-merge shared fixtures', () => {
     const result = mergeJson(fixture.template, fixture.destination, 'json');
 
     expect(result.ok).toBe(fixture.expected.ok);
+    expect(result.policies).toEqual([
+      {
+        surface: 'array',
+        name: 'destination_wins_array'
+      }
+    ]);
     expect(result.output).toBe(fixture.expected.output);
     expect(result.diagnostics).toEqual([]);
   });

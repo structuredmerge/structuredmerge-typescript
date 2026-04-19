@@ -18,12 +18,14 @@ export interface ParseResult<TAnalysis> {
   readonly ok: boolean;
   readonly diagnostics: readonly Diagnostic[];
   readonly analysis?: TAnalysis;
+  readonly policies?: readonly PolicyReference[];
 }
 
 export interface MergeResult<TOutput> {
   readonly ok: boolean;
   readonly diagnostics: readonly Diagnostic[];
   readonly output?: TOutput;
+  readonly policies?: readonly PolicyReference[];
 }
 
 export type PolicySurface = 'fallback' | 'array';

@@ -53,6 +53,12 @@ describe('json-merge', () => {
 
     expect(result.ok).toBe(true);
     expect(result.output).toBe('{"items":[9],"meta":{"mode":"template","tags":["destination"]}}');
+    expect(result.policies).toEqual([
+      {
+        surface: 'array',
+        name: 'destination_wins_array'
+      }
+    ]);
   });
 
   it('reports destination parse failures distinctly', () => {
@@ -72,6 +78,16 @@ describe('json-merge', () => {
         severity: 'warning',
         category: 'fallback_applied',
         message: 'Applied destination trailing-comma fallback during merge.'
+      }
+    ]);
+    expect(result.policies).toEqual([
+      {
+        surface: 'array',
+        name: 'destination_wins_array'
+      },
+      {
+        surface: 'fallback',
+        name: 'trailing_comma_destination_fallback'
       }
     ]);
   });

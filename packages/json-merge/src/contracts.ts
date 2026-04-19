@@ -1,5 +1,10 @@
 import type { AnalysisHandle, ParserAdapter, ParserRequest } from '@structuredmerge/tree-haver';
-import type { Diagnostic, MergeResult, ParseResult } from '@structuredmerge/ast-merge';
+import type {
+  Diagnostic,
+  MergeResult,
+  ParseResult,
+  PolicyReference
+} from '@structuredmerge/ast-merge';
 
 export type JsonDialect = 'json' | 'jsonc';
 export type JsonRootKind = 'object' | 'array' | 'scalar';
@@ -52,6 +57,16 @@ export interface JsonOwnerMatcher {
 export interface JsonMergeResolution {
   readonly output: string;
 }
+
+const destinationWinsArrayPolicy: PolicyReference = {
+  surface: 'array',
+  name: 'destination_wins_array'
+};
+
+const trailingCommaFallbackPolicy: PolicyReference = {
+  surface: 'fallback',
+  name: 'trailing_comma_destination_fallback'
+};
 
 export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {
   return {
@@ -322,14 +337,14 @@ export function parseJson(source: string, dialect: JsonDialect): ParseResult<Jso
 
   if (detectTrailingComma(source)) {
     diagnostics.push(parseError('Trailing commas are not supported.'));
-    return { ok: false, diagnostics };
+    return { ok: false, diagnostics, policies: [] };
   }
 
   const normalizedSource = dialect === 'jsonc' ? stripJsonComments(source) : source;
 
   if (dialect === 'json' && normalizedSource !== stripJsonComments(source)) {
     diagnostics.push(parseError('Comments are not supported in strict JSON.'));
-    return { ok: false, diagnostics };
+    return { ok: false, diagnostics, policies: [] };
   }
 
   try {
@@ -339,6 +354,7 @@ export function parseJson(source: string, dialect: JsonDialect): ParseResult<Jso
     return {
       ok: true,
       diagnostics,
+      policies: [],
       analysis: {
         kind: 'json',
         dialect,
@@ -350,7 +366,7 @@ export function parseJson(source: string, dialect: JsonDialect): ParseResult<Jso
     };
   } catch (error) {
     diagnostics.push(parseError(error instanceof Error ? error.message : 'JSON parse failed.'));
-    return { ok: false, diagnostics };
+    return { ok: false, diagnostics, policies: [] };
   }
 }
 
@@ -459,6 +475,7 @@ export function mergeJson(
   try {
     const template = parseNormalizedJson(templateSource, dialect, parseError);
     const diagnostics: Diagnostic[] = [];
+    const policies: PolicyReference[] = [destinationWinsArrayPolicy];
     let destination: unknown;
 
     try {
@@ -476,6 +493,7 @@ export function mergeJson(
           throw error;
         }
         destination = parseNormalizedJson(sanitizedDestination, dialect, destinationParseError);
+        policies.push(trailingCommaFallbackPolicy);
         diagnostics.push(
           fallbackApplied('Applied destination trailing-comma fallback during merge.')
         );
@@ -489,6 +507,7 @@ export function mergeJson(
     return {
       ok: true,
       diagnostics,
+      policies,
       output: canonicalJson(merged)
     };
   } catch (error) {
@@ -503,7 +522,8 @@ export function mergeJson(
 
     return {
       ok: false,
-      diagnostics: [diagnostic]
+      diagnostics: [diagnostic],
+      policies: []
     };
   }
 }
