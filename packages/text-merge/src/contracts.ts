@@ -41,8 +41,23 @@ export interface TextSimilarity {
   readonly matched: boolean;
 }
 
+export interface TextBlockMatch {
+  readonly templateIndex: number;
+  readonly destinationIndex: number;
+}
+
+export interface TextBlockMatchResult {
+  readonly matched: readonly TextBlockMatch[];
+  readonly unmatchedTemplate: readonly number[];
+  readonly unmatchedDestination: readonly number[];
+}
+
 export interface TextMergeResolution {
   readonly output: string;
+}
+
+export interface TextBlockMatcher {
+  match(template: TextAnalysis, destination: TextAnalysis): TextBlockMatchResult;
 }
 
 export function normalizeText(source: string): string {
@@ -150,5 +165,40 @@ export function mergeText(templateSource: string, destinationSource: string): Me
     ok: true,
     diagnostics: [],
     output: mergedBlocks.join("\n\n")
+  };
+}
+
+export function matchTextBlocks(
+  templateSource: string,
+  destinationSource: string
+): TextBlockMatchResult {
+  const template = analyzeText(templateSource);
+  const destination = analyzeText(destinationSource);
+  const matchedTemplate = new Set<number>();
+  const matchedDestination = new Set<number>();
+  const matched: TextBlockMatch[] = [];
+
+  destination.blocks.forEach((destinationBlock, destinationIndex) => {
+    const templateIndex = template.blocks.findIndex(
+      (templateBlock, candidateIndex) =>
+        !matchedTemplate.has(candidateIndex) &&
+        templateBlock.normalized === destinationBlock.normalized
+    );
+
+    if (templateIndex >= 0) {
+      matchedTemplate.add(templateIndex);
+      matchedDestination.add(destinationIndex);
+      matched.push({ templateIndex, destinationIndex });
+    }
+  });
+
+  return {
+    matched,
+    unmatchedTemplate: template.blocks
+      .map((_, index) => index)
+      .filter((index) => !matchedTemplate.has(index)),
+    unmatchedDestination: destination.blocks
+      .map((_, index) => index)
+      .filter((index) => !matchedDestination.has(index))
   };
 }
