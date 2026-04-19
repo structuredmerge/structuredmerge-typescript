@@ -89,6 +89,7 @@ export interface ConformanceCaseExecution {
 export interface ConformanceManifestEntry {
   readonly role: string;
   readonly path: readonly string[];
+  readonly requirements?: ConformanceCaseRequirements;
 }
 
 export interface ConformanceFamilyFeatureProfileEntry extends ConformanceManifestEntry {
@@ -292,9 +293,11 @@ export function planConformanceSuite(
   const missingRoles: string[] = [];
 
   for (const role of roles) {
-    const path = conformanceFixturePath(manifest, family, role);
+    const entry = conformanceFamilyEntries(manifest, family).find(
+      (manifestEntry) => manifestEntry.role === role
+    );
 
-    if (!path) {
+    if (!entry) {
       missingRoles.push(role);
       continue;
     }
@@ -307,10 +310,10 @@ export function planConformanceSuite(
 
     entries.push({
       ref,
-      path,
+      path: entry.path,
       run: {
         ref,
-        requirements: {},
+        requirements: entry.requirements ?? {},
         familyProfile,
         featureProfile
       }

@@ -179,6 +179,17 @@ interface PlannedConformanceSuiteReportFixture {
   expected_report: ConformanceSuiteReport;
 }
 
+interface ManifestRequirementsFixture {
+  family: string;
+  roles: string[];
+  family_profile: {
+    family: string;
+    supported_dialects: string[];
+    supported_policies: PolicyReference[];
+  };
+  expected_requirements: Record<string, ConformanceCaseRequirements>;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -567,5 +578,26 @@ describe('ast-merge shared fixtures', () => {
         return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
       })
     ).toEqual(fixture.expected_report);
+  });
+
+  it('conforms to the slice-42 manifest case-requirements fixture', () => {
+    const fixture = readFixture<ManifestRequirementsFixture>(
+      ...diagnosticsFixturePath('manifest_requirements')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    const plan = planConformanceSuite(manifest, fixture.family, fixture.roles, {
+      family: fixture.family_profile.family,
+      supportedDialects: fixture.family_profile.supported_dialects,
+      supportedPolicies: fixture.family_profile.supported_policies
+    });
+
+    expect(
+      Object.fromEntries(plan.entries.map((entry) => [entry.ref.role, entry.run.requirements]))
+    ).toEqual(fixture.expected_requirements);
   });
 });
