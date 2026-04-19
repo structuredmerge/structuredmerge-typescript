@@ -57,6 +57,7 @@ import {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
   runConformanceCase,
   runNamedConformanceSuiteEntry,
@@ -389,6 +390,11 @@ interface ConformanceManifestReviewStateFixture {
       request_id: string;
       action: ReviewDecision['action'];
     }>;
+    review_replay_context?: {
+      surface: 'conformance_manifest';
+      families: string[];
+      require_explicit_contexts: boolean;
+    };
   };
   executions: Record<string, ConformanceCaseExecution>;
   expected_state: {
@@ -419,6 +425,24 @@ interface ConformanceManifestReviewStateFixture {
       families: string[];
       require_explicit_contexts: boolean;
     };
+  };
+}
+
+interface ReviewReplayCompatibilityFixture {
+  current_context: {
+    surface: 'conformance_manifest';
+    families: string[];
+    require_explicit_contexts: boolean;
+  };
+  compatible_context: {
+    surface: 'conformance_manifest';
+    families: string[];
+    require_explicit_contexts: boolean;
+  };
+  incompatible_context: {
+    surface: 'conformance_manifest';
+    families: string[];
+    require_explicit_contexts: boolean;
   };
 }
 
@@ -585,6 +609,11 @@ function normalizeManifestReviewOptions(raw: {
     request_id: string;
     action: ReviewDecision['action'];
   }>;
+  review_replay_context?: {
+    surface: 'conformance_manifest';
+    families: string[];
+    require_explicit_contexts: boolean;
+  };
 }): ConformanceManifestReviewOptions {
   return {
     ...normalizeManifestPlanningOptions(raw),
@@ -592,7 +621,10 @@ function normalizeManifestReviewOptions(raw: {
     reviewDecisions: raw.review_decisions?.map((decision) => ({
       requestId: decision.request_id,
       action: decision.action
-    }))
+    })),
+    reviewReplayContext: raw.review_replay_context
+      ? normalizeReviewReplayContext(raw.review_replay_context)
+      : undefined
   };
 }
 
@@ -714,7 +746,8 @@ describe('ast-merge shared fixtures', () => {
       'fallback_applied',
       'ambiguity',
       'assumed_default',
-      'configuration_error'
+      'configuration_error',
+      'replay_rejected'
     ];
 
     expect(severities).toEqual(fixture.severities);
@@ -1549,6 +1582,44 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-64 reviewed default-context fixture', () => {
     const fixture = readFixture<ConformanceManifestReviewStateFixture>(
       ...diagnosticsFixturePath('reviewed_default_context')
+    );
+
+    expect(
+      reviewConformanceManifest(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-65 review replay compatibility fixture', () => {
+    const fixture = readFixture<ReviewReplayCompatibilityFixture>(
+      ...diagnosticsFixturePath('review_replay_compatibility')
+    );
+    const current = normalizeReviewReplayContext(fixture.current_context);
+
+    expect(
+      reviewReplayContextCompatible(
+        current,
+        normalizeReviewReplayContext(fixture.compatible_context)
+      )
+    ).toBe(true);
+    expect(
+      reviewReplayContextCompatible(
+        current,
+        normalizeReviewReplayContext(fixture.incompatible_context)
+      )
+    ).toBe(false);
+    expect(reviewReplayContextCompatible(current, undefined)).toBe(false);
+  });
+
+  it('conforms to the slice-66 review replay rejection fixture', () => {
+    const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+      ...diagnosticsFixturePath('review_replay_rejection')
     );
 
     expect(

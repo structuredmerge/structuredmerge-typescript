@@ -7,7 +7,8 @@ export type DiagnosticCategory =
   | 'fallback_applied'
   | 'ambiguity'
   | 'assumed_default'
-  | 'configuration_error';
+  | 'configuration_error'
+  | 'replay_rejected';
 
 export interface Diagnostic {
   readonly severity: DiagnosticSeverity;
@@ -177,6 +178,7 @@ export interface ReviewReplayContext {
 
 export interface ConformanceManifestReviewOptions extends ConformanceManifestPlanningOptions {
   readonly reviewDecisions?: readonly ReviewDecision[];
+  readonly reviewReplayContext?: ReviewReplayContext;
   readonly interactive?: boolean;
 }
 
@@ -298,6 +300,19 @@ export function conformanceManifestReplayContext(
     families,
     requireExplicitContexts: options.requireExplicitContexts ?? false
   };
+}
+
+export function reviewReplayContextCompatible(
+  current: ReviewReplayContext,
+  candidate?: ReviewReplayContext
+): boolean {
+  return (
+    candidate !== undefined &&
+    candidate.surface === current.surface &&
+    candidate.requireExplicitContexts === current.requireExplicitContexts &&
+    candidate.families.length === current.families.length &&
+    candidate.families.every((family, index) => family === current.families[index])
+  );
 }
 
 export function resolveConformanceFamilyContext(
@@ -891,8 +906,35 @@ export function reviewConformanceManifest(
   options: ConformanceManifestReviewOptions,
   execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
 ): ConformanceManifestReviewState {
-  const entries: NamedConformanceSuitePlan[] = [];
+  const replayContext = conformanceManifestReplayContext(manifest, options);
   const diagnostics: Diagnostic[] = [];
+  const effectiveOptions: ConformanceManifestReviewOptions =
+    options.reviewDecisions && options.reviewDecisions.length > 0
+      ? reviewReplayContextCompatible(replayContext, options.reviewReplayContext)
+        ? options
+        : {
+            ...options,
+            reviewDecisions: []
+          }
+      : options;
+
+  if (options.reviewDecisions && options.reviewDecisions.length > 0) {
+    if (!options.reviewReplayContext) {
+      diagnostics.push({
+        severity: 'error',
+        category: 'replay_rejected',
+        message: 'review decisions were provided without replay context.'
+      });
+    } else if (!reviewReplayContextCompatible(replayContext, options.reviewReplayContext)) {
+      diagnostics.push({
+        severity: 'error',
+        category: 'replay_rejected',
+        message: 'review replay context does not match the current conformance manifest state.'
+      });
+    }
+  }
+
+  const entries: NamedConformanceSuitePlan[] = [];
   const requests: ReviewRequest[] = [];
   const appliedDecisions: ReviewDecision[] = [];
   const resolvedContexts = new Map<string, ConformanceFamilyPlanContext | undefined>();
@@ -907,7 +949,7 @@ export function reviewConformanceManifest(
     let context = resolvedContexts.get(definition.family);
 
     if (context === undefined && !resolvedContexts.has(definition.family)) {
-      const reviewed = reviewConformanceFamilyContext(definition.family, options);
+      const reviewed = reviewConformanceFamilyContext(definition.family, effectiveOptions);
       diagnostics.push(...reviewed.diagnostics);
       requests.push(...reviewed.requests);
       appliedDecisions.push(...reviewed.appliedDecisions);
@@ -945,6 +987,6 @@ export function reviewConformanceManifest(
     requests,
     appliedDecisions,
     hostHints: conformanceReviewHostHints(options),
-    replayContext: conformanceManifestReplayContext(manifest, options)
+    replayContext
   };
 }

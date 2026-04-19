@@ -67,6 +67,7 @@ export {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
   runConformanceCase,
   runNamedConformanceSuiteEntry,
