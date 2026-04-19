@@ -147,19 +147,19 @@ export function isSimilar(
 export function mergeText(templateSource: string, destinationSource: string): MergeResult<string> {
   const template = analyzeText(templateSource);
   const destination = analyzeText(destinationSource);
-  const total = Math.max(template.blocks.length, destination.blocks.length);
+  const matches = matchTextBlocks(templateSource, destinationSource);
+  const matchedTemplate = new Set(matches.matched.map((match) => match.templateIndex));
   const mergedBlocks: string[] = [];
 
-  for (let index = 0; index < total; index += 1) {
-    const templateBlock = template.blocks[index];
-    const destinationBlock = destination.blocks[index];
+  destination.blocks.forEach((block) => {
+    mergedBlocks.push(block.normalized);
+  });
 
-    if (destinationBlock) {
-      mergedBlocks.push(destinationBlock.normalized);
-    } else if (templateBlock) {
-      mergedBlocks.push(templateBlock.normalized);
+  template.blocks.forEach((block, index) => {
+    if (!matchedTemplate.has(index)) {
+      mergedBlocks.push(block.normalized);
     }
-  }
+  });
 
   return {
     ok: true,
