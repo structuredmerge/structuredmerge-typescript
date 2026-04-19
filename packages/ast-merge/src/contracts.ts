@@ -107,6 +107,11 @@ export interface ConformanceSuiteSummary {
   readonly skipped: number;
 }
 
+export interface ConformanceSuiteReport {
+  readonly results: readonly ConformanceCaseResult[];
+  readonly summary: ConformanceSuiteSummary;
+}
+
 function includesPolicy(
   supportedPolicies: readonly PolicyReference[],
   policy: PolicyReference
@@ -236,4 +241,13 @@ export function runConformanceSuite(
   execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
 ): readonly ConformanceCaseResult[] {
   return runs.map((run) => runConformanceCase(run, execute));
+}
+
+export function reportConformanceSuite(
+  results: readonly ConformanceCaseResult[]
+): ConformanceSuiteReport {
+  return {
+    results,
+    summary: summarizeConformanceResults(results)
+  };
 }

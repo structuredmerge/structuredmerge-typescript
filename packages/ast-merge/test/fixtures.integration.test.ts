@@ -10,6 +10,7 @@ import type {
   ConformanceCaseResult,
   ConformanceManifest,
   ConformanceOutcome,
+  ConformanceSuiteReport,
   ConformanceSuiteSummary,
   DiagnosticCategory,
   DiagnosticSeverity,
@@ -20,6 +21,7 @@ import type {
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  reportConformanceSuite,
   runConformanceCase,
   runConformanceSuite,
   selectConformanceCase,
@@ -371,5 +373,14 @@ describe('ast-merge shared fixtures', () => {
         return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
       })
     ).toEqual(fixture.expected_results);
+  });
+
+  it('conforms to the slice-36 conformance suite report fixture', () => {
+    const fixture = readFixture<{
+      results: ConformanceCaseResult[];
+      report: ConformanceSuiteReport;
+    }>(...diagnosticsFixturePath('suite_report'));
+
+    expect(reportConformanceSuite(fixture.results)).toEqual(fixture.report);
   });
 });
