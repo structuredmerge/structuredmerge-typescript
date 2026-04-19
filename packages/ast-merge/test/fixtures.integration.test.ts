@@ -3,6 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
   ConformanceCaseRef,
+  ConformanceCaseRun,
+  ConformanceCaseExecution,
   ConformanceCaseRequirements,
   ConformanceCaseSelection,
   ConformanceCaseResult,
@@ -18,6 +20,8 @@ import type {
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  runConformanceCase,
+  runConformanceSuite,
   selectConformanceCase,
   summarizeConformanceResults
 } from '../src/index';
@@ -76,6 +80,48 @@ interface ConformanceSelectionFixtureCase {
 
 interface ConformanceSelectionFixture {
   cases: ConformanceSelectionFixtureCase[];
+}
+
+interface ConformanceCaseRunnerFixtureCase {
+  run: {
+    ref: ConformanceCaseRef;
+    requirements: ConformanceCaseRequirements;
+    family_profile: {
+      family: string;
+      supported_dialects: string[];
+      supported_policies: PolicyReference[];
+    };
+    feature_profile?: {
+      backend: string;
+      supports_dialects: boolean;
+      supported_policies: PolicyReference[];
+    };
+  };
+  execution: ConformanceCaseExecution;
+  expected: ConformanceCaseResult;
+}
+
+interface ConformanceCaseRunnerFixture {
+  cases: ConformanceCaseRunnerFixtureCase[];
+}
+
+interface ConformanceSuiteRunnerFixture {
+  cases: Array<{
+    ref: ConformanceCaseRef;
+    requirements: ConformanceCaseRequirements;
+    family_profile: {
+      family: string;
+      supported_dialects: string[];
+      supported_policies: PolicyReference[];
+    };
+    feature_profile?: {
+      backend: string;
+      supports_dialects: boolean;
+      supported_policies: PolicyReference[];
+    };
+  }>;
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_results: ConformanceCaseResult[];
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -264,5 +310,66 @@ describe('ast-merge shared fixtures', () => {
         messages: selection.messages
       }).toEqual(testCase.expected);
     }
+  });
+
+  it('conforms to the slice-34 conformance case runner fixture', () => {
+    const fixture = readFixture<ConformanceCaseRunnerFixture>(
+      ...diagnosticsFixturePath('case_runner')
+    );
+
+    for (const testCase of fixture.cases) {
+      const run: ConformanceCaseRun = {
+        ref: testCase.run.ref,
+        requirements: testCase.run.requirements,
+        familyProfile: {
+          family: testCase.run.family_profile.family,
+          supportedDialects: testCase.run.family_profile.supported_dialects,
+          supportedPolicies: testCase.run.family_profile.supported_policies
+        },
+        ...(testCase.run.feature_profile
+          ? {
+              featureProfile: {
+                backend: testCase.run.feature_profile.backend,
+                supportsDialects: testCase.run.feature_profile.supports_dialects,
+                supportedPolicies: testCase.run.feature_profile.supported_policies
+              }
+            }
+          : {})
+      };
+
+      expect(runConformanceCase(run, () => testCase.execution)).toEqual(testCase.expected);
+    }
+  });
+
+  it('conforms to the slice-35 conformance suite runner fixture', () => {
+    const fixture = readFixture<ConformanceSuiteRunnerFixture>(
+      ...diagnosticsFixturePath('suite_runner')
+    );
+
+    const runs: ConformanceCaseRun[] = fixture.cases.map((testCase) => ({
+      ref: testCase.ref,
+      requirements: testCase.requirements,
+      familyProfile: {
+        family: testCase.family_profile.family,
+        supportedDialects: testCase.family_profile.supported_dialects,
+        supportedPolicies: testCase.family_profile.supported_policies
+      },
+      ...(testCase.feature_profile
+        ? {
+            featureProfile: {
+              backend: testCase.feature_profile.backend,
+              supportsDialects: testCase.feature_profile.supports_dialects,
+              supportedPolicies: testCase.feature_profile.supported_policies
+            }
+          }
+        : {})
+    }));
+
+    expect(
+      runConformanceSuite(runs, (run) => {
+        const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+        return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+      })
+    ).toEqual(fixture.expected_results);
   });
 });

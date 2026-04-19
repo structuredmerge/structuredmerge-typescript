@@ -2,7 +2,10 @@ export const packageName = '@structuredmerge/ast-merge';
 
 export type {
   ConformanceCaseRef,
+  ConformanceCaseRun,
   ConformanceCaseRequirements,
+  ConformanceCaseExecution,
+  ConformanceFeatureProfileView,
   ConformanceCaseSelection,
   ConformanceCaseResult,
   ConformanceFamilyFeatureProfileEntry,
@@ -25,6 +28,8 @@ export {
   conformanceFamilyEntries,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  runConformanceCase,
+  runConformanceSuite,
   selectConformanceCase,
   summarizeConformanceResults
 } from './contracts';

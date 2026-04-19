@@ -68,6 +68,24 @@ export interface ConformanceCaseSelection {
   readonly messages: readonly string[];
 }
 
+export interface ConformanceFeatureProfileView {
+  readonly backend: string;
+  readonly supportsDialects: boolean;
+  readonly supportedPolicies?: readonly PolicyReference[];
+}
+
+export interface ConformanceCaseRun {
+  readonly ref: ConformanceCaseRef;
+  readonly requirements: ConformanceCaseRequirements;
+  readonly familyProfile: FamilyFeatureProfile;
+  readonly featureProfile?: ConformanceFeatureProfileView;
+}
+
+export interface ConformanceCaseExecution {
+  readonly outcome: Exclude<ConformanceOutcome, 'skipped'>;
+  readonly messages: readonly string[];
+}
+
 export interface ConformanceManifestEntry {
   readonly role: string;
   readonly path: readonly string[];
@@ -148,11 +166,7 @@ export function selectConformanceCase(
   ref: ConformanceCaseRef,
   requirements: ConformanceCaseRequirements,
   familyProfile: FamilyFeatureProfile,
-  featureProfile?: {
-    readonly backend: string;
-    readonly supportsDialects: boolean;
-    readonly supportedPolicies?: readonly PolicyReference[];
-  }
+  featureProfile?: ConformanceFeatureProfileView
 ): ConformanceCaseSelection {
   const messages: string[] = [];
 
@@ -188,4 +202,38 @@ export function selectConformanceCase(
     status: messages.length === 0 ? 'selected' : 'skipped',
     messages
   };
+}
+
+export function runConformanceCase(
+  run: ConformanceCaseRun,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): ConformanceCaseResult {
+  const selection = selectConformanceCase(
+    run.ref,
+    run.requirements,
+    run.familyProfile,
+    run.featureProfile
+  );
+
+  if (selection.status === 'skipped') {
+    return {
+      ref: run.ref,
+      outcome: 'skipped',
+      messages: selection.messages
+    };
+  }
+
+  const execution = execute(run);
+  return {
+    ref: run.ref,
+    outcome: execution.outcome,
+    messages: execution.messages
+  };
+}
+
+export function runConformanceSuite(
+  runs: readonly ConformanceCaseRun[],
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): readonly ConformanceCaseResult[] {
+  return runs.map((run) => runConformanceCase(run, execute));
 }
