@@ -16,6 +16,12 @@ export interface AdapterInfo {
   readonly supportedPolicies?: readonly PolicyReference[];
 }
 
+export interface FeatureProfile {
+  readonly backend: string;
+  readonly supportsDialects: boolean;
+  readonly supportedPolicies?: readonly PolicyReference[];
+}
+
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
   readonly info: AdapterInfo;
   parse(request: ParserRequest): ParseResult<TAnalysis>;
