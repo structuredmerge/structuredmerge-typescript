@@ -4,12 +4,19 @@ import { describe, expect, it } from 'vitest';
 import type {
   ConformanceCaseRef,
   ConformanceCaseResult,
+  ConformanceManifest,
   ConformanceOutcome,
+  ConformanceSuiteSummary,
   DiagnosticCategory,
   DiagnosticSeverity,
   FamilyFeatureProfile,
   PolicyReference,
   PolicySurface
+} from '../src/index';
+import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
+  summarizeConformanceResults
 } from '../src/index';
 
 interface DiagnosticFixture {
@@ -43,11 +50,9 @@ interface ConformanceRunnerFixture {
   };
 }
 
-interface ConformanceManifest {
-  diagnostics: Array<{
-    role: string;
-    path: string[];
-  }>;
+interface ConformanceSummaryFixture {
+  results: ConformanceCaseResult[];
+  summary: ConformanceSuiteSummary;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -62,13 +67,13 @@ function diagnosticsFixturePath(role: string): string[] {
     'slice-24-manifest',
     'family-feature-profiles.json'
   );
-  const entry = manifest.diagnostics.find((candidate) => candidate.role === role);
+  const entry = conformanceFixturePath(manifest, 'diagnostics', role);
 
   if (!entry) {
     throw new Error(`missing diagnostics fixture entry for ${role}`);
   }
 
-  return entry.path;
+  return [...entry];
 }
 
 describe('ast-merge shared fixtures', () => {
@@ -129,8 +134,14 @@ describe('ast-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-22 shared family feature profile fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
     const fixture = readFixture<FamilyFeatureProfileFixture>(
-      ...diagnosticsFixturePath('shared_family_feature_profile')
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'shared_family_feature_profile') ??
+        []) as string[])
     );
 
     const featureProfile: FamilyFeatureProfile = {
@@ -169,5 +180,37 @@ describe('ast-merge shared fixtures', () => {
 
     expect(caseRef).toEqual(fixture.case_ref);
     expect(result).toEqual(fixture.result);
+  });
+
+  it('conforms to the slice-30 normalized manifest contract', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'json')).toEqual([
+      'diagnostics',
+      'slice-21-family-feature-profile',
+      'json-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'text', 'analysis')).toEqual([
+      'text',
+      'slice-03-analysis',
+      'whitespace-and-blocks.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'diagnostics', 'runner_shape')).toEqual([
+      'diagnostics',
+      'slice-28-conformance-runner',
+      'runner-shape.json'
+    ]);
+  });
+
+  it('conforms to the slice-32 conformance suite summary fixture', () => {
+    const fixture = readFixture<ConformanceSummaryFixture>(
+      ...diagnosticsFixturePath('runner_summary')
+    );
+
+    expect(summarizeConformanceResults(fixture.results)).toEqual(fixture.summary);
   });
 });

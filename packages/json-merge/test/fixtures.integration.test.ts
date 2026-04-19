@@ -2,6 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
+  type ConformanceManifest
+} from '@structuredmerge/ast-merge';
+import {
   jsonFeatureProfile,
   matchJsonOwners,
   mergeJson,
@@ -112,18 +117,6 @@ interface TreeSitterAdapterFixture {
   }>;
 }
 
-interface ConformanceManifest {
-  family_feature_profiles: Array<{
-    family: string;
-    role: string;
-    path: string[];
-  }>;
-  json: Array<{
-    role: string;
-    path: string[];
-  }>;
-}
-
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -136,13 +129,13 @@ function familyFeatureProfileFixturePath(family: string): string[] {
     'slice-24-manifest',
     'family-feature-profiles.json'
   );
-  const entry = manifest.family_feature_profiles.find((candidate) => candidate.family === family);
+  const entry = conformanceFamilyFeatureProfilePath(manifest, family);
 
   if (!entry) {
     throw new Error(`missing family feature profile entry for ${family}`);
   }
 
-  return entry.path;
+  return [...entry];
 }
 
 function jsonFixturePath(role: string): string[] {
@@ -151,13 +144,13 @@ function jsonFixturePath(role: string): string[] {
     'slice-24-manifest',
     'family-feature-profiles.json'
   );
-  const entry = manifest.json.find((candidate) => candidate.role === role);
+  const entry = conformanceFixturePath(manifest, 'json', role);
 
   if (!entry) {
     throw new Error(`missing json fixture entry for ${role}`);
   }
 
-  return entry.path;
+  return [...entry];
 }
 
 describe('json-merge shared fixtures', () => {

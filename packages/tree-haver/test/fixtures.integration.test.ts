@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { AdapterInfo, BackendReference, FeatureProfile, ParserRequest } from '../src/index';
-import type { PolicyReference } from '@structuredmerge/ast-merge';
+import {
+  conformanceFixturePath,
+  type ConformanceManifest,
+  type PolicyReference
+} from '@structuredmerge/ast-merge';
 
 interface ParserAdapterFixture {
   request: {
@@ -29,13 +33,6 @@ interface BackendRegistryFixture {
   backends: BackendReference[];
 }
 
-interface ConformanceManifest {
-  diagnostics: Array<{
-    role: string;
-    path: string[];
-  }>;
-}
-
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -48,13 +45,13 @@ function diagnosticsFixturePath(role: string): string[] {
     'slice-24-manifest',
     'family-feature-profiles.json'
   );
-  const entry = manifest.diagnostics.find((candidate) => candidate.role === role);
+  const entry = conformanceFixturePath(manifest, 'diagnostics', role);
 
   if (!entry) {
     throw new Error(`missing diagnostics fixture entry for ${role}`);
   }
 
-  return entry.path;
+  return [...entry];
 }
 
 describe('tree-haver shared fixtures', () => {

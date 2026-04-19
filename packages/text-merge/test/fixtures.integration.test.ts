@@ -2,6 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
+  type ConformanceManifest
+} from '@structuredmerge/ast-merge';
+import {
   analyzeText,
   isSimilar,
   matchTextBlocks,
@@ -60,18 +65,6 @@ interface TextSimilarityFixture {
   }>;
 }
 
-interface ConformanceManifest {
-  family_feature_profiles: Array<{
-    family: string;
-    role: string;
-    path: string[];
-  }>;
-  text: Array<{
-    role: string;
-    path: string[];
-  }>;
-}
-
 interface TextFeatureProfileFixture {
   feature_profile: {
     family: 'text';
@@ -92,13 +85,13 @@ function familyFeatureProfileFixturePath(family: string): string[] {
     'slice-24-manifest',
     'family-feature-profiles.json'
   );
-  const entry = manifest.family_feature_profiles.find((candidate) => candidate.family === family);
+  const entry = conformanceFamilyFeatureProfilePath(manifest, family);
 
   if (!entry) {
     throw new Error(`missing family feature profile entry for ${family}`);
   }
 
-  return entry.path;
+  return [...entry];
 }
 
 function textFixturePath(role: string): string[] {
@@ -107,13 +100,13 @@ function textFixturePath(role: string): string[] {
     'slice-24-manifest',
     'family-feature-profiles.json'
   );
-  const entry = manifest.text.find((candidate) => candidate.role === role);
+  const entry = conformanceFixturePath(manifest, 'text', role);
 
   if (!entry) {
     throw new Error(`missing text fixture entry for ${role}`);
   }
 
-  return entry.path;
+  return [...entry];
 }
 
 describe('text-merge shared fixtures', () => {
