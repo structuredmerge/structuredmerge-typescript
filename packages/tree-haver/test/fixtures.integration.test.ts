@@ -29,19 +29,37 @@ interface BackendRegistryFixture {
   backends: BackendReference[];
 }
 
+interface ConformanceManifest {
+  diagnostics: Array<{
+    role: string;
+    path: string[];
+  }>;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
 }
 
+function diagnosticsFixturePath(role: string): string[] {
+  const manifest = readFixture<ConformanceManifest>(
+    'conformance',
+    'slice-24-manifest',
+    'family-feature-profiles.json'
+  );
+  const entry = manifest.diagnostics.find((candidate) => candidate.role === role);
+
+  if (!entry) {
+    throw new Error(`missing diagnostics fixture entry for ${role}`);
+  }
+
+  return entry.path;
+}
+
 describe('tree-haver shared fixtures', () => {
   it('conforms to the slice-06 parser request fixture', () => {
-    const fixture = readFixture<ParserAdapterFixture>(
-      'diagnostics',
-      'slice-06-parser-adapters',
-      'parser-request.json'
-    );
+    const fixture = readFixture<ParserAdapterFixture>(...diagnosticsFixturePath('parser_request'));
 
     const request: ParserRequest = {
       source: fixture.request.source,
@@ -63,9 +81,7 @@ describe('tree-haver shared fixtures', () => {
 
   it('conforms to the slice-19 adapter policy support fixture', () => {
     const fixture = readFixture<ParserAdapterFixture>(
-      'diagnostics',
-      'slice-19-adapter-policy-support',
-      'adapter-info.json'
+      ...diagnosticsFixturePath('adapter_policy_support')
     );
 
     const adapterInfo: AdapterInfo = {
@@ -83,9 +99,7 @@ describe('tree-haver shared fixtures', () => {
 
   it('conforms to the slice-20 adapter feature profile fixture', () => {
     const fixture = readFixture<FeatureProfileFixture>(
-      'diagnostics',
-      'slice-20-adapter-feature-profile',
-      'feature-profile.json'
+      ...diagnosticsFixturePath('adapter_feature_profile')
     );
 
     const profile: FeatureProfile = {
@@ -103,9 +117,7 @@ describe('tree-haver shared fixtures', () => {
 
   it('conforms to the slice-25 backend registry fixture', () => {
     const fixture = readFixture<BackendRegistryFixture>(
-      'diagnostics',
-      'slice-25-backend-registry',
-      'backend-identities.json'
+      ...diagnosticsFixturePath('backend_registry')
     );
 
     const backends: BackendReference[] = [

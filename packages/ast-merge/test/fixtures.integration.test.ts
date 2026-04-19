@@ -31,18 +31,38 @@ interface FamilyFeatureProfileFixture {
   };
 }
 
+interface ConformanceManifest {
+  diagnostics: Array<{
+    role: string;
+    path: string[];
+  }>;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
 }
 
+function diagnosticsFixturePath(role: string): string[] {
+  const manifest = readFixture<ConformanceManifest>(
+    'conformance',
+    'slice-24-manifest',
+    'family-feature-profiles.json'
+  );
+  const entry = manifest.diagnostics.find((candidate) => candidate.role === role);
+
+  if (!entry) {
+    throw new Error(`missing diagnostics fixture entry for ${role}`);
+  }
+
+  return entry.path;
+}
+
 describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
     const fixture = readFixture<DiagnosticFixture>(
-      'diagnostics',
-      'slice-02-core',
-      'diagnostic-categories.json'
+      ...diagnosticsFixturePath('diagnostic_vocabulary')
     );
 
     const severities: DiagnosticSeverity[] = ['info', 'warning', 'error'];
@@ -59,11 +79,7 @@ describe('ast-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-17 policy vocabulary fixture', () => {
-    const fixture = readFixture<PolicyFixture>(
-      'diagnostics',
-      'slice-17-policy-vocabulary',
-      'policy-references.json'
-    );
+    const fixture = readFixture<PolicyFixture>(...diagnosticsFixturePath('policy_vocabulary'));
 
     const surfaces: PolicySurface[] = ['fallback', 'array'];
     const policies: PolicyReference[] = [
@@ -83,9 +99,7 @@ describe('ast-merge shared fixtures', () => {
 
   it('conforms to the slice-18 policy reporting fixture', () => {
     const fixture = readFixture<PolicyReportingFixture>(
-      'diagnostics',
-      'slice-18-policy-reporting',
-      'result-policies.json'
+      ...diagnosticsFixturePath('policy_reporting')
     );
 
     const mergePolicies: PolicyReference[] = [
@@ -104,9 +118,7 @@ describe('ast-merge shared fixtures', () => {
 
   it('conforms to the slice-22 shared family feature profile fixture', () => {
     const fixture = readFixture<FamilyFeatureProfileFixture>(
-      'diagnostics',
-      'slice-22-shared-family-feature-profile',
-      'family-feature-profile.json'
+      ...diagnosticsFixturePath('shared_family_feature_profile')
     );
 
     const featureProfile: FamilyFeatureProfile = {
