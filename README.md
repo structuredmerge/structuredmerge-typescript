@@ -28,3 +28,6 @@ The TypeScript monorepo uses:
 - `prettier` for formatting
 - `tsc` for type checking
 - `vitest` for unit tests
+
+Integration tests consume the shared fixture corpus from the sibling
+`../fixtures` repository rather than copying fixture data into this monorepo.
