@@ -81,6 +81,11 @@ interface JsonFeatureProfileFixture {
 interface ConformanceManifest {
   family_feature_profiles: Array<{
     family: string;
+    role: string;
+    path: string[];
+  }>;
+  json: Array<{
+    role: string;
     path: string[];
   }>;
 }
@@ -106,13 +111,24 @@ function familyFeatureProfileFixturePath(family: string): string[] {
   return entry.path;
 }
 
+function jsonFixturePath(role: string): string[] {
+  const manifest = readFixture<ConformanceManifest>(
+    'conformance',
+    'slice-24-manifest',
+    'family-feature-profiles.json'
+  );
+  const entry = manifest.json.find((candidate) => candidate.role === role);
+
+  if (!entry) {
+    throw new Error(`missing json fixture entry for ${role}`);
+  }
+
+  return entry.path;
+}
+
 describe('json-merge shared fixtures', () => {
   it('conforms to the jsonc comments-accepted fixture', () => {
-    const fixture = readFixture<JsoncParseFixture>(
-      'jsonc',
-      'slice-04-parse',
-      'comments-accepted.json'
-    );
+    const fixture = readFixture<JsoncParseFixture>(...jsonFixturePath('parse_comments'));
 
     const result = parseJson(fixture.source, fixture.dialect);
 
@@ -122,11 +138,7 @@ describe('json-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-07 structure fixtures', () => {
-    const objectFixture = readFixture<JsonStructureFixture>(
-      'json',
-      'slice-07-structure',
-      'object-and-array.json'
-    );
+    const objectFixture = readFixture<JsonStructureFixture>(...jsonFixturePath('structure_json'));
     const objectResult = parseJson(objectFixture.source, objectFixture.dialect);
 
     expect(objectResult.ok).toBe(true);
@@ -139,11 +151,7 @@ describe('json-merge shared fixtures', () => {
       }))
     ).toEqual(objectFixture.expected.owners);
 
-    const jsoncFixture = readFixture<JsonStructureFixture>(
-      'jsonc',
-      'slice-07-structure',
-      'commented-object.json'
-    );
+    const jsoncFixture = readFixture<JsonStructureFixture>(...jsonFixturePath('structure_jsonc'));
     const jsoncResult = parseJson(jsoncFixture.source, jsoncFixture.dialect);
 
     expect(jsoncResult.ok).toBe(true);
@@ -158,11 +166,7 @@ describe('json-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-08 owner matching fixture', () => {
-    const fixture = readFixture<JsonMatchFixture>(
-      'json',
-      'slice-08-matching',
-      'path-equality.json'
-    );
+    const fixture = readFixture<JsonMatchFixture>(...jsonFixturePath('matching'));
     const template = parseJson(fixture.template, 'json');
     const destination = parseJson(fixture.destination, 'json');
 
@@ -179,7 +183,7 @@ describe('json-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-09 object merge fixture', () => {
-    const fixture = readFixture<JsonMergeFixture>('json', 'slice-09-merge', 'object-merge.json');
+    const fixture = readFixture<JsonMergeFixture>(...jsonFixturePath('merge_object'));
 
     const result = mergeJson(fixture.template, fixture.destination, 'json');
 
@@ -189,9 +193,7 @@ describe('json-merge shared fixtures', () => {
 
   it('conforms to the slice-09 invalid merge fixtures', () => {
     const invalidTemplateFixture = readFixture<JsonMergeFixture>(
-      'json',
-      'slice-09-merge',
-      'invalid-template.json'
+      ...jsonFixturePath('merge_invalid_template')
     );
     const invalidTemplateResult = mergeJson(
       invalidTemplateFixture.template,
@@ -206,9 +208,7 @@ describe('json-merge shared fixtures', () => {
     ).toEqual(invalidTemplateFixture.expected.diagnostics);
 
     const invalidDestinationFixture = readFixture<JsonMergeFixture>(
-      'json',
-      'slice-09-merge',
-      'invalid-destination.json'
+      ...jsonFixturePath('merge_invalid_destination')
     );
     const invalidDestinationResult = mergeJson(
       invalidDestinationFixture.template,
@@ -227,11 +227,7 @@ describe('json-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-14 fallback fixture', () => {
-    const fixture = readFixture<JsonMergeFixture>(
-      'json',
-      'slice-14-fallback',
-      'trailing-comma-destination.json'
-    );
+    const fixture = readFixture<JsonMergeFixture>(...jsonFixturePath('fallback'));
 
     const result = mergeJson(fixture.template, fixture.destination, 'json');
 
@@ -254,9 +250,7 @@ describe('json-merge shared fixtures', () => {
 
   it('conforms to the slice-15 fallback boundary fixtures', () => {
     const templateFixture = readFixture<JsonMergeFixture>(
-      'json',
-      'slice-15-fallback-boundaries',
-      'template-trailing-comma-not-recovered.json'
+      ...jsonFixturePath('fallback_boundary_template')
     );
     const templateResult = mergeJson(templateFixture.template, templateFixture.destination, 'json');
 
@@ -267,9 +261,7 @@ describe('json-merge shared fixtures', () => {
     expect(templateResult.output).toBeUndefined();
 
     const commentsFixture = readFixture<JsonMergeFixture>(
-      'json',
-      'slice-15-fallback-boundaries',
-      'strict-json-comments-not-recovered.json'
+      ...jsonFixturePath('fallback_boundary_comments')
     );
     const commentsResult = mergeJson(commentsFixture.template, commentsFixture.destination, 'json');
 
@@ -281,11 +273,7 @@ describe('json-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-16 array policy fixture', () => {
-    const fixture = readFixture<JsonMergeFixture>(
-      'json',
-      'slice-16-array-policy',
-      'destination-wins-array.json'
-    );
+    const fixture = readFixture<JsonMergeFixture>(...jsonFixturePath('array_policy'));
 
     const result = mergeJson(fixture.template, fixture.destination, 'json');
 

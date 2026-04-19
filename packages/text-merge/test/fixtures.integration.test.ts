@@ -63,6 +63,11 @@ interface TextSimilarityFixture {
 interface ConformanceManifest {
   family_feature_profiles: Array<{
     family: string;
+    role: string;
+    path: string[];
+  }>;
+  text: Array<{
+    role: string;
     path: string[];
   }>;
 }
@@ -96,13 +101,24 @@ function familyFeatureProfileFixturePath(family: string): string[] {
   return entry.path;
 }
 
+function textFixturePath(role: string): string[] {
+  const manifest = readFixture<ConformanceManifest>(
+    'conformance',
+    'slice-24-manifest',
+    'family-feature-profiles.json'
+  );
+  const entry = manifest.text.find((candidate) => candidate.role === role);
+
+  if (!entry) {
+    throw new Error(`missing text fixture entry for ${role}`);
+  }
+
+  return entry.path;
+}
+
 describe('text-merge shared fixtures', () => {
   it('conforms to the slice-03 analysis fixture', () => {
-    const fixture = readFixture<TextAnalysisFixture>(
-      'text',
-      'slice-03-analysis',
-      'whitespace-and-blocks.json'
-    );
+    const fixture = readFixture<TextAnalysisFixture>(...textFixturePath('analysis'));
 
     const analysis = analyzeText(fixture.source);
 
@@ -116,11 +132,7 @@ describe('text-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-11 exact matching fixture', () => {
-    const fixture = readFixture<TextExactMatchFixture>(
-      'text',
-      'slice-11-matching',
-      'exact-content.json'
-    );
+    const fixture = readFixture<TextExactMatchFixture>(...textFixturePath('matching_exact'));
 
     const result = matchTextBlocks(fixture.template, fixture.destination);
 
@@ -132,11 +144,7 @@ describe('text-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-05 similarity fixture', () => {
-    const fixture = readFixture<TextSimilarityFixture>(
-      'text',
-      'slice-05-similarity',
-      'similarity-cases.json'
-    );
+    const fixture = readFixture<TextSimilarityFixture>(...textFixturePath('similarity'));
 
     for (const testCase of fixture.cases) {
       expect(similarityScore(testCase.left, testCase.right), testCase.name).toBe(
@@ -151,11 +159,7 @@ describe('text-merge shared fixtures', () => {
   });
 
   it('conforms to the slice-13 refined matching fixture', () => {
-    const fixture = readFixture<TextRefinedFixture>(
-      'text',
-      'slice-13-refined-matching',
-      'content-refined-merge.json'
-    );
+    const fixture = readFixture<TextRefinedFixture>(...textFixturePath('merge_refined'));
 
     const result = matchTextBlocks(fixture.template, fixture.destination);
 
