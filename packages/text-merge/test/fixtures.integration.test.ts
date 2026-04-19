@@ -48,10 +48,6 @@ function readFixture<T>(...segments: string[]): T {
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
 }
 
-function decodeFixtureString(value: string): string {
-  return JSON.parse(`"${value}"`) as string;
-}
-
 describe('text-merge shared fixtures', () => {
   it('conforms to the slice-03 analysis fixture', () => {
     const fixture = readFixture<TextAnalysisFixture>(
@@ -60,9 +56,9 @@ describe('text-merge shared fixtures', () => {
       'whitespace-and-blocks.json'
     );
 
-    const analysis = analyzeText(decodeFixtureString(fixture.source));
+    const analysis = analyzeText(fixture.source);
 
-    expect(analysis.normalizedSource).toBe(decodeFixtureString(fixture.expected.normalized_source));
+    expect(analysis.normalizedSource).toBe(fixture.expected.normalized_source);
     expect(
       analysis.blocks.map(({ index, normalized }) => ({
         index,
