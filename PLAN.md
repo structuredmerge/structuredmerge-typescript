@@ -82,6 +82,16 @@ Primary backend:
 
 - Node bindings for tree-sitter
 
+Current constraint:
+
+- In this workspace environment, the official native Node binding is blocked on
+  Node `22.22.2` because no native build is available here, and the published
+  `tree-sitter-json` grammar package still advertises `tree-sitter ^0.21.1` as
+  its peer range.
+- Until that host/runtime constraint is resolved, TypeScript tree-sitter work
+  should be treated as experimental and should not be assumed to move in lock
+  step with Rust and Go backend adoption.
+
 Requirements:
 
 - grammar loading abstraction
