@@ -12,6 +12,7 @@ import type {
   ConformanceManifest,
   NamedConformanceSuiteReport,
   NamedConformanceSuitePlan,
+  NamedConformanceSuiteResults,
   ConformanceOutcome,
   ConformanceSuiteDefinition,
   ConformanceSuitePlan,
@@ -34,10 +35,13 @@ import {
   planNamedConformanceSuite,
   reportNamedConformanceSuiteEntry,
   reportNamedConformanceSuite,
+  reportPlannedNamedConformanceSuites,
   reportPlannedConformanceSuite,
   reportConformanceSuite,
   runConformanceCase,
+  runNamedConformanceSuiteEntry,
   runNamedConformanceSuite,
+  runPlannedNamedConformanceSuites,
   runPlannedConformanceSuite,
   runConformanceSuite,
   selectConformanceCase,
@@ -251,6 +255,25 @@ interface NamedSuitePlansFixture {
   expected_entries: NamedConformanceSuitePlan[];
 }
 
+interface NamedSuiteResultsFixture {
+  suite_name: string;
+  family_profile: NamedSuiteReportFixture['family_profile'];
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_entry: NamedConformanceSuiteResults;
+}
+
+interface NamedSuiteRunnerEntriesFixture {
+  contexts: Record<string, ConformanceFamilyPlanContext>;
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_entries: NamedConformanceSuiteResults[];
+}
+
+interface NamedSuiteReportEntriesFixture {
+  contexts: Record<string, ConformanceFamilyPlanContext>;
+  executions: Record<string, ConformanceCaseExecution>;
+  expected_entries: NamedConformanceSuiteReport[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -343,6 +366,16 @@ function normalizeSuitePlan(raw: {
       })),
       missingRoles: raw.plan.missing_roles
     }
+  };
+}
+
+function normalizeSuiteResults(raw: {
+  suite: string;
+  results: ConformanceCaseResult[];
+}): NamedConformanceSuiteResults {
+  return {
+    suite: raw.suite,
+    results: raw.results
   };
 }
 
@@ -937,5 +970,91 @@ describe('ast-merge shared fixtures', () => {
         )
       )
     ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
+  it('conforms to the slice-51 named conformance suite-results fixture', () => {
+    const fixture = readFixture<NamedSuiteResultsFixture>(
+      ...diagnosticsFixturePath('named_suite_results')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(
+      runNamedConformanceSuiteEntry(
+        manifest,
+        fixture.suite_name,
+        {
+          family: fixture.family_profile.family,
+          supportedDialects: fixture.family_profile.supported_dialects,
+          supportedPolicies: fixture.family_profile.supported_policies
+        },
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        },
+        {
+          backend: 'kreuzberg-language-pack',
+          supportsDialects: false,
+          supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
+        }
+      )
+    ).toEqual(normalizeSuiteResults(fixture.expected_entry as never));
+  });
+
+  it('conforms to the slice-52 planned named conformance suite-runner fixture', () => {
+    const fixture = readFixture<NamedSuiteRunnerEntriesFixture>(
+      ...diagnosticsFixturePath('named_suite_runner_entries')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const plans = planNamedConformanceSuites(
+      manifest,
+      Object.fromEntries(
+        Object.entries(fixture.contexts).map(([family, context]) => [
+          family,
+          normalizeFamilyPlanContext(context as never)
+        ])
+      )
+    );
+
+    expect(
+      runPlannedNamedConformanceSuites(plans, (run) => {
+        const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+        return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+      })
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuiteResults(entry as never)));
+  });
+
+  it('conforms to the slice-53 planned named conformance suite-reports fixture', () => {
+    const fixture = readFixture<NamedSuiteReportEntriesFixture>(
+      ...diagnosticsFixturePath('named_suite_report_entries')
+    );
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const plans = planNamedConformanceSuites(
+      manifest,
+      Object.fromEntries(
+        Object.entries(fixture.contexts).map(([family, context]) => [
+          family,
+          normalizeFamilyPlanContext(context as never)
+        ])
+      )
+    );
+
+    expect(
+      reportPlannedNamedConformanceSuites(plans, (run) => {
+        const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+        return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+      })
+    ).toEqual(fixture.expected_entries);
   });
 });
