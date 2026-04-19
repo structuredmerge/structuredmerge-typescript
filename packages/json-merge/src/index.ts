@@ -1,10 +1,11 @@
 export const packageName = "@structuredmerge/json-merge";
 
-export { jsonParseRequest, matchJsonOwners, parseJson } from "./contracts";
+export { jsonParseRequest, matchJsonOwners, mergeJson, parseJson } from "./contracts";
 export type {
   JsonAnalysis,
   JsonAnalyzer,
   JsonDialect,
+  JsonMergeResolution,
   JsonMerger,
   JsonOwnerMatch,
   JsonOwnerMatchResult,

@@ -49,6 +49,10 @@ export interface JsonOwnerMatcher {
   match(template: JsonAnalysis, destination: JsonAnalysis): JsonOwnerMatchResult;
 }
 
+export interface JsonMergeResolution {
+  readonly output: string;
+}
+
 export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {
   return {
     source,
@@ -283,4 +287,88 @@ export function matchJsonOwners(
     unmatchedTemplate,
     unmatchedDestination
   };
+}
+
+function parseNormalizedJson(source: string, dialect: JsonDialect): unknown {
+  const result = parseJson(source, dialect);
+  if (!result.ok || !result.analysis) {
+    throw new Error(result.diagnostics[0]?.message ?? "JSON parse failed.");
+  }
+  return JSON.parse(result.analysis.normalizedSource) as unknown;
+}
+
+function mergeValues(template: unknown, destination: unknown): unknown {
+  if (Array.isArray(template) && Array.isArray(destination)) {
+    return destination;
+  }
+
+  if (
+    template && destination &&
+    typeof template === "object" &&
+    typeof destination === "object" &&
+    !Array.isArray(template) &&
+    !Array.isArray(destination)
+  ) {
+    const merged: Record<string, unknown> = {};
+    const keys = new Set([
+      ...Object.keys(template as Record<string, unknown>),
+      ...Object.keys(destination as Record<string, unknown>)
+    ]);
+    for (const key of [...keys].sort()) {
+      const templateRecord = template as Record<string, unknown>;
+      const destinationRecord = destination as Record<string, unknown>;
+      const hasTemplate = Object.prototype.hasOwnProperty.call(templateRecord, key);
+      const hasDestination = Object.prototype.hasOwnProperty.call(destinationRecord, key);
+
+      if (hasTemplate && hasDestination) {
+        merged[key] = mergeValues(templateRecord[key], destinationRecord[key]);
+      } else if (hasDestination) {
+        merged[key] = destinationRecord[key];
+      } else {
+        merged[key] = templateRecord[key];
+      }
+    }
+    return merged;
+  }
+
+  return destination;
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const entries = Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+export function mergeJson(
+  templateSource: string,
+  destinationSource: string,
+  dialect: JsonDialect
+): MergeResult<string> {
+  try {
+    const template = parseNormalizedJson(templateSource, dialect);
+    const destination = parseNormalizedJson(destinationSource, dialect);
+    const merged = mergeValues(template, destination);
+
+    return {
+      ok: true,
+      diagnostics: [],
+      output: canonicalJson(merged)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostics: [parseError(error instanceof Error ? error.message : "JSON merge failed.")]
+    };
+  }
 }
