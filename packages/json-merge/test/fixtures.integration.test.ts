@@ -236,4 +236,18 @@ describe('json-merge shared fixtures', () => {
     ).toEqual(commentsFixture.expected.diagnostics);
     expect(commentsResult.output).toBeUndefined();
   });
+
+  it('conforms to the slice-16 array policy fixture', () => {
+    const fixture = readFixture<JsonMergeFixture>(
+      'json',
+      'slice-16-array-policy',
+      'destination-wins-array.json'
+    );
+
+    const result = mergeJson(fixture.template, fixture.destination, 'json');
+
+    expect(result.ok).toBe(fixture.expected.ok);
+    expect(result.output).toBe(fixture.expected.output);
+    expect(result.diagnostics).toEqual([]);
+  });
 });

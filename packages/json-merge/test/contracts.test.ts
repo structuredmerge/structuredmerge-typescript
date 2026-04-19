@@ -44,6 +44,17 @@ describe('json-merge', () => {
     expect(result.output).toBe('{"alpha":{"beta":9,"gamma":2},"delta":4,"epsilon":5}');
   });
 
+  it('preserves the destination array as the baseline array policy', () => {
+    const result = mergeJson(
+      '{"items":[1,2,3],"meta":{"tags":["template"],"mode":"template"}}',
+      '{"items":[9],"meta":{"tags":["destination"]}}',
+      'json'
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.output).toBe('{"items":[9],"meta":{"mode":"template","tags":["destination"]}}');
+  });
+
   it('reports destination parse failures distinctly', () => {
     const result = mergeJson('{"alpha":1}', '{"alpha":', 'json');
 
