@@ -1,4 +1,9 @@
-import type { AnalysisHandle, ParserAdapter, ParserRequest } from '@structuredmerge/tree-haver';
+import {
+  parseWithLanguagePack,
+  type AnalysisHandle,
+  type ParserAdapter,
+  type ParserRequest
+} from '@structuredmerge/tree-haver';
 import type {
   Diagnostic,
   FamilyFeatureProfile,
@@ -81,6 +86,35 @@ export function jsonFeatureProfile(): JsonFeatureProfile {
     supportedDialects: ['json', 'jsonc'],
     supportedPolicies: [destinationWinsArrayPolicy, trailingCommaFallbackPolicy]
   };
+}
+
+export function parseJsonWithLanguagePack(
+  source: string,
+  dialect: JsonDialect
+): ParseResult<JsonAnalysis> {
+  if (dialect !== 'json') {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'unsupported_feature',
+          message:
+            'tree-sitter-language-pack json parsing currently supports only the json dialect.'
+        }
+      ]
+    };
+  }
+
+  const backendResult = parseWithLanguagePack(jsonParseRequest(source, dialect));
+  if (!backendResult.ok) {
+    return {
+      ok: false,
+      diagnostics: backendResult.diagnostics
+    };
+  }
+
+  return parseJson(source, dialect);
 }
 
 export function jsonParseRequest(source: string, dialect: JsonDialect): ParserRequest {

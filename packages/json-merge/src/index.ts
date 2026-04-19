@@ -5,7 +5,8 @@ export {
   jsonParseRequest,
   matchJsonOwners,
   mergeJson,
-  parseJson
+  parseJson,
+  parseJsonWithLanguagePack
 } from './contracts';
 export type {
   JsonAnalysis,

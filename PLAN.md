@@ -80,7 +80,10 @@ For MVP, the critical mapping is:
 
 Primary backend:
 
-- Node bindings for tree-sitter
+- `@kreuzberg/tree-sitter-language-pack` as the current preferred native
+  TypeScript backend
+- direct raw `tree-sitter` Node bindings only if host/runtime compatibility is
+  demonstrated cleanly
 
 Current constraint:
 
@@ -88,6 +91,8 @@ Current constraint:
   Node `22.22.2` because no native build is available here, and the published
   `tree-sitter-json` grammar package still advertises `tree-sitter ^0.21.1` as
   its peer range.
+- `@kreuzberg/tree-sitter-language-pack` does work in this environment and is
+  now the current practical backend path for TypeScript experiments.
 - Until that host/runtime constraint is resolved, TypeScript tree-sitter work
   should be treated as experimental and should not be assumed to move in lock
   step with Rust and Go backend adoption.

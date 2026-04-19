@@ -55,6 +55,9 @@ importers:
 
   packages/tree-haver:
     dependencies:
+      '@kreuzberg/tree-sitter-language-pack':
+        specifier: 1.6.2
+        version: 1.6.2
       '@structuredmerge/ast-merge':
         specifier: workspace:*
         version: link:../ast-merge
@@ -277,6 +280,10 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
+
+  '@kreuzberg/tree-sitter-language-pack@1.6.2':
+    resolution: {integrity: sha512-fvdXInOPoqFXgtpLGgaSaStCEEv07VzqnL3COFgfuc+HqlyMguU//y+URCJAHHj9EvrQPySEW+k8bXVQPECTnw==}
+    engines: {node: '>= 16'}
 
   '@rollup/rollup-android-arm-eabi@4.60.2':
     resolution: {integrity: sha512-dnlp69efPPg6Uaw2dVqzWRfAWRnYVb1XJ8CyyhIbZeaq4CA5/mLeZ1IEt9QqQxmbdvagjLIm2ZL8BxXv5lH4Yw==}
@@ -1179,6 +1186,8 @@ snapshots:
   '@humanwhocodes/retry@0.4.3': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@kreuzberg/tree-sitter-language-pack@1.6.2': {}
 
   '@rollup/rollup-android-arm-eabi@4.60.2':
     optional: true

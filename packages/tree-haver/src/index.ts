@@ -5,7 +5,13 @@ export type {
   AnalysisHandle,
   BackendReference,
   FeatureProfile,
+  LanguagePackAnalysis,
   ParserAdapter,
   ParserDiagnostics,
   ParserRequest
+} from './contracts';
+export {
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
+  languagePackAdapterInfo,
+  parseWithLanguagePack
 } from './contracts';

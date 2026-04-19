@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchJsonOwners, mergeJson, parseJson } from '../src/index';
+import { matchJsonOwners, mergeJson, parseJson, parseJsonWithLanguagePack } from '../src/index';
 
 describe('json-merge', () => {
   it('rejects trailing commas in jsonc', () => {
@@ -104,5 +104,42 @@ describe('json-merge', () => {
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics[0]?.category).toBe('destination_parse_error');
+  });
+
+  it('parses strict json through tree-sitter-language-pack and preserves observable analysis', () => {
+    const result = parseJsonWithLanguagePack('{"alpha":{"beta":1}}', 'json');
+
+    expect(result.ok).toBe(true);
+    expect(result.analysis?.rootKind).toBe('object');
+    expect(result.analysis?.owners).toEqual([
+      { path: '/alpha', ownerKind: 'member', matchKey: 'alpha' },
+      { path: '/alpha/beta', ownerKind: 'member', matchKey: 'beta' }
+    ]);
+  });
+
+  it('reports strict json syntax errors through tree-sitter-language-pack', () => {
+    const result = parseJsonWithLanguagePack('{"alpha":1,}', 'json');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toEqual([
+      {
+        severity: 'error',
+        category: 'parse_error',
+        message: 'tree-sitter-language-pack reported syntax errors for json.'
+      }
+    ]);
+  });
+
+  it('rejects jsonc through tree-sitter-language-pack for now', () => {
+    const result = parseJsonWithLanguagePack('{\n  // note\n  "alpha":1\n}', 'jsonc');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toEqual([
+      {
+        severity: 'error',
+        category: 'unsupported_feature',
+        message: 'tree-sitter-language-pack json parsing currently supports only the json dialect.'
+      }
+    ]);
   });
 });

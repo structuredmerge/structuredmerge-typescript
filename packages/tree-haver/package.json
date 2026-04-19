@@ -5,6 +5,7 @@
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
+    "@kreuzberg/tree-sitter-language-pack": "1.6.2",
     "@structuredmerge/ast-merge": "workspace:*"
   }
 }
