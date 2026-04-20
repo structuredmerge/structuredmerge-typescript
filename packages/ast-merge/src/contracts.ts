@@ -74,6 +74,7 @@ export interface ConformanceCaseResult {
 }
 
 export interface ConformanceCaseRequirements {
+  readonly backend?: string;
   readonly dialect?: string;
   readonly policies?: readonly PolicyReference[];
 }
@@ -759,6 +760,18 @@ export function selectConformanceCase(
   featureProfile?: ConformanceFeatureProfileView
 ): ConformanceCaseSelection {
   const messages: string[] = [];
+
+  if (requirements.backend) {
+    if (!featureProfile) {
+      messages.push(
+        `case requires backend ${requirements.backend} but no backend feature profile is available for family ${familyProfile.family}.`
+      );
+    } else if (featureProfile.backend !== requirements.backend) {
+      messages.push(
+        `case requires backend ${requirements.backend} but backend ${featureProfile.backend} is active for family ${familyProfile.family}.`
+      );
+    }
+  }
 
   if (requirements.dialect) {
     const { dialect } = requirements;

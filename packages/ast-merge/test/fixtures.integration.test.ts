@@ -1162,6 +1162,35 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-119 backend-aware selection fixture', () => {
+    const fixture = readFixture<ConformanceSelectionFixture>(
+      ...diagnosticsFixturePath('backend_selection')
+    );
+
+    for (const testCase of fixture.cases) {
+      const selection = selectConformanceCase(
+        testCase.ref,
+        testCase.requirements,
+        {
+          family: testCase.family_profile.family,
+          supportedDialects: testCase.family_profile.supported_dialects,
+          supportedPolicies: testCase.family_profile.supported_policies
+        },
+        {
+          backend: testCase.feature_profile.backend,
+          supportsDialects: testCase.feature_profile.supports_dialects,
+          supportedPolicies: testCase.feature_profile.supported_policies
+        }
+      );
+
+      expect(selection.ref).toEqual(testCase.ref);
+      expect({
+        status: selection.status,
+        messages: selection.messages
+      }).toEqual(testCase.expected);
+    }
+  });
+
   it('conforms to the slice-34 conformance case runner fixture', () => {
     const fixture = readFixture<ConformanceCaseRunnerFixture>(
       ...diagnosticsFixturePath('case_runner')
