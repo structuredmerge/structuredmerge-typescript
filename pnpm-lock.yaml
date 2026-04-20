@@ -44,6 +44,15 @@ importers:
         specifier: workspace:*
         version: link:../tree-haver
 
+  packages/rust-merge:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
+
   packages/text-merge:
     dependencies:
       '@structuredmerge/ast-merge':
@@ -70,6 +79,15 @@ importers:
       '@structuredmerge/ast-merge':
         specifier: workspace:*
         version: link:../ast-merge
+
+  packages/typescript-merge:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
 
   packages/yaml-merge:
     dependencies:
