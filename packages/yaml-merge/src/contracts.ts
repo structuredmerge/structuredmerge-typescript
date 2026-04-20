@@ -9,9 +9,10 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
+import { currentBackendId, parseWithLanguagePack } from '@structuredmerge/tree-haver';
 
 export type YamlDialect = 'yaml';
-export type YamlBackend = 'yaml' | 'js-yaml';
+export type YamlBackend = 'yaml' | 'js-yaml' | 'kreuzberg-language-pack';
 export type YamlRootKind = 'mapping';
 export type YamlOwnerKind = 'mapping' | 'key_value' | 'sequence_item';
 
@@ -99,22 +100,22 @@ export function yamlFeatureProfile(): YamlFeatureProfile {
 }
 
 export function availableYamlBackends(): readonly YamlBackend[] {
-  return ['yaml', 'js-yaml'];
+  return ['yaml', 'js-yaml', 'kreuzberg-language-pack'];
 }
 
-export function yamlBackendFeatureProfile(
-  backend: YamlBackend = 'yaml'
-): YamlBackendFeatureProfile {
+export function yamlBackendFeatureProfile(backend?: YamlBackend): YamlBackendFeatureProfile {
+  const resolvedBackend = resolveBackend(backend);
   return {
     ...yamlFeatureProfile(),
-    backend
+    backend: resolvedBackend
   };
 }
 
-export function yamlPlanContext(backend: YamlBackend = 'yaml'): ConformanceFamilyPlanContext {
+export function yamlPlanContext(backend?: YamlBackend): ConformanceFamilyPlanContext {
+  const resolvedBackend = resolveBackend(backend);
   const featureProfile: ConformanceFeatureProfileView = {
-    backend,
-    supportsDialects: true,
+    backend: resolvedBackend,
+    supportsDialects: resolvedBackend !== 'kreuzberg-language-pack',
     supportedPolicies: yamlFeatureProfile().supportedPolicies
   };
 
@@ -122,6 +123,11 @@ export function yamlPlanContext(backend: YamlBackend = 'yaml'): ConformanceFamil
     familyProfile: yamlFeatureProfile(),
     featureProfile
   };
+}
+
+function resolveBackend(backend?: YamlBackend): YamlBackend {
+  if (backend) return backend;
+  return currentBackendId() === 'kreuzberg-language-pack' ? 'kreuzberg-language-pack' : 'yaml';
 }
 
 function isScalar(value: unknown): value is YamlScalar {
@@ -362,13 +368,24 @@ function analyzeYamlDocument(source: string, backend: YamlBackend): ParseResult<
 export function parseYaml(
   source: string,
   dialect: YamlDialect,
-  backend: YamlBackend = 'yaml'
+  backend?: YamlBackend
 ): ParseResult<YamlAnalysis> {
   if (dialect !== 'yaml') {
     return { ok: false, diagnostics: [unsupportedFeature(`Unsupported YAML dialect ${dialect}.`)] };
   }
 
-  return analyzeYamlDocument(source, backend);
+  const resolvedBackend = resolveBackend(backend);
+  if (resolvedBackend === 'kreuzberg-language-pack') {
+    const syntaxResult = parseWithLanguagePack({ source, language: 'yaml', dialect });
+    if (!syntaxResult.ok) {
+      return { ok: false, diagnostics: [...syntaxResult.diagnostics] };
+    }
+  }
+
+  return analyzeYamlDocument(
+    source,
+    resolvedBackend === 'kreuzberg-language-pack' ? 'yaml' : resolvedBackend
+  );
 }
 
 export function matchYamlOwners(
@@ -395,8 +412,9 @@ export function mergeYaml(
   templateSource: string,
   destinationSource: string,
   dialect: YamlDialect,
-  backend: YamlBackend = 'yaml'
+  backend?: YamlBackend
 ): MergeResult<string> {
+  const resolvedBackend = resolveBackend(backend);
   const template = parseYaml(templateSource, dialect, backend);
   if (!template.ok || !template.analysis) {
     return { ok: false, diagnostics: template.diagnostics, policies: [] };
@@ -415,8 +433,11 @@ export function mergeYaml(
     };
   }
 
-  const templateMapping = parseYamlMapping(template.analysis.normalizedSource, backend);
-  const destinationMapping = parseYamlMapping(destination.analysis.normalizedSource, backend);
+  const templateMapping = parseYamlMapping(template.analysis.normalizedSource, resolvedBackend);
+  const destinationMapping = parseYamlMapping(
+    destination.analysis.normalizedSource,
+    resolvedBackend
+  );
   if (!templateMapping.ok || !templateMapping.analysis) {
     return { ok: false, diagnostics: templateMapping.diagnostics, policies: [] };
   }

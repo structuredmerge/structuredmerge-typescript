@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "dependencies": {
     "@structuredmerge/ast-merge": "workspace:*",
+    "@structuredmerge/tree-haver": "workspace:*",
     "js-yaml": "^4.1.1",
     "yaml": "^2.8.1"
   }
