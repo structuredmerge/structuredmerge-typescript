@@ -159,6 +159,10 @@ Requirements:
 
 - Use one monorepo workspace with multiple publishable packages.
 - Prefer the `@structuredmerge` npm scope.
+- Keep `tree-haver` focused on reusable parser frameworks such as tree-sitter
+  and `Peggy`.
+- Keep one-trick parser integrations such as the TypeScript compiler API inside
+  merge-family packages, not in `tree-haver`.
 
 ## First Implementation Sequence
 
