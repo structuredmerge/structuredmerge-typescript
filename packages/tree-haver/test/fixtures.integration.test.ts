@@ -7,6 +7,7 @@ import {
   type ConformanceManifest,
   type PolicyReference
 } from '@structuredmerge/ast-merge';
+import { processWithLanguagePack } from '../src/index';
 
 interface ParserAdapterFixture {
   request: {
@@ -137,5 +138,33 @@ describe('tree-haver shared fixtures', () => {
 
     expect(backends).toEqual(fixture.backends);
     expect(profile.backendRef).toEqual(fixture.backends[1]);
+  });
+
+  it('conforms to the slice-100 process baseline fixture', () => {
+    const fixture = readFixture<{
+      request: { language: string; source: string };
+      expected: {
+        language: string;
+        structure: Array<{ kind: string; name?: string }>;
+        imports: Array<{ source: string; items: string[] }>;
+      };
+    }>(...diagnosticsFixturePath('process_baseline'));
+
+    const result = processWithLanguagePack(fixture.request);
+
+    expect(result.ok).toBe(true);
+    expect(result.analysis?.language).toBe(fixture.expected.language);
+    expect(
+      result.analysis?.structure.map((item) => ({
+        kind: item.kind,
+        ...(item.name ? { name: item.name } : {})
+      }))
+    ).toEqual(fixture.expected.structure);
+    expect(
+      result.analysis?.imports.map((item) => ({
+        source: item.source,
+        items: item.items
+      }))
+    ).toEqual(fixture.expected.imports);
   });
 });

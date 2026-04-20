@@ -1,5 +1,8 @@
 import type { Diagnostic, ParseResult, PolicyReference } from '@structuredmerge/ast-merge';
 import {
+  hasLanguage,
+  init,
+  process as processWithKreuzbergLanguagePack,
   parseString as parseWithKreuzbergLanguagePack,
   treeHasErrorNodes,
   treeRootNodeType
@@ -45,12 +48,52 @@ export interface ParserDiagnostics {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export interface ProcessRequest {
+  readonly source: string;
+  readonly language: string;
+}
+
+export interface ProcessSpan {
+  readonly startByte: number;
+  readonly endByte: number;
+  readonly startRow: number;
+  readonly startCol: number;
+  readonly endRow: number;
+  readonly endCol: number;
+}
+
+export interface ProcessStructureItem {
+  readonly kind: string;
+  readonly name?: string;
+  readonly span: ProcessSpan;
+}
+
+export interface ProcessImportInfo {
+  readonly source: string;
+  readonly items: readonly string[];
+  readonly span: ProcessSpan;
+}
+
+export interface ProcessDiagnostic {
+  readonly message: string;
+  readonly severity: string;
+}
+
 export interface LanguagePackAnalysis extends AnalysisHandle {
   readonly kind: string;
   readonly language: string;
   readonly dialect?: string;
   readonly rootType: string;
   readonly hasError: boolean;
+  readonly backendRef: BackendReference;
+}
+
+export interface LanguagePackProcessAnalysis extends AnalysisHandle {
+  readonly kind: 'tree-sitter-process';
+  readonly language: string;
+  readonly structure: readonly ProcessStructureItem[];
+  readonly imports: readonly ProcessImportInfo[];
+  readonly diagnostics: readonly ProcessDiagnostic[];
   readonly backendRef: BackendReference;
 }
 
@@ -65,8 +108,99 @@ export const languagePackAdapterInfo: AdapterInfo = {
   supportsDialects: false
 };
 
+const initializedLanguages = new Set<string>();
+
+function ensureLanguagePackLanguage(language: string): void {
+  if (initializedLanguages.has(language) || hasLanguage(language)) {
+    initializedLanguages.add(language);
+    return;
+  }
+
+  init({ languages: [language] });
+  initializedLanguages.add(language);
+}
+
+function normalizeStructureKind(kind: string): string {
+  return kind.toLowerCase();
+}
+
+function normalizeTypeScriptImport(importText: string, span: ProcessSpan): ProcessImportInfo {
+  const sourceMatch = importText.match(/from\s+['"]([^'"]+)['"]|import\s+['"]([^'"]+)['"]/);
+  const source = sourceMatch?.[1] ?? sourceMatch?.[2] ?? importText.trim();
+  const namedItemsMatch = importText.match(/\{([^}]+)\}/);
+  const items = namedItemsMatch
+    ? namedItemsMatch[1]
+        .split(',')
+        .map((item) => item.replace(/\btype\b/g, '').trim())
+        .filter((item) => item.length > 0)
+    : [];
+
+  return { source, items, span };
+}
+
+export function processWithLanguagePack(
+  request: ProcessRequest
+): ParseResult<LanguagePackProcessAnalysis> {
+  try {
+    ensureLanguagePackLanguage(request.language);
+    const result = processWithKreuzbergLanguagePack(request.source, {
+      language: request.language,
+      structure: true,
+      imports: true,
+      diagnostics: true
+    });
+
+    return {
+      ok: true,
+      diagnostics: [],
+      analysis: {
+        kind: 'tree-sitter-process',
+        language: result.language,
+        structure: (result.structure ?? []).map((item) => ({
+          kind: normalizeStructureKind(item.kind),
+          ...(item.name ? { name: item.name } : {}),
+          span: item.span
+        })),
+        imports: (result.imports ?? []).map((item) => {
+          const rawItem = item as typeof item & {
+            source?: string;
+            module?: string;
+            items?: string[];
+          };
+          const importSourceText = rawItem.source ?? rawItem.module ?? '';
+          const importItems = rawItem.items ?? rawItem.names ?? [];
+
+          return request.language === 'typescript'
+            ? normalizeTypeScriptImport(importSourceText, item.span)
+            : { source: importSourceText, items: importItems, span: item.span };
+        }),
+        diagnostics: (result.diagnostics ?? []).map((diagnostic) => ({
+          message: diagnostic.message,
+          severity: diagnostic.severity
+        })),
+        backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND
+      }
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'unsupported_feature',
+          message:
+            error instanceof Error
+              ? error.message
+              : `tree-sitter-language-pack could not process ${request.language}.`
+        }
+      ]
+    };
+  }
+}
+
 export function parseWithLanguagePack(request: ParserRequest): ParseResult<LanguagePackAnalysis> {
   try {
+    ensureLanguagePackLanguage(request.language);
     const tree = parseWithKreuzbergLanguagePack(request.language, request.source);
     const hasError = treeHasErrorNodes(tree);
     const analysis: LanguagePackAnalysis = {

@@ -6,12 +6,19 @@ export type {
   BackendReference,
   FeatureProfile,
   LanguagePackAnalysis,
+  LanguagePackProcessAnalysis,
   ParserAdapter,
   ParserDiagnostics,
-  ParserRequest
+  ParserRequest,
+  ProcessDiagnostic,
+  ProcessImportInfo,
+  ProcessRequest,
+  ProcessSpan,
+  ProcessStructureItem
 } from './contracts';
 export {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   languagePackAdapterInfo,
+  processWithLanguagePack,
   parseWithLanguagePack
 } from './contracts';
