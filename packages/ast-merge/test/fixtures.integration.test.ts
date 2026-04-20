@@ -1543,6 +1543,25 @@ describe('ast-merge shared fixtures', () => {
     );
   });
 
+  it('conforms to the slice-125 source-family suite-definitions fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      suite_names: string[];
+      definitions: Record<string, ConformanceSuiteDefinition>;
+    }>('diagnostics', 'slice-125-source-family-suite-definitions', 'source-suite-definitions.json');
+
+    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
+    expect(conformanceSuiteDefinition(fixture.manifest, 'typescript_portable')).toEqual(
+      fixture.definitions.typescript_portable
+    );
+    expect(conformanceSuiteDefinition(fixture.manifest, 'rust_portable')).toEqual(
+      fixture.definitions.rust_portable
+    );
+    expect(conformanceSuiteDefinition(fixture.manifest, 'go_portable')).toEqual(
+      fixture.definitions.go_portable
+    );
+  });
+
   it('conforms to the slice-44 named conformance suite-report fixture', () => {
     const fixture = readFixture<NamedSuiteReportFixture>(
       ...diagnosticsFixturePath('named_suite_report')
@@ -1704,6 +1723,26 @@ describe('ast-merge shared fixtures', () => {
     expect(
       planNamedConformanceSuites(
         manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
+  it('conforms to the slice-126 source-family named suite-plans fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>('diagnostics', 'slice-126-source-family-named-suite-plans', 'source-named-suite-plans.json');
+
+    expect(
+      planNamedConformanceSuites(
+        fixture.manifest,
         Object.fromEntries(
           Object.entries(fixture.contexts).map(([family, context]) => [
             family,

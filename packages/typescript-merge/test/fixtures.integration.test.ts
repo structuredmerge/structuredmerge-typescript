@@ -2,6 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
+  type ConformanceManifest
+} from '@structuredmerge/ast-merge';
+import {
   typeScriptBackends,
   matchTypeScriptOwners,
   mergeTypeScript,
@@ -249,5 +254,34 @@ describe('typescript-merge shared fixtures', () => {
         supportedPolicies: fixture.native.feature_profile.supported_policies
       }
     });
+  });
+
+  it('conforms to the slice-124 source-family manifest fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-124-source-family-manifest',
+      'source-family-manifest.json'
+    );
+
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'typescript')).toEqual([
+      'diagnostics',
+      'slice-101-typescript-family-feature-profile',
+      'typescript-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'typescript', 'analysis')).toEqual([
+      'typescript',
+      'slice-102-analysis',
+      'module-owners.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'typescript', 'matching')).toEqual([
+      'typescript',
+      'slice-103-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'typescript', 'merge')).toEqual([
+      'typescript',
+      'slice-104-merge',
+      'module-merge.json'
+    ]);
   });
 });
