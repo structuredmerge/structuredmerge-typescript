@@ -2459,6 +2459,126 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual(normalizeManifestReport(fixture.expected_report as never));
   });
 
+  it('conforms to the slice-246 Markdown nested suite-definitions fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      suite_names: string[];
+      definitions: Record<string, ConformanceSuiteDefinition>;
+    }>(
+      'diagnostics',
+      'slice-246-markdown-nested-suite-definitions',
+      'markdown-nested-suite-definitions.json'
+    );
+
+    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
+    expect(conformanceSuiteDefinition(fixture.manifest, 'markdown_nested_portable')).toEqual(
+      fixture.definitions.markdown_nested_portable
+    );
+  });
+
+  it('conforms to the slice-247 Markdown nested named suite-plans fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-247-markdown-nested-named-suite-plans',
+      'markdown-nested-named-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        fixture.manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
+  it('conforms to the slice-248 Markdown nested manifest report fixture', () => {
+    const fixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-248-markdown-nested-manifest-report',
+      'markdown-nested-manifest-report.json'
+    );
+
+    expect(
+      reportConformanceManifest(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+  });
+
+  it('conforms to the slice-249 Ruby nested suite-definitions fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      suite_names: string[];
+      definitions: Record<string, ConformanceSuiteDefinition>;
+    }>(
+      'diagnostics',
+      'slice-249-ruby-nested-suite-definitions',
+      'ruby-nested-suite-definitions.json'
+    );
+
+    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
+    expect(conformanceSuiteDefinition(fixture.manifest, 'ruby_nested_portable')).toEqual(
+      fixture.definitions.ruby_nested_portable
+    );
+  });
+
+  it('conforms to the slice-250 Ruby nested named suite-plans fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-250-ruby-nested-named-suite-plans',
+      'ruby-nested-named-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        fixture.manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
+  it('conforms to the slice-251 Ruby nested manifest report fixture', () => {
+    const fixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-251-ruby-nested-manifest-report',
+      'ruby-nested-manifest-report.json'
+    );
+
+    expect(
+      reportConformanceManifest(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+  });
+
   it('conforms to the slice-173 YAML family backend named suite-plans fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
