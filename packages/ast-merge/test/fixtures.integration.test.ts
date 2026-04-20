@@ -2647,82 +2647,110 @@ describe('ast-merge shared fixtures', () => {
   });
 
   it('conforms to the canonical widened-suite backend fixtures', () => {
-    const plansFixture = readFixture<{
-      manifest: ConformanceManifest;
-      contexts: Record<string, ConformanceFamilyPlanContext>;
-      expected_entries: NamedConformanceSuitePlan[];
-    }>(
-      'diagnostics',
-      'slice-178-canonical-widened-suite-backend-plans',
-      'typescript-canonical-widened-suite-backend-plans.json'
-    );
-    const reportFixture = readFixture<ConformanceManifestReportFixture>(
-      'diagnostics',
-      'slice-179-canonical-widened-suite-backend-report',
-      'typescript-canonical-widened-suite-backend-report.json'
-    );
-    const reviewFixtures = [
-      readFixture<ConformanceManifestReviewStateFixture>(
+    for (const [plansSlice, plansFile, reportSlice, reportFile, reviewFixtures] of [
+      [
+        'slice-178-canonical-widened-suite-backend-plans',
+        'typescript-canonical-widened-suite-backend-plans.json',
+        'slice-179-canonical-widened-suite-backend-report',
+        'typescript-canonical-widened-suite-backend-report.json',
+        [
+          [
+            'slice-180-canonical-widened-suite-backend-review-state',
+            'typescript-canonical-widened-suite-backend-review-state.json'
+          ],
+          [
+            'slice-181-canonical-widened-suite-backend-reviewed-default',
+            'typescript-canonical-widened-suite-backend-reviewed-default.json'
+          ],
+          [
+            'slice-182-canonical-widened-suite-backend-replay-application',
+            'typescript-canonical-widened-suite-backend-replay-application.json'
+          ]
+        ]
+      ],
+      [
+        'slice-187-canonical-widened-suite-polyglot-backend-plans',
+        'typescript-canonical-widened-suite-polyglot-backend-plans.json',
+        'slice-188-canonical-widened-suite-polyglot-backend-report',
+        'typescript-canonical-widened-suite-polyglot-backend-report.json',
+        [
+          [
+            'slice-189-canonical-widened-suite-polyglot-backend-review-state',
+            'typescript-canonical-widened-suite-polyglot-backend-review-state.json'
+          ],
+          [
+            'slice-190-canonical-widened-suite-polyglot-backend-reviewed-default',
+            'typescript-canonical-widened-suite-polyglot-backend-reviewed-default.json'
+          ],
+          [
+            'slice-191-canonical-widened-suite-polyglot-backend-replay-application',
+            'typescript-canonical-widened-suite-polyglot-backend-replay-application.json'
+          ]
+        ]
+      ]
+    ] as const) {
+      const plansFixture = readFixture<{
+        manifest: ConformanceManifest;
+        contexts: Record<string, ConformanceFamilyPlanContext>;
+        expected_entries: NamedConformanceSuitePlan[];
+      }>('diagnostics', plansSlice, plansFile);
+      const reportFixture = readFixture<ConformanceManifestReportFixture>(
         'diagnostics',
-        'slice-180-canonical-widened-suite-backend-review-state',
-        'typescript-canonical-widened-suite-backend-review-state.json'
-      ),
-      readFixture<ConformanceManifestReviewStateFixture>(
-        'diagnostics',
-        'slice-181-canonical-widened-suite-backend-reviewed-default',
-        'typescript-canonical-widened-suite-backend-reviewed-default.json'
-      ),
-      readFixture<ConformanceManifestReviewStateFixture>(
-        'diagnostics',
-        'slice-182-canonical-widened-suite-backend-replay-application',
-        'typescript-canonical-widened-suite-backend-replay-application.json'
-      )
-    ];
+        reportSlice,
+        reportFile
+      );
 
-    expect(
-      planNamedConformanceSuites(
-        plansFixture.manifest,
-        Object.fromEntries(
-          Object.entries(plansFixture.contexts).map(([family, context]) => [
-            family,
-            normalizeFamilyPlanContext(context as never)
-          ])
-        )
-      )
-    ).toEqual(plansFixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
-
-    expect(
-      reportConformanceManifest(
-        reportFixture.manifest,
-        normalizeManifestPlanningOptions(reportFixture.options as never),
-        (run) => {
-          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-          return (
-            reportFixture.executions[key] ?? {
-              outcome: 'failed',
-              messages: ['missing execution']
-            }
-          );
-        }
-      )
-    ).toEqual(normalizeManifestReport(reportFixture.expected_report as never));
-
-    for (const fixture of reviewFixtures) {
       expect(
-        reviewConformanceManifest(
-          fixture.manifest,
-          normalizeManifestReviewOptions(fixture.options as never),
+        planNamedConformanceSuites(
+          plansFixture.manifest,
+          Object.fromEntries(
+            Object.entries(plansFixture.contexts).map(([family, context]) => [
+              family,
+              normalizeFamilyPlanContext(context as never)
+            ])
+          )
+        )
+      ).toEqual(plansFixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+
+      expect(
+        reportConformanceManifest(
+          reportFixture.manifest,
+          normalizeManifestPlanningOptions(reportFixture.options as never),
           (run) => {
             const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
             return (
-              fixture.executions[key] ?? {
+              reportFixture.executions[key] ?? {
                 outcome: 'failed',
                 messages: ['missing execution']
               }
             );
           }
         )
-      ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+      ).toEqual(normalizeManifestReport(reportFixture.expected_report as never));
+
+      for (const [reviewSlice, reviewFile] of reviewFixtures) {
+        const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+          'diagnostics',
+          reviewSlice,
+          reviewFile
+        );
+
+        expect(
+          reviewConformanceManifest(
+            fixture.manifest,
+            normalizeManifestReviewOptions(fixture.options as never),
+            (run) => {
+              const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+              return (
+                fixture.executions[key] ?? {
+                  outcome: 'failed',
+                  messages: ['missing execution']
+                }
+              );
+            }
+          )
+        ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+      }
     }
   });
 
