@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+  planNamedConformanceSuites,
+  reportNamedConformanceSuiteEnvelope,
+  reportPlannedNamedConformanceSuites,
+  type ConformanceManifest,
+  type ConformanceCaseExecution
+} from '@structuredmerge/ast-merge';
+import {
   availableMarkdownBackends,
   markdownBackendFeatureProfile,
   markdownFeatureProfile,
@@ -111,5 +118,68 @@ describe('markdown-it-merge shared fixtures', () => {
     expect(result.unmatchedDestination).toEqual(
       (matchingFixture.expected as Record<string, unknown>).unmatched_destination as string[]
     );
+  });
+
+  it('conforms to the provider named-suite plan fixture', () => {
+    const fixture = readFixture(
+      'diagnostics',
+      'slice-206-markdown-provider-named-suite-plans',
+      'typescript-markdown-provider-named-suite-plans.json'
+    );
+
+    const actual = planNamedConformanceSuites(fixture.manifest as ConformanceManifest, {
+      markdown: markdownPlanContext()
+    }).map((entry) => ({
+      suite: entry.suite,
+      plan: {
+        family: entry.plan.family,
+        entries: entry.plan.entries.map((planEntry) => ({
+          ref: planEntry.ref,
+          path: [...planEntry.path],
+          run: {
+            ref: planEntry.run.ref,
+            requirements: planEntry.run.requirements,
+            family_profile: {
+              family: planEntry.run.familyProfile.family,
+              supported_dialects: [...planEntry.run.familyProfile.supportedDialects],
+              supported_policies: [...(planEntry.run.familyProfile.supportedPolicies ?? [])]
+            },
+            feature_profile: {
+              backend: planEntry.run.featureProfile?.backend,
+              supports_dialects: planEntry.run.featureProfile?.supportsDialects,
+              supported_policies: [...(planEntry.run.featureProfile?.supportedPolicies ?? [])]
+            }
+          }
+        })),
+        missing_roles: [...entry.plan.missingRoles]
+      }
+    }));
+
+    expect(actual).toEqual(fixture.expected_entries);
+  });
+
+  it('conforms to the provider manifest-report fixture', () => {
+    const fixture = readFixture(
+      'diagnostics',
+      'slice-207-markdown-provider-manifest-report',
+      'typescript-markdown-provider-manifest-report.json'
+    );
+
+    const entries = reportPlannedNamedConformanceSuites(
+      planNamedConformanceSuites(fixture.manifest as ConformanceManifest, {
+        markdown: markdownPlanContext()
+      }),
+      (run) => {
+        const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+        return (
+          (fixture.executions as Record<string, ConformanceCaseExecution>)[key] ?? {
+            outcome: 'failed',
+            messages: ['missing execution']
+          }
+        );
+      }
+    );
+
+    expect(reportNamedConformanceSuiteEnvelope(entries)).toEqual(fixture.expected_report);
   });
 });
