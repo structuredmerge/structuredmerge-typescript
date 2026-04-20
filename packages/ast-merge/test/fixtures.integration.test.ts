@@ -2054,6 +2054,62 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual(normalizeManifestReport(fixture.expected_report as never));
   });
 
+  it('conforms to the slice-144 YAML family suite-definitions fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      suite_names: string[];
+      definitions: Record<string, ConformanceSuiteDefinition>;
+    }>('diagnostics', 'slice-144-yaml-family-suite-definitions', 'yaml-suite-definitions.json');
+
+    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
+    expect(conformanceSuiteDefinition(fixture.manifest, 'yaml_portable')).toEqual(
+      fixture.definitions.yaml_portable
+    );
+  });
+
+  it('conforms to the slice-145 YAML family named suite-plans fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-145-yaml-family-named-suite-plans',
+      'typescript-yaml-named-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        fixture.manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
+  it('conforms to the slice-146 YAML family manifest report fixture', () => {
+    const fixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-146-yaml-family-manifest-report',
+      'typescript-yaml-manifest-report.json'
+    );
+
+    expect(
+      reportConformanceManifest(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+  });
+
   it('conforms to the slice-129 source-family backend-restricted plans fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;

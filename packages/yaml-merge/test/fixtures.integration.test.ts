@@ -1,7 +1,18 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { matchYamlOwners, mergeYaml, parseYaml, yamlFeatureProfile } from '../src/index';
+import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
+  type ConformanceManifest
+} from '@structuredmerge/ast-merge';
+import {
+  matchYamlOwners,
+  mergeYaml,
+  parseYaml,
+  yamlFeatureProfile,
+  yamlPlanContext
+} from '../src/index';
 
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
@@ -23,6 +34,99 @@ describe('yaml-merge shared fixtures', () => {
       supportedDialects: fixture.feature_profile.supported_dialects,
       supportedPolicies: fixture.feature_profile.supported_policies
     });
+  });
+
+  it('conforms to the slice-142 YAML plan-context fixture', () => {
+    const fixture = readFixture<{
+      native: {
+        family_profile: {
+          family: 'yaml';
+          supported_dialects: ['yaml'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: 'yaml';
+          supports_dialects: true;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+    }>('diagnostics', 'slice-142-yaml-family-plan-contexts', 'typescript-yaml-plan-contexts.json');
+
+    expect(yamlPlanContext()).toEqual({
+      familyProfile: {
+        family: fixture.native.family_profile.family,
+        supportedDialects: fixture.native.family_profile.supported_dialects,
+        supportedPolicies: fixture.native.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.native.feature_profile.backend,
+        supportsDialects: fixture.native.feature_profile.supports_dialects,
+        supportedPolicies: fixture.native.feature_profile.supported_policies
+      }
+    });
+  });
+
+  it('conforms to the slice-143 YAML family manifest fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-143-yaml-family-manifest',
+      'yaml-family-manifest.json'
+    );
+    const suites = manifest.suites as NonNullable<ConformanceManifest['suites']>;
+
+    expect(suites.yaml_portable).toEqual({
+      family: 'yaml',
+      roles: ['analysis', 'matching', 'merge']
+    });
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'yaml')).toEqual([
+      'diagnostics',
+      'slice-95-yaml-family-feature-profile',
+      'yaml-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'yaml', 'analysis')).toEqual([
+      'yaml',
+      'slice-97-structure',
+      'mapping-and-sequence.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'yaml', 'matching')).toEqual([
+      'yaml',
+      'slice-98-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'yaml', 'merge')).toEqual([
+      'yaml',
+      'slice-99-merge',
+      'mapping-merge.json'
+    ]);
+  });
+
+  it('resolves YAML paths through the canonical manifest', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'yaml')).toEqual([
+      'diagnostics',
+      'slice-95-yaml-family-feature-profile',
+      'yaml-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'yaml', 'analysis')).toEqual([
+      'yaml',
+      'slice-97-structure',
+      'mapping-and-sequence.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'yaml', 'matching')).toEqual([
+      'yaml',
+      'slice-98-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'yaml', 'merge')).toEqual([
+      'yaml',
+      'slice-99-merge',
+      'mapping-merge.json'
+    ]);
   });
 
   it('conforms to the slice-96 YAML parse fixtures', () => {

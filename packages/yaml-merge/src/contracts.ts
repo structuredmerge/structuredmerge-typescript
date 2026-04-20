@@ -1,5 +1,7 @@
 import { parseDocument } from 'yaml';
 import type {
+  ConformanceFamilyPlanContext,
+  ConformanceFeatureProfileView,
   Diagnostic,
   FamilyFeatureProfile,
   MergeResult,
@@ -87,6 +89,19 @@ export function yamlFeatureProfile(): YamlFeatureProfile {
     family: 'yaml',
     supportedDialects: ['yaml'],
     supportedPolicies: [destinationWinsArrayPolicy]
+  };
+}
+
+export function yamlPlanContext(): ConformanceFamilyPlanContext {
+  const featureProfile: ConformanceFeatureProfileView = {
+    backend: 'yaml',
+    supportsDialects: true,
+    supportedPolicies: yamlFeatureProfile().supportedPolicies
+  };
+
+  return {
+    familyProfile: yamlFeatureProfile(),
+    featureProfile
   };
 }
 
