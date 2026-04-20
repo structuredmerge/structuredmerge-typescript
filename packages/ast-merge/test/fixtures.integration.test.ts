@@ -2115,11 +2115,7 @@ describe('ast-merge shared fixtures', () => {
       manifest: ConformanceManifest;
       suite_names: string[];
       definitions: Record<string, ConformanceSuiteDefinition>;
-    }>(
-      'diagnostics',
-      'slice-148-config-family-aggregate-manifest',
-      'config-family-aggregate.json'
-    );
+    }>('diagnostics', 'slice-148-config-family-aggregate-manifest', 'config-family-aggregate.json');
 
     expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
     expect(conformanceSuiteDefinition(fixture.manifest, 'json_portable')).toEqual(
@@ -2202,10 +2198,12 @@ describe('ast-merge shared fixtures', () => {
         normalizeManifestReviewOptions(reviewStateFixture.options as never),
         (run) => {
           const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-          return reviewStateFixture.executions[key] ?? {
-            outcome: 'failed',
-            messages: ['missing execution']
-          };
+          return (
+            reviewStateFixture.executions[key] ?? {
+              outcome: 'failed',
+              messages: ['missing execution']
+            }
+          );
         }
       )
     ).toEqual(normalizeManifestReviewState(reviewStateFixture.expected_state as never));
@@ -2216,10 +2214,12 @@ describe('ast-merge shared fixtures', () => {
         normalizeManifestReviewOptions(reviewedDefaultFixture.options as never),
         (run) => {
           const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-          return reviewedDefaultFixture.executions[key] ?? {
-            outcome: 'failed',
-            messages: ['missing execution']
-          };
+          return (
+            reviewedDefaultFixture.executions[key] ?? {
+              outcome: 'failed',
+              messages: ['missing execution']
+            }
+          );
         }
       )
     ).toEqual(normalizeManifestReviewState(reviewedDefaultFixture.expected_state as never));
@@ -2230,10 +2230,12 @@ describe('ast-merge shared fixtures', () => {
         normalizeManifestReviewOptions(replayFixture.options as never),
         (run) => {
           const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-          return replayFixture.executions[key] ?? {
-            outcome: 'failed',
-            messages: ['missing execution']
-          };
+          return (
+            replayFixture.executions[key] ?? {
+              outcome: 'failed',
+              messages: ['missing execution']
+            }
+          );
         }
       )
     ).toEqual(normalizeManifestReviewState(replayFixture.expected_state as never));
@@ -2278,7 +2280,9 @@ describe('ast-merge shared fixtures', () => {
         normalizeManifestPlanningOptions(reportFixture.options as never),
         (run) => {
           const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-          return reportFixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+          return (
+            reportFixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+          );
         }
       )
     ).toEqual(normalizeManifestReport(reportFixture.expected_report as never));
@@ -2289,7 +2293,9 @@ describe('ast-merge shared fixtures', () => {
         normalizeManifestReviewOptions(reviewFixture.options as never),
         (run) => {
           const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-          return reviewFixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+          return (
+            reviewFixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+          );
         }
       )
     ).toEqual(normalizeManifestReviewState(reviewFixture.expected_state as never));
@@ -2375,6 +2381,41 @@ describe('ast-merge shared fixtures', () => {
       'slice-112-merge',
       'module-merge.json'
     ]);
+  });
+
+  it('conforms to the source-family review-state fixtures', () => {
+    const fixtures = [
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-158-source-family-review-state',
+        'source-family-review-state.json'
+      ),
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-159-source-family-reviewed-default',
+        'source-family-reviewed-default.json'
+      ),
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-160-source-family-replay-application',
+        'source-family-replay-application.json'
+      )
+    ];
+
+    for (const fixture of fixtures) {
+      expect(
+        reviewConformanceManifest(
+          fixture.manifest,
+          normalizeManifestReviewOptions(fixture.options as never),
+          (run) => {
+            const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+            return (
+              fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+            );
+          }
+        )
+      ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+    }
   });
 
   it('conforms to the slice-61 review host hints fixture', () => {
