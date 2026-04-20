@@ -2804,6 +2804,34 @@ describe('ast-merge shared fixtures', () => {
         )
       ).toEqual(normalizeManifestReport(fixture.expected_report as never));
     }
+
+    const reviewFixtures = [
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-192-backend-sensitive-aggregate-tree-sitter-review-state',
+        'backend-sensitive-aggregate-tree-sitter-review-state.json'
+      ),
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-193-backend-sensitive-aggregate-native-review-state',
+        'backend-sensitive-aggregate-native-review-state.json'
+      )
+    ];
+
+    for (const fixture of reviewFixtures) {
+      expect(
+        reviewConformanceManifest(
+          fixture.manifest,
+          normalizeManifestReviewOptions(fixture.options as never),
+          (run) => {
+            const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+            return (
+              fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+            );
+          }
+        )
+      ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+    }
   });
 
   it('conforms to the slice-61 review host hints fixture', () => {
