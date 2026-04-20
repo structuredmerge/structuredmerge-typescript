@@ -226,7 +226,7 @@ describe('yaml-merge shared fixtures', () => {
     ]);
     expect(conformanceFixturePath(manifest, 'yaml', 'analysis')).toEqual([
       'yaml',
-      'slice-97-structure',
+      'slice-96-parse',
       'mapping-and-sequence.json'
     ]);
     expect(conformanceFixturePath(manifest, 'yaml', 'matching')).toEqual([
