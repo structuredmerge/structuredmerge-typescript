@@ -165,6 +165,35 @@ describe('toml-merge shared fixtures', () => {
     ]);
   });
 
+  it('resolves TOML paths through the canonical manifest', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'toml')).toEqual([
+      'diagnostics',
+      'slice-90-toml-family-feature-profile',
+      'toml-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'toml', 'analysis')).toEqual([
+      'toml',
+      'slice-92-structure',
+      'table-and-array.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'toml', 'matching')).toEqual([
+      'toml',
+      'slice-93-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'toml', 'merge')).toEqual([
+      'toml',
+      'slice-94-merge',
+      'table-merge.json'
+    ]);
+  });
+
   it('conforms to the slice-91 TOML parse fixtures', () => {
     const validFixture = readFixture<{
       dialect: 'toml';
