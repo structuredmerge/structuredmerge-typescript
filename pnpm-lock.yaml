@@ -35,6 +35,15 @@ importers:
 
   packages/ast-merge: {}
 
+  packages/go-merge:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
+
   packages/json-merge:
     dependencies:
       '@structuredmerge/ast-merge':
