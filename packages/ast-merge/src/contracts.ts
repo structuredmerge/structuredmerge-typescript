@@ -150,6 +150,11 @@ export type ReviewRequestKind = 'family_context';
 
 export type ReviewDecisionAction = 'accept_default_context' | 'provide_explicit_context';
 
+export interface ReviewActionOffer {
+  readonly action: ReviewDecisionAction;
+  readonly requiresContext: boolean;
+}
+
 export interface ReviewRequest {
   readonly id: string;
   readonly kind: ReviewRequestKind;
@@ -157,7 +162,7 @@ export interface ReviewRequest {
   readonly message: string;
   readonly blocking: boolean;
   readonly proposedContext?: ConformanceFamilyPlanContext;
-  readonly availableActions: readonly ReviewDecisionAction[];
+  readonly actionOffers: readonly ReviewActionOffer[];
   readonly defaultAction?: ReviewDecisionAction;
 }
 
@@ -684,7 +689,10 @@ export function reviewConformanceFamilyContext(
         message: `explicit family context is required for ${family}; a synthesized default may be accepted by review.`,
         blocking: true,
         proposedContext: defaultConformanceFamilyContext(familyProfile),
-        availableActions: ['accept_default_context', 'provide_explicit_context'],
+        actionOffers: [
+          { action: 'accept_default_context', requiresContext: false },
+          { action: 'provide_explicit_context', requiresContext: true }
+        ],
         defaultAction: 'accept_default_context'
       }
     ],

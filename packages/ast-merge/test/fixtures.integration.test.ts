@@ -31,6 +31,7 @@ import type {
   PolicySurface,
   Diagnostic,
   ReviewDecision,
+  ReviewActionOffer,
   ReviewHostHints,
   ReviewReplayBundleEnvelope,
   ReviewReplayContext,
@@ -404,7 +405,10 @@ interface FamilyContextReviewRequestFixture {
         supported_policies: PolicyReference[];
       };
     };
-    available_actions: ReviewRequest['availableActions'];
+    action_offers: Array<{
+      action: ReviewActionOffer['action'];
+      requires_context: boolean;
+    }>;
     default_action?: ReviewRequest['defaultAction'];
   };
 }
@@ -447,7 +451,10 @@ interface ConformanceManifestReviewStateFixture {
       family: string;
       message: string;
       blocking: boolean;
-      available_actions: ReviewRequest['availableActions'];
+      action_offers: Array<{
+        action: ReviewActionOffer['action'];
+        requires_context: boolean;
+      }>;
       default_action?: ReviewRequest['defaultAction'];
     }>;
     applied_decisions: Array<{
@@ -830,7 +837,10 @@ function normalizeReviewRequest(raw: {
       supported_policies: PolicyReference[];
     };
   };
-  available_actions: ReviewRequest['availableActions'];
+  action_offers: Array<{
+    action: ReviewActionOffer['action'];
+    requires_context: boolean;
+  }>;
   default_action?: ReviewRequest['defaultAction'];
 }): ReviewRequest {
   return {
@@ -842,7 +852,10 @@ function normalizeReviewRequest(raw: {
     proposedContext: raw.proposed_context
       ? normalizeFamilyPlanContext(raw.proposed_context)
       : undefined,
-    availableActions: raw.available_actions,
+    actionOffers: raw.action_offers.map((offer) => ({
+      action: offer.action,
+      requiresContext: offer.requires_context
+    })),
     defaultAction: raw.default_action
   };
 }
@@ -900,7 +913,10 @@ function normalizeManifestReviewState(raw: {
     family: string;
     message: string;
     blocking: boolean;
-    available_actions: ReviewRequest['availableActions'];
+    action_offers: Array<{
+      action: ReviewActionOffer['action'];
+      requires_context: boolean;
+    }>;
     default_action?: ReviewRequest['defaultAction'];
   }>;
   applied_decisions: Array<{

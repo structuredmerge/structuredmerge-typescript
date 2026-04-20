@@ -38,6 +38,7 @@ export type {
   ParseResult,
   ReviewDecision,
   ReviewDecisionAction,
+  ReviewActionOffer,
   ReviewHostHints,
   ReviewReplayBundleEnvelope,
   ReviewReplayBundle,
