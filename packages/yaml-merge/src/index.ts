@@ -1,9 +1,11 @@
 export const packageName = '@structuredmerge/yaml-merge';
 
 export {
+  availableYamlBackends,
   matchYamlOwners,
   mergeYaml,
   parseYaml,
+  yamlBackendFeatureProfile,
   yamlFeatureProfile,
   yamlPlanContext
 } from './contracts';
@@ -11,6 +13,8 @@ export {
 export type {
   YamlAnalysis,
   YamlAnalyzer,
+  YamlBackend,
+  YamlBackendFeatureProfile,
   YamlDialect,
   YamlFeatureProfile,
   YamlMergeResolution,

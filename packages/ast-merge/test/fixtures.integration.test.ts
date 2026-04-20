@@ -2110,6 +2110,49 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual(normalizeManifestReport(fixture.expected_report as never));
   });
 
+  it('conforms to the slice-173 YAML family backend named suite-plans fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-173-yaml-family-backend-named-suite-plans',
+      'typescript-yaml-backend-named-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        fixture.manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
+  it('conforms to the slice-174 YAML family backend manifest report fixture', () => {
+    const fixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-174-yaml-family-backend-manifest-report',
+      'typescript-yaml-backend-manifest-report.json'
+    );
+
+    expect(
+      reportConformanceManifest(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+  });
+
   it('conforms to the slice-148 config-family aggregate manifest fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;

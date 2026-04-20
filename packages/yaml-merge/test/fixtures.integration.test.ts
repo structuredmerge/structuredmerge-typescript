@@ -7,9 +7,11 @@ import {
   type ConformanceManifest
 } from '@structuredmerge/ast-merge';
 import {
+  availableYamlBackends,
   matchYamlOwners,
   mergeYaml,
   parseYaml,
+  yamlBackendFeatureProfile,
   yamlFeatureProfile,
   yamlPlanContext
 } from '../src/index';
@@ -36,9 +38,38 @@ describe('yaml-merge shared fixtures', () => {
     });
   });
 
-  it('conforms to the slice-142 YAML plan-context fixture', () => {
+  it('conforms to the slice-171 YAML backend feature profile fixtures', () => {
     const fixture = readFixture<{
-      native: {
+      yaml: {
+        backend: 'yaml';
+        supports_dialects: true;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+      js_yaml: {
+        backend: 'js-yaml';
+        supports_dialects: true;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+    }>(
+      'diagnostics',
+      'slice-171-yaml-family-backend-feature-profiles',
+      'typescript-yaml-backend-feature-profiles.json'
+    );
+
+    expect(availableYamlBackends()).toEqual(['yaml', 'js-yaml']);
+    expect(yamlBackendFeatureProfile('yaml')).toMatchObject({
+      backend: fixture.yaml.backend,
+      supportedPolicies: fixture.yaml.supported_policies
+    });
+    expect(yamlBackendFeatureProfile('js-yaml')).toMatchObject({
+      backend: fixture.js_yaml.backend,
+      supportedPolicies: fixture.js_yaml.supported_policies
+    });
+  });
+
+  it('conforms to the slice-172 YAML backend plan-context fixtures', () => {
+    const fixture = readFixture<{
+      yaml: {
         family_profile: {
           family: 'yaml';
           supported_dialects: ['yaml'];
@@ -50,18 +81,46 @@ describe('yaml-merge shared fixtures', () => {
           supported_policies: Array<{ surface: 'array'; name: string }>;
         };
       };
-    }>('diagnostics', 'slice-142-yaml-family-plan-contexts', 'typescript-yaml-plan-contexts.json');
+      js_yaml: {
+        family_profile: {
+          family: 'yaml';
+          supported_dialects: ['yaml'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: 'js-yaml';
+          supports_dialects: true;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+    }>(
+      'diagnostics',
+      'slice-172-yaml-family-backend-plan-contexts',
+      'typescript-yaml-plan-contexts.json'
+    );
 
-    expect(yamlPlanContext()).toEqual({
+    expect(yamlPlanContext('yaml')).toEqual({
       familyProfile: {
-        family: fixture.native.family_profile.family,
-        supportedDialects: fixture.native.family_profile.supported_dialects,
-        supportedPolicies: fixture.native.family_profile.supported_policies
+        family: fixture.yaml.family_profile.family,
+        supportedDialects: fixture.yaml.family_profile.supported_dialects,
+        supportedPolicies: fixture.yaml.family_profile.supported_policies
       },
       featureProfile: {
-        backend: fixture.native.feature_profile.backend,
-        supportsDialects: fixture.native.feature_profile.supports_dialects,
-        supportedPolicies: fixture.native.feature_profile.supported_policies
+        backend: fixture.yaml.feature_profile.backend,
+        supportsDialects: fixture.yaml.feature_profile.supports_dialects,
+        supportedPolicies: fixture.yaml.feature_profile.supported_policies
+      }
+    });
+    expect(yamlPlanContext('js-yaml')).toEqual({
+      familyProfile: {
+        family: fixture.js_yaml.family_profile.family,
+        supportedDialects: fixture.js_yaml.family_profile.supported_dialects,
+        supportedPolicies: fixture.js_yaml.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.js_yaml.feature_profile.backend,
+        supportsDialects: fixture.js_yaml.feature_profile.supports_dialects,
+        supportedPolicies: fixture.js_yaml.feature_profile.supported_policies
       }
     });
   });
@@ -135,21 +194,25 @@ describe('yaml-merge shared fixtures', () => {
       source: string;
       expected: { ok: boolean; root_kind: 'mapping'; diagnostics: [] };
     }>('yaml', 'slice-96-parse', 'valid-document.json');
-    const validResult = parseYaml(validFixture.source, validFixture.dialect);
-    expect(validResult.ok).toBe(validFixture.expected.ok);
-    expect(validResult.analysis?.rootKind).toBe(validFixture.expected.root_kind);
-    expect(validResult.diagnostics).toEqual(validFixture.expected.diagnostics);
+    for (const backend of ['yaml', 'js-yaml'] as const) {
+      const validResult = parseYaml(validFixture.source, validFixture.dialect, backend);
+      expect(validResult.ok).toBe(validFixture.expected.ok);
+      expect(validResult.analysis?.rootKind).toBe(validFixture.expected.root_kind);
+      expect(validResult.diagnostics).toEqual(validFixture.expected.diagnostics);
+    }
 
     const invalidFixture = readFixture<{
       dialect: 'yaml';
       source: string;
       expected: { ok: boolean; diagnostics: Array<{ severity: 'error'; category: 'parse_error' }> };
     }>('yaml', 'slice-96-parse', 'invalid-document.json');
-    const invalidResult = parseYaml(invalidFixture.source, invalidFixture.dialect);
-    expect(invalidResult.ok).toBe(invalidFixture.expected.ok);
-    expect(
-      invalidResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
-    ).toEqual(invalidFixture.expected.diagnostics);
+    for (const backend of ['yaml', 'js-yaml'] as const) {
+      const invalidResult = parseYaml(invalidFixture.source, invalidFixture.dialect, backend);
+      expect(invalidResult.ok).toBe(invalidFixture.expected.ok);
+      expect(
+        invalidResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
+      ).toEqual(invalidFixture.expected.diagnostics);
+    }
   });
 
   it('conforms to the slice-97 YAML structure fixture', () => {
@@ -162,16 +225,18 @@ describe('yaml-merge shared fixtures', () => {
       };
     }>('yaml', 'slice-97-structure', 'mapping-and-sequence.json');
 
-    const result = parseYaml(fixture.source, fixture.dialect);
-    expect(result.ok).toBe(true);
-    expect(result.analysis?.rootKind).toBe(fixture.expected.root_kind);
-    expect(
-      result.analysis?.owners.map((owner) => ({
-        path: owner.path,
-        owner_kind: owner.ownerKind,
-        ...(owner.matchKey ? { match_key: owner.matchKey } : {})
-      }))
-    ).toEqual(fixture.expected.owners);
+    for (const backend of ['yaml', 'js-yaml'] as const) {
+      const result = parseYaml(fixture.source, fixture.dialect, backend);
+      expect(result.ok).toBe(true);
+      expect(result.analysis?.rootKind).toBe(fixture.expected.root_kind);
+      expect(
+        result.analysis?.owners.map((owner) => ({
+          path: owner.path,
+          owner_kind: owner.ownerKind,
+          ...(owner.matchKey ? { match_key: owner.matchKey } : {})
+        }))
+      ).toEqual(fixture.expected.owners);
+    }
   });
 
   it('conforms to the slice-98 YAML matching fixture', () => {
@@ -185,15 +250,17 @@ describe('yaml-merge shared fixtures', () => {
       };
     }>('yaml', 'slice-98-matching', 'path-equality.json');
 
-    const template = parseYaml(fixture.template, 'yaml');
-    const destination = parseYaml(fixture.destination, 'yaml');
-    const result = matchYamlOwners(template.analysis!, destination.analysis!);
+    for (const backend of ['yaml', 'js-yaml'] as const) {
+      const template = parseYaml(fixture.template, 'yaml', backend);
+      const destination = parseYaml(fixture.destination, 'yaml', backend);
+      const result = matchYamlOwners(template.analysis!, destination.analysis!);
 
-    expect(
-      result.matched.map(({ templatePath, destinationPath }) => [templatePath, destinationPath])
-    ).toEqual(fixture.expected.matched);
-    expect(result.unmatchedTemplate).toEqual(fixture.expected.unmatched_template);
-    expect(result.unmatchedDestination).toEqual(fixture.expected.unmatched_destination);
+      expect(
+        result.matched.map(({ templatePath, destinationPath }) => [templatePath, destinationPath])
+      ).toEqual(fixture.expected.matched);
+      expect(result.unmatchedTemplate).toEqual(fixture.expected.unmatched_template);
+      expect(result.unmatchedDestination).toEqual(fixture.expected.unmatched_destination);
+    }
   });
 
   it('conforms to the slice-99 YAML merge fixtures', () => {
@@ -202,24 +269,34 @@ describe('yaml-merge shared fixtures', () => {
       destination: string;
       expected: { ok: boolean; output: string };
     }>('yaml', 'slice-99-merge', 'mapping-merge.json');
-    const mergeResult = mergeYaml(mergeFixture.template, mergeFixture.destination, 'yaml');
-    expect(mergeResult.ok).toBe(mergeFixture.expected.ok);
-    expect(mergeResult.output).toBe(mergeFixture.expected.output);
+    for (const backend of ['yaml', 'js-yaml'] as const) {
+      const mergeResult = mergeYaml(
+        mergeFixture.template,
+        mergeFixture.destination,
+        'yaml',
+        backend
+      );
+      expect(mergeResult.ok).toBe(mergeFixture.expected.ok);
+      expect(mergeResult.output).toBe(mergeFixture.expected.output);
+    }
 
     const invalidTemplateFixture = readFixture<{
       template: string;
       destination: string;
       expected: { ok: boolean; diagnostics: Array<{ severity: 'error'; category: 'parse_error' }> };
     }>('yaml', 'slice-99-merge', 'invalid-template.json');
-    const invalidTemplateResult = mergeYaml(
-      invalidTemplateFixture.template,
-      invalidTemplateFixture.destination,
-      'yaml'
-    );
-    expect(invalidTemplateResult.ok).toBe(invalidTemplateFixture.expected.ok);
-    expect(
-      invalidTemplateResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
-    ).toEqual(invalidTemplateFixture.expected.diagnostics);
+    for (const backend of ['yaml', 'js-yaml'] as const) {
+      const invalidTemplateResult = mergeYaml(
+        invalidTemplateFixture.template,
+        invalidTemplateFixture.destination,
+        'yaml',
+        backend
+      );
+      expect(invalidTemplateResult.ok).toBe(invalidTemplateFixture.expected.ok);
+      expect(
+        invalidTemplateResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
+      ).toEqual(invalidTemplateFixture.expected.diagnostics);
+    }
 
     const invalidDestinationFixture = readFixture<{
       template: string;
@@ -229,14 +306,20 @@ describe('yaml-merge shared fixtures', () => {
         diagnostics: Array<{ severity: 'error'; category: 'destination_parse_error' }>;
       };
     }>('yaml', 'slice-99-merge', 'invalid-destination.json');
-    const invalidDestinationResult = mergeYaml(
-      invalidDestinationFixture.template,
-      invalidDestinationFixture.destination,
-      'yaml'
-    );
-    expect(invalidDestinationResult.ok).toBe(invalidDestinationFixture.expected.ok);
-    expect(
-      invalidDestinationResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
-    ).toEqual(invalidDestinationFixture.expected.diagnostics);
+    for (const backend of ['yaml', 'js-yaml'] as const) {
+      const invalidDestinationResult = mergeYaml(
+        invalidDestinationFixture.template,
+        invalidDestinationFixture.destination,
+        'yaml',
+        backend
+      );
+      expect(invalidDestinationResult.ok).toBe(invalidDestinationFixture.expected.ok);
+      expect(
+        invalidDestinationResult.diagnostics.map(({ severity, category }) => ({
+          severity,
+          category
+        }))
+      ).toEqual(invalidDestinationFixture.expected.diagnostics);
+    }
   });
 });

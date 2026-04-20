@@ -1,3 +1,4 @@
+import { load as loadJsYaml } from 'js-yaml';
 import { parseDocument } from 'yaml';
 import type {
   ConformanceFamilyPlanContext,
@@ -10,6 +11,7 @@ import type {
 } from '@structuredmerge/ast-merge';
 
 export type YamlDialect = 'yaml';
+export type YamlBackend = 'yaml' | 'js-yaml';
 export type YamlRootKind = 'mapping';
 export type YamlOwnerKind = 'mapping' | 'key_value' | 'sequence_item';
 
@@ -50,11 +52,11 @@ export interface YamlMerger {
 }
 
 export interface YamlAnalyzer {
-  parse(source: string, dialect: YamlDialect): ParseResult<YamlAnalysis>;
+  parse(source: string, dialect: YamlDialect, backend?: YamlBackend): ParseResult<YamlAnalysis>;
 }
 
 export interface YamlStructureAnalyzer {
-  analyze(source: string, dialect: YamlDialect): ParseResult<YamlAnalysis>;
+  analyze(source: string, dialect: YamlDialect, backend?: YamlBackend): ParseResult<YamlAnalysis>;
 }
 
 export interface YamlOwnerMatcher {
@@ -69,6 +71,10 @@ export interface YamlFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'yaml';
   readonly supportedDialects: readonly YamlDialect[];
   readonly supportedPolicies: readonly PolicyReference[];
+}
+
+export interface YamlBackendFeatureProfile extends YamlFeatureProfile {
+  readonly backend: YamlBackend;
 }
 
 const destinationWinsArrayPolicy: PolicyReference = {
@@ -92,9 +98,22 @@ export function yamlFeatureProfile(): YamlFeatureProfile {
   };
 }
 
-export function yamlPlanContext(): ConformanceFamilyPlanContext {
+export function availableYamlBackends(): readonly YamlBackend[] {
+  return ['yaml', 'js-yaml'];
+}
+
+export function yamlBackendFeatureProfile(
+  backend: YamlBackend = 'yaml'
+): YamlBackendFeatureProfile {
+  return {
+    ...yamlFeatureProfile(),
+    backend
+  };
+}
+
+export function yamlPlanContext(backend: YamlBackend = 'yaml'): ConformanceFamilyPlanContext {
   const featureProfile: ConformanceFeatureProfileView = {
-    backend: 'yaml',
+    backend,
     supportsDialects: true,
     supportedPolicies: yamlFeatureProfile().supportedPolicies
   };
@@ -262,27 +281,68 @@ function mergeYamlMappings(template: YamlMapping, destination: YamlMapping): Yam
   return merged;
 }
 
-function analyzeYamlDocument(source: string): ParseResult<YamlAnalysis> {
-  const document = parseDocument(source, { uniqueKeys: false, merge: false });
+function parseYamlMapping(source: string, backend: YamlBackend): ParseResult<YamlMapping> {
+  if (backend === 'yaml') {
+    const document = parseDocument(source, { uniqueKeys: false, merge: false });
 
-  if (document.errors.length > 0) {
+    if (document.errors.length > 0) {
+      return {
+        ok: false,
+        diagnostics: [parseError(document.errors[0]?.message ?? 'YAML parse failed.')]
+      };
+    }
+
+    const parsed = document.toJS();
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {
+        ok: false,
+        diagnostics: [parseError('YAML documents must parse to a mapping root.')]
+      };
+    }
+
+    const validated = validateYamlNode(parsed, '');
+    if (!validated.ok) {
+      return { ok: false, diagnostics: [validated.diagnostic] };
+    }
+
     return {
-      ok: false,
-      diagnostics: [parseError(document.errors[0]?.message ?? 'YAML parse failed.')]
+      ok: true,
+      diagnostics: [],
+      analysis: validated.value as YamlMapping
     };
   }
 
-  const parsed = document.toJS();
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  try {
+    const parsed = loadJsYaml(source);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {
+        ok: false,
+        diagnostics: [parseError('YAML documents must parse to a mapping root.')]
+      };
+    }
+
+    const validated = validateYamlNode(parsed, '');
+    if (!validated.ok) {
+      return { ok: false, diagnostics: [validated.diagnostic] };
+    }
+
+    return {
+      ok: true,
+      diagnostics: [],
+      analysis: validated.value as YamlMapping
+    };
+  } catch (error) {
     return {
       ok: false,
-      diagnostics: [parseError('YAML documents must parse to a mapping root.')]
+      diagnostics: [parseError(error instanceof Error ? error.message : 'YAML parse failed.')]
     };
   }
+}
 
-  const validated = validateYamlNode(parsed, '');
-  if (!validated.ok) {
-    return { ok: false, diagnostics: [validated.diagnostic] };
+function analyzeYamlDocument(source: string, backend: YamlBackend): ParseResult<YamlAnalysis> {
+  const parsed = parseYamlMapping(source, backend);
+  if (!parsed.ok || !parsed.analysis) {
+    return { ok: false, diagnostics: parsed.diagnostics };
   }
 
   return {
@@ -291,20 +351,24 @@ function analyzeYamlDocument(source: string): ParseResult<YamlAnalysis> {
     analysis: {
       kind: 'yaml',
       dialect: 'yaml',
-      normalizedSource: canonicalYaml(validated.value as YamlMapping),
+      normalizedSource: canonicalYaml(parsed.analysis),
       rootKind: 'mapping',
-      owners: collectYamlOwners(validated.value as YamlMapping)
+      owners: collectYamlOwners(parsed.analysis)
     },
     policies: []
   };
 }
 
-export function parseYaml(source: string, dialect: YamlDialect): ParseResult<YamlAnalysis> {
+export function parseYaml(
+  source: string,
+  dialect: YamlDialect,
+  backend: YamlBackend = 'yaml'
+): ParseResult<YamlAnalysis> {
   if (dialect !== 'yaml') {
     return { ok: false, diagnostics: [unsupportedFeature(`Unsupported YAML dialect ${dialect}.`)] };
   }
 
-  return analyzeYamlDocument(source);
+  return analyzeYamlDocument(source, backend);
 }
 
 export function matchYamlOwners(
@@ -330,14 +394,15 @@ export function matchYamlOwners(
 export function mergeYaml(
   templateSource: string,
   destinationSource: string,
-  dialect: YamlDialect
+  dialect: YamlDialect,
+  backend: YamlBackend = 'yaml'
 ): MergeResult<string> {
-  const template = parseYaml(templateSource, dialect);
+  const template = parseYaml(templateSource, dialect, backend);
   if (!template.ok || !template.analysis) {
     return { ok: false, diagnostics: template.diagnostics, policies: [] };
   }
 
-  const destination = parseYaml(destinationSource, dialect);
+  const destination = parseYaml(destinationSource, dialect, backend);
   if (!destination.ok || !destination.analysis) {
     return {
       ok: false,
@@ -350,21 +415,27 @@ export function mergeYaml(
     };
   }
 
-  const templateDocument = parseDocument(template.analysis.normalizedSource, {
-    uniqueKeys: false,
-    merge: false
-  });
-  const destinationDocument = parseDocument(destination.analysis.normalizedSource, {
-    uniqueKeys: false,
-    merge: false
-  });
-  const templateMapping = templateDocument.toJS() as YamlMapping;
-  const destinationMapping = destinationDocument.toJS() as YamlMapping;
+  const templateMapping = parseYamlMapping(template.analysis.normalizedSource, backend);
+  const destinationMapping = parseYamlMapping(destination.analysis.normalizedSource, backend);
+  if (!templateMapping.ok || !templateMapping.analysis) {
+    return { ok: false, diagnostics: templateMapping.diagnostics, policies: [] };
+  }
+  if (!destinationMapping.ok || !destinationMapping.analysis) {
+    return {
+      ok: false,
+      diagnostics: destinationMapping.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        category:
+          diagnostic.category === 'parse_error' ? 'destination_parse_error' : diagnostic.category
+      })),
+      policies: []
+    };
+  }
 
   return {
     ok: true,
     diagnostics: [],
-    output: canonicalYaml(mergeYamlMappings(templateMapping, destinationMapping)),
+    output: canonicalYaml(mergeYamlMappings(templateMapping.analysis, destinationMapping.analysis)),
     policies: [destinationWinsArrayPolicy]
   };
 }
