@@ -58,6 +58,7 @@ import {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  reviewReplayBundleInputs,
   reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
   runConformanceCase,
@@ -457,6 +458,20 @@ interface ReviewRequestIdsFixture {
   expected_request_ids: string[];
 }
 
+interface ReviewReplayBundleFixture {
+  replay_bundle: {
+    replay_context: {
+      surface: 'conformance_manifest';
+      families: string[];
+      require_explicit_contexts: boolean;
+    };
+    decisions: Array<{
+      request_id: string;
+      action: ReviewDecision['action'];
+    }>;
+  };
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -625,6 +640,17 @@ function normalizeManifestReviewOptions(raw: {
     families: string[];
     require_explicit_contexts: boolean;
   };
+  review_replay_bundle?: {
+    replay_context: {
+      surface: 'conformance_manifest';
+      families: string[];
+      require_explicit_contexts: boolean;
+    };
+    decisions: Array<{
+      request_id: string;
+      action: ReviewDecision['action'];
+    }>;
+  };
 }): ConformanceManifestReviewOptions {
   return {
     ...normalizeManifestPlanningOptions(raw),
@@ -635,6 +661,14 @@ function normalizeManifestReviewOptions(raw: {
     })),
     reviewReplayContext: raw.review_replay_context
       ? normalizeReviewReplayContext(raw.review_replay_context)
+      : undefined,
+    reviewReplayBundle: raw.review_replay_bundle
+      ? {
+          replayContext: normalizeReviewReplayContext(raw.review_replay_bundle.replay_context),
+          decisions: raw.review_replay_bundle.decisions.map((decision) =>
+            normalizeReviewDecision(decision)
+          )
+        }
       : undefined
   };
 }
@@ -1661,6 +1695,42 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-68 stale review decision fixture', () => {
     const fixture = readFixture<ConformanceManifestReviewStateFixture>(
       ...diagnosticsFixturePath('stale_review_decision')
+    );
+
+    expect(
+      reviewConformanceManifest(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-69 review replay bundle fixture', () => {
+    const fixture = readFixture<ReviewReplayBundleFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle')
+    );
+
+    expect(
+      reviewReplayBundleInputs(
+        normalizeManifestReviewOptions({
+          review_replay_bundle: fixture.replay_bundle
+        })
+      )
+    ).toEqual({
+      replayContext: normalizeReviewReplayContext(fixture.replay_bundle.replay_context),
+      decisions: fixture.replay_bundle.decisions.map((decision) =>
+        normalizeReviewDecision(decision)
+      )
+    });
+  });
+
+  it('conforms to the slice-70 review replay bundle application fixture', () => {
+    const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_application')
     );
 
     expect(

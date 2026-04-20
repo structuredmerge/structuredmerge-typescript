@@ -165,6 +165,11 @@ export interface ReviewDecision {
   readonly action: ReviewDecisionAction;
 }
 
+export interface ReviewReplayBundle {
+  readonly replayContext: ReviewReplayContext;
+  readonly decisions: readonly ReviewDecision[];
+}
+
 export interface ReviewHostHints {
   readonly interactive: boolean;
   readonly requireExplicitContexts: boolean;
@@ -179,6 +184,7 @@ export interface ReviewReplayContext {
 export interface ConformanceManifestReviewOptions extends ConformanceManifestPlanningOptions {
   readonly reviewDecisions?: readonly ReviewDecision[];
   readonly reviewReplayContext?: ReviewReplayContext;
+  readonly reviewReplayBundle?: ReviewReplayBundle;
   readonly interactive?: boolean;
 }
 
@@ -313,6 +319,23 @@ export function reviewReplayContextCompatible(
     candidate.families.length === current.families.length &&
     candidate.families.every((family, index) => family === current.families[index])
   );
+}
+
+export function reviewReplayBundleInputs(options: ConformanceManifestReviewOptions): {
+  replayContext?: ReviewReplayContext;
+  decisions: readonly ReviewDecision[];
+} {
+  if (options.reviewReplayBundle) {
+    return {
+      replayContext: options.reviewReplayBundle.replayContext,
+      decisions: options.reviewReplayBundle.decisions
+    };
+  }
+
+  return {
+    replayContext: options.reviewReplayContext,
+    decisions: options.reviewDecisions ?? []
+  };
 }
 
 export function conformanceManifestReviewRequestIds(
@@ -938,9 +961,10 @@ export function reviewConformanceManifest(
   const replayContext = conformanceManifestReplayContext(manifest, options);
   const diagnostics: Diagnostic[] = [];
   let effectiveOptions: ConformanceManifestReviewOptions = options;
+  const replayInputs = reviewReplayBundleInputs(options);
 
-  if (options.reviewDecisions && options.reviewDecisions.length > 0) {
-    if (!options.reviewReplayContext) {
+  if (replayInputs.decisions.length > 0) {
+    if (!replayInputs.replayContext) {
       diagnostics.push({
         severity: 'error',
         category: 'replay_rejected',
@@ -948,9 +972,11 @@ export function reviewConformanceManifest(
       });
       effectiveOptions = {
         ...options,
+        reviewReplayBundle: undefined,
+        reviewReplayContext: undefined,
         reviewDecisions: []
       };
-    } else if (!reviewReplayContextCompatible(replayContext, options.reviewReplayContext)) {
+    } else if (!reviewReplayContextCompatible(replayContext, replayInputs.replayContext)) {
       diagnostics.push({
         severity: 'error',
         category: 'replay_rejected',
@@ -958,13 +984,15 @@ export function reviewConformanceManifest(
       });
       effectiveOptions = {
         ...options,
+        reviewReplayBundle: undefined,
+        reviewReplayContext: undefined,
         reviewDecisions: []
       };
     } else {
       const allowedRequestIds = new Set(conformanceManifestReviewRequestIds(manifest, options));
       const acceptedDecisions: ReviewDecision[] = [];
 
-      for (const decision of options.reviewDecisions) {
+      for (const decision of replayInputs.decisions) {
         if (allowedRequestIds.has(decision.requestId)) {
           acceptedDecisions.push(decision);
         } else {
@@ -978,6 +1006,8 @@ export function reviewConformanceManifest(
 
       effectiveOptions = {
         ...options,
+        reviewReplayBundle: undefined,
+        reviewReplayContext: replayInputs.replayContext,
         reviewDecisions: acceptedDecisions
       };
     }

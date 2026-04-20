@@ -38,6 +38,7 @@ export type {
   ReviewDecision,
   ReviewDecisionAction,
   ReviewHostHints,
+  ReviewReplayBundle,
   ReviewReplayContext,
   ReviewRequest,
   ReviewRequestKind
@@ -68,6 +69,7 @@ export {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  reviewReplayBundleInputs,
   reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
   runConformanceCase,
