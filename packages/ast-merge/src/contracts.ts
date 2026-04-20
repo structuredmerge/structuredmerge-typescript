@@ -148,7 +148,7 @@ export interface ConformanceManifestReport {
 
 export type ReviewRequestKind = 'family_context';
 
-export type ReviewDecisionAction = 'accept_default_context';
+export type ReviewDecisionAction = 'accept_default_context' | 'provide_explicit_context';
 
 export interface ReviewRequest {
   readonly id: string;
@@ -164,6 +164,7 @@ export interface ReviewRequest {
 export interface ReviewDecision {
   readonly requestId: string;
   readonly action: ReviewDecisionAction;
+  readonly context?: ConformanceFamilyPlanContext;
 }
 
 export interface ReviewReplayBundle {
@@ -531,11 +532,39 @@ export function resolveConformanceFamilyContext(
 function reviewDecisionForFamilyContext(
   family: string,
   options: ConformanceManifestReviewOptions
-): ReviewDecision | undefined {
+):
+  | { context: ConformanceFamilyPlanContext; decision: ReviewDecision; assumedDefault: boolean }
+  | undefined {
   const requestId = reviewRequestIdForFamilyContext(family);
-  return options.reviewDecisions?.find(
-    (decision) => decision.requestId === requestId && decision.action === 'accept_default_context'
-  );
+  const familyProfile = options.familyProfiles?.[family];
+
+  for (const decision of options.reviewDecisions ?? []) {
+    if (decision.requestId !== requestId) {
+      continue;
+    }
+
+    if (decision.action === 'accept_default_context') {
+      if (!familyProfile) {
+        continue;
+      }
+
+      return {
+        context: defaultConformanceFamilyContext(familyProfile),
+        decision,
+        assumedDefault: true
+      };
+    }
+
+    if (decision.action === 'provide_explicit_context' && decision.context) {
+      return {
+        context: decision.context,
+        decision,
+        assumedDefault: false
+      };
+    }
+  }
+
+  return undefined;
 }
 
 export function reviewConformanceFamilyContext(
@@ -584,20 +613,22 @@ export function reviewConformanceFamilyContext(
     };
   }
 
-  const decision = reviewDecisionForFamilyContext(family, options);
+  const reviewedDecision = reviewDecisionForFamilyContext(family, options);
 
-  if (decision) {
+  if (reviewedDecision) {
     return {
-      context: defaultConformanceFamilyContext(familyProfile),
-      diagnostics: [
-        {
-          severity: 'warning',
-          category: 'assumed_default',
-          message: `using default family context for ${family}.`
-        }
-      ],
+      context: reviewedDecision.context,
+      diagnostics: reviewedDecision.assumedDefault
+        ? [
+            {
+              severity: 'warning',
+              category: 'assumed_default',
+              message: `using default family context for ${family}.`
+            }
+          ]
+        : [],
       requests: [],
-      appliedDecisions: [decision]
+      appliedDecisions: [reviewedDecision.decision]
     };
   }
 
@@ -617,7 +648,7 @@ export function reviewConformanceFamilyContext(
         message: `explicit family context is required for ${family}; a synthesized default may be accepted by review.`,
         blocking: true,
         proposedContext: defaultConformanceFamilyContext(familyProfile),
-        availableActions: ['accept_default_context'],
+        availableActions: ['accept_default_context', 'provide_explicit_context'],
         defaultAction: 'accept_default_context'
       }
     ],

@@ -407,6 +407,14 @@ interface ConformanceManifestReviewStateFixture {
     review_decisions?: Array<{
       request_id: string;
       action: ReviewDecision['action'];
+      context?: {
+        family_profile: NamedSuiteReportFixture['family_profile'];
+        feature_profile?: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: PolicyReference[];
+        };
+      };
     }>;
     review_replay_context?: {
       surface: 'conformance_manifest';
@@ -484,6 +492,14 @@ interface ReviewReplayBundleFixture {
     decisions: Array<{
       request_id: string;
       action: ReviewDecision['action'];
+      context?: {
+        family_profile: NamedSuiteReportFixture['family_profile'];
+        feature_profile?: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: PolicyReference[];
+        };
+      };
     }>;
   };
 }
@@ -514,6 +530,46 @@ interface ReviewTransportRejectionFixture {
     label: string;
     envelope: Record<string, unknown>;
     expected_error: ReviewTransportImportError;
+  }>;
+}
+
+interface FamilyContextExplicitReviewDecisionFixture {
+  family: string;
+  options: {
+    family_profiles: Record<string, NamedSuiteReportFixture['family_profile']>;
+    require_explicit_contexts: boolean;
+    review_decisions: Array<{
+      request_id: string;
+      action: ReviewDecision['action'];
+      context?: {
+        family_profile: NamedSuiteReportFixture['family_profile'];
+        feature_profile?: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: PolicyReference[];
+        };
+      };
+    }>;
+  };
+  expected_context: {
+    family_profile: NamedSuiteReportFixture['family_profile'];
+    feature_profile?: {
+      backend: string;
+      supports_dialects: boolean;
+      supported_policies: PolicyReference[];
+    };
+  };
+  expected_applied_decisions: Array<{
+    request_id: string;
+    action: ReviewDecision['action'];
+    context?: {
+      family_profile: NamedSuiteReportFixture['family_profile'];
+      feature_profile?: {
+        backend: string;
+        supports_dialects: boolean;
+        supported_policies: PolicyReference[];
+      };
+    };
   }>;
 }
 
@@ -679,6 +735,14 @@ function normalizeManifestReviewOptions(raw: {
   review_decisions?: Array<{
     request_id: string;
     action: ReviewDecision['action'];
+    context?: {
+      family_profile: NamedSuiteReportFixture['family_profile'];
+      feature_profile?: {
+        backend: string;
+        supports_dialects: boolean;
+        supported_policies: PolicyReference[];
+      };
+    };
   }>;
   review_replay_context?: {
     surface: 'conformance_manifest';
@@ -694,6 +758,14 @@ function normalizeManifestReviewOptions(raw: {
     decisions: Array<{
       request_id: string;
       action: ReviewDecision['action'];
+      context?: {
+        family_profile: NamedSuiteReportFixture['family_profile'];
+        feature_profile?: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: PolicyReference[];
+        };
+      };
     }>;
   };
 }): ConformanceManifestReviewOptions {
@@ -702,7 +774,8 @@ function normalizeManifestReviewOptions(raw: {
     interactive: raw.interactive,
     reviewDecisions: raw.review_decisions?.map((decision) => ({
       requestId: decision.request_id,
-      action: decision.action
+      action: decision.action,
+      context: decision.context ? normalizeFamilyPlanContext(decision.context) : undefined
     })),
     reviewReplayContext: raw.review_replay_context
       ? normalizeReviewReplayContext(raw.review_replay_context)
@@ -765,10 +838,19 @@ function normalizeReviewRequest(raw: {
 function normalizeReviewDecision(raw: {
   request_id: string;
   action: ReviewDecision['action'];
+  context?: {
+    family_profile: NamedSuiteReportFixture['family_profile'];
+    feature_profile?: {
+      backend: string;
+      supports_dialects: boolean;
+      supported_policies: PolicyReference[];
+    };
+  };
 }): ReviewDecision {
   return {
     requestId: raw.request_id,
-    action: raw.action
+    action: raw.action,
+    context: raw.context ? normalizeFamilyPlanContext(raw.context) : undefined
   };
 }
 
@@ -1669,6 +1751,24 @@ describe('ast-merge shared fixtures', () => {
     expect(reviewed.requests).toEqual([normalizeReviewRequest(fixture.expected_request)]);
   });
 
+  it('conforms to the slice-78 family-context explicit review decision fixture', () => {
+    const fixture = readFixture<FamilyContextExplicitReviewDecisionFixture>(
+      ...diagnosticsFixturePath('family_context_explicit_review_decision')
+    );
+
+    const reviewed = reviewConformanceFamilyContext(
+      fixture.family,
+      normalizeManifestReviewOptions(fixture.options as never)
+    );
+
+    expect(reviewed.context).toEqual(normalizeFamilyPlanContext(fixture.expected_context));
+    expect(reviewed.appliedDecisions).toEqual(
+      fixture.expected_applied_decisions.map((decision) => normalizeReviewDecision(decision))
+    );
+    expect(reviewed.diagnostics).toEqual([]);
+    expect(reviewed.requests).toEqual([]);
+  });
+
   it('conforms to the slice-63 conformance manifest review-state fixture', () => {
     const fixture = readFixture<ConformanceManifestReviewStateFixture>(
       ...diagnosticsFixturePath('conformance_manifest_review_state')
@@ -1901,5 +2001,22 @@ describe('ast-merge shared fixtures', () => {
         error: rejectionCase.expected_error
       });
     }
+  });
+
+  it('conforms to the slice-79 explicit review replay bundle application fixture', () => {
+    const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+      ...diagnosticsFixturePath('explicit_review_replay_bundle_application')
+    );
+
+    expect(
+      reviewConformanceManifest(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
   });
 });
