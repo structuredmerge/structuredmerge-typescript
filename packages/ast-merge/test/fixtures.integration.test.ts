@@ -712,6 +712,7 @@ function normalizeSuiteReportEnvelope(raw: {
 function normalizeDiagnostic(
   raw: Diagnostic & {
     request_id?: string;
+    reason?: Diagnostic['reason'];
   }
 ): Diagnostic {
   return {
@@ -720,7 +721,8 @@ function normalizeDiagnostic(
     message: raw.message,
     path: raw.path,
     requestId: raw.requestId ?? raw.request_id,
-    action: raw.action
+    action: raw.action,
+    reason: raw.reason
   };
 }
 

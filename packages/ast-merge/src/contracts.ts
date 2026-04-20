@@ -10,6 +10,11 @@ export type DiagnosticCategory =
   | 'configuration_error'
   | 'replay_rejected';
 
+export type ReviewDiagnosticReason =
+  | 'missing_required_payload'
+  | 'family_mismatch'
+  | 'request_not_found';
+
 export interface Diagnostic {
   readonly severity: DiagnosticSeverity;
   readonly category: DiagnosticCategory;
@@ -17,6 +22,7 @@ export interface Diagnostic {
   readonly path?: string;
   readonly requestId?: string;
   readonly action?: ReviewDecisionAction;
+  readonly reason?: ReviewDiagnosticReason;
 }
 
 export interface ParseResult<TAnalysis> {
@@ -578,7 +584,8 @@ function reviewDecisionForFamilyContext(
             category: 'configuration_error',
             message: `review decision ${requestId} requires explicit context payload.`,
             requestId,
-            action: 'provide_explicit_context'
+            action: 'provide_explicit_context',
+            reason: 'missing_required_payload'
           }
         ]
       };
@@ -594,7 +601,8 @@ function reviewDecisionForFamilyContext(
               category: 'configuration_error',
               message: `review decision ${requestId} provided context for ${decision.context.familyProfile.family}, expected ${family}.`,
               requestId,
-              action: 'provide_explicit_context'
+              action: 'provide_explicit_context',
+              reason: 'family_mismatch'
             }
           ]
         };
@@ -1198,7 +1206,8 @@ export function reviewConformanceManifest(
             category: 'replay_rejected',
             message: `review decision ${decision.requestId} does not match any current review request.`,
             requestId: decision.requestId,
-            action: decision.action
+            action: decision.action,
+            reason: 'request_not_found'
           });
         }
       }
