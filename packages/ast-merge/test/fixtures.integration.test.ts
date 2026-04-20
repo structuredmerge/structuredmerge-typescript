@@ -384,6 +384,14 @@ interface FamilyContextReviewRequestFixture {
     family: string;
     message: string;
     blocking: boolean;
+    proposed_context?: {
+      family_profile: NamedSuiteReportFixture['family_profile'];
+      feature_profile?: {
+        backend: string;
+        supports_dialects: boolean;
+        supported_policies: PolicyReference[];
+      };
+    };
     available_actions: ReviewRequest['availableActions'];
     default_action?: ReviewRequest['defaultAction'];
   };
@@ -729,6 +737,14 @@ function normalizeReviewRequest(raw: {
   family: string;
   message: string;
   blocking: boolean;
+  proposed_context?: {
+    family_profile: NamedSuiteReportFixture['family_profile'];
+    feature_profile?: {
+      backend: string;
+      supports_dialects: boolean;
+      supported_policies: PolicyReference[];
+    };
+  };
   available_actions: ReviewRequest['availableActions'];
   default_action?: ReviewRequest['defaultAction'];
 }): ReviewRequest {
@@ -738,6 +754,9 @@ function normalizeReviewRequest(raw: {
     family: raw.family,
     message: raw.message,
     blocking: raw.blocking,
+    proposedContext: raw.proposed_context
+      ? normalizeFamilyPlanContext(raw.proposed_context)
+      : undefined,
     availableActions: raw.available_actions,
     defaultAction: raw.default_action
   };
@@ -1634,6 +1653,19 @@ describe('ast-merge shared fixtures', () => {
 
     expect(reviewRequestIdForFamilyContext(fixture.family)).toEqual(fixture.expected_request.id);
     expect(reviewed.diagnostics).toEqual([normalizeDiagnostic(fixture.expected_diagnostic)]);
+    expect(reviewed.requests).toEqual([normalizeReviewRequest(fixture.expected_request)]);
+  });
+
+  it('conforms to the slice-77 family-context review proposal fixture', () => {
+    const fixture = readFixture<FamilyContextReviewRequestFixture>(
+      ...diagnosticsFixturePath('family_context_review_proposal')
+    );
+
+    const reviewed = reviewConformanceFamilyContext(
+      fixture.family,
+      normalizeManifestReviewOptions(fixture.options as never)
+    );
+
     expect(reviewed.requests).toEqual([normalizeReviewRequest(fixture.expected_request)]);
   });
 

@@ -156,6 +156,7 @@ export interface ReviewRequest {
   readonly family: string;
   readonly message: string;
   readonly blocking: boolean;
+  readonly proposedContext?: ConformanceFamilyPlanContext;
   readonly availableActions: readonly ReviewDecisionAction[];
   readonly defaultAction?: ReviewDecisionAction;
 }
@@ -615,6 +616,7 @@ export function reviewConformanceFamilyContext(
         family,
         message: `explicit family context is required for ${family}; a synthesized default may be accepted by review.`,
         blocking: true,
+        proposedContext: defaultConformanceFamilyContext(familyProfile),
         availableActions: ['accept_default_context'],
         defaultAction: 'accept_default_context'
       }
