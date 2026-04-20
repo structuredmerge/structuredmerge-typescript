@@ -1,0 +1,11 @@
+{
+  "name": "@structuredmerge/toml-merge",
+  "version": "0.0.0",
+  "private": false,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@structuredmerge/ast-merge": "workspace:*",
+    "smol-toml": "^1.4.2"
+  }
+}
