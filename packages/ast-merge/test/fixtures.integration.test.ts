@@ -241,6 +241,19 @@ interface ManifestRequirementsFixture {
   expected_requirements: Record<string, ConformanceCaseRequirements>;
 }
 
+interface ManifestBackendRequirementsFixture {
+  manifest: ConformanceManifest;
+  family: string;
+  roles: string[];
+  family_profile: ManifestRequirementsFixture['family_profile'];
+  feature_profile: {
+    backend: string;
+    supports_dialects: boolean;
+    supported_policies: PolicyReference[];
+  };
+  expected: ConformanceSuitePlanFixture['expected'];
+}
+
 interface SuiteDefinitionsFixture {
   suite_name: string;
   expected: ConformanceSuiteDefinition;
@@ -1412,6 +1425,54 @@ describe('ast-merge shared fixtures', () => {
     expect(
       Object.fromEntries(plan.entries.map((entry) => [entry.ref.role, entry.run.requirements]))
     ).toEqual(fixture.expected_requirements);
+  });
+
+  it('conforms to the slice-120 manifest backend-requirements fixture', () => {
+    const fixture = readFixture<ManifestBackendRequirementsFixture>(
+      ...diagnosticsFixturePath('manifest_backend_requirements')
+    );
+    const expected: ConformanceSuitePlan = {
+      family: fixture.expected.family,
+      entries: fixture.expected.entries.map((entry) => ({
+        ref: entry.ref,
+        path: entry.path,
+        run: {
+          ref: entry.run.ref,
+          requirements: entry.run.requirements,
+          familyProfile: {
+            family: entry.run.family_profile.family,
+            supportedDialects: entry.run.family_profile.supported_dialects,
+            supportedPolicies: entry.run.family_profile.supported_policies
+          },
+          featureProfile: entry.run.feature_profile
+            ? {
+                backend: entry.run.feature_profile.backend,
+                supportsDialects: entry.run.feature_profile.supports_dialects,
+                supportedPolicies: entry.run.feature_profile.supported_policies
+              }
+            : undefined
+        }
+      })),
+      missingRoles: fixture.expected.missing_roles
+    };
+
+    expect(
+      planConformanceSuite(
+        fixture.manifest,
+        fixture.family,
+        fixture.roles,
+        {
+          family: fixture.family_profile.family,
+          supportedDialects: fixture.family_profile.supported_dialects,
+          supportedPolicies: fixture.family_profile.supported_policies
+        },
+        {
+          backend: fixture.feature_profile.backend,
+          supportsDialects: fixture.feature_profile.supports_dialects,
+          supportedPolicies: fixture.feature_profile.supported_policies
+        }
+      )
+    ).toEqual(expected);
   });
 
   it('conforms to the slice-43 conformance suite-definitions fixture', () => {
