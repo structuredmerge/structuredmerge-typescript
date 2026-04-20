@@ -2239,6 +2239,62 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual(normalizeManifestReviewState(replayFixture.expected_state as never));
   });
 
+  it('conforms to the canonical stable-suite planning and review fixtures', () => {
+    const plansFixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-155-canonical-stable-suite-plans',
+      'canonical-stable-suite-plans.json'
+    );
+    const reportFixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-156-canonical-stable-suite-report',
+      'canonical-stable-suite-report.json'
+    );
+    const reviewFixture = readFixture<ConformanceManifestReviewStateFixture>(
+      'diagnostics',
+      'slice-157-canonical-stable-suite-review-state',
+      'canonical-stable-suite-review-state.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        plansFixture.manifest,
+        Object.fromEntries(
+          Object.entries(plansFixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(plansFixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+
+    expect(
+      reportConformanceManifest(
+        reportFixture.manifest,
+        normalizeManifestPlanningOptions(reportFixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return reportFixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(reportFixture.expected_report as never));
+
+    expect(
+      reviewConformanceManifest(
+        reviewFixture.manifest,
+        normalizeManifestReviewOptions(reviewFixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return reviewFixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(reviewFixture.expected_state as never));
+  });
+
   it('conforms to the slice-129 source-family backend-restricted plans fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
