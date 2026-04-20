@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "dependencies": {
     "@structuredmerge/ast-merge": "workspace:*",
+    "@structuredmerge/tree-haver": "workspace:*",
     "smol-toml": "^1.4.2"
   }
 }

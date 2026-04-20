@@ -17,8 +17,16 @@ export type {
   ProcessStructureItem
 } from './contracts';
 export {
+  backendReference,
+  createPeggyParser,
+  currentBackendId,
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   languagePackAdapterInfo,
+  PEGGY_BACKEND,
+  peggyAdapterInfo,
+  peggyFeatureProfile,
   processWithLanguagePack,
-  parseWithLanguagePack
+  parseWithLanguagePack,
+  parseWithPeggy,
+  withBackend
 } from './contracts';

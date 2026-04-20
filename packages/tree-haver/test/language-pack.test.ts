@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createPeggyParser,
+  currentBackendId,
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
+  parseWithPeggy,
+  PEGGY_BACKEND,
   type ParserRequest
 } from '../src/index';
 
@@ -41,5 +45,19 @@ describe('tree-haver language pack', () => {
         message: 'tree-sitter-language-pack reported syntax errors for json.'
       }
     ]);
+  });
+
+  it('parses valid input through a peggy parser helper', () => {
+    const parser = createPeggyParser(String.raw`
+      start = "hello" " " "world"
+    `);
+
+    const result = parseWithPeggy('hello world', parser);
+    expect(result.ok).toBe(true);
+    expect(result.analysis).toEqual({
+      kind: 'peggy',
+      backendRef: PEGGY_BACKEND
+    });
+    expect(currentBackendId()).toBeUndefined();
   });
 });

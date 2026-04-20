@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { matchTomlOwners, mergeToml, parseToml, tomlFeatureProfile } from '../src/index';
+import { withBackend } from '@structuredmerge/tree-haver';
+import {
+  availableTomlBackends,
+  matchTomlOwners,
+  mergeToml,
+  parseToml,
+  tomlBackendFeatureProfile,
+  tomlFeatureProfile
+} from '../src/index';
 
 describe('toml-merge', () => {
   it('parses valid toml documents', () => {
@@ -92,5 +100,25 @@ describe('toml-merge', () => {
       supportedDialects: ['toml'],
       supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
     });
+  });
+
+  it('exposes backend-specific TOML feature profiles', () => {
+    expect(availableTomlBackends()).toEqual(['native', 'peggy']);
+    expect(tomlBackendFeatureProfile('native').backendRef).toEqual({
+      id: 'native',
+      family: 'builtin'
+    });
+    expect(tomlBackendFeatureProfile('peggy').backendRef).toEqual({
+      id: 'peggy',
+      family: 'peg'
+    });
+  });
+
+  it('uses tree-haver backend context when no explicit backend is given', () => {
+    const result = withBackend('peggy', () =>
+      mergeToml('title = "Structured Merge"\n', '[package]\nname = "structuredmerge"\n', 'toml')
+    );
+
+    expect(result.ok).toBe(true);
   });
 });

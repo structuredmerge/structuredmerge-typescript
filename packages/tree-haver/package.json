@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "dependencies": {
     "@kreuzberg/tree-sitter-language-pack": "1.6.2",
-    "@structuredmerge/ast-merge": "workspace:*"
+    "@structuredmerge/ast-merge": "workspace:*",
+    "peggy": "^5.1.0"
   }
 }

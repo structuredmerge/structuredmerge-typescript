@@ -8,6 +8,13 @@ import {
   type PolicyReference
 } from '@structuredmerge/ast-merge';
 import { processWithLanguagePack } from '../src/index';
+import {
+  currentBackendId,
+  PEGGY_BACKEND,
+  peggyAdapterInfo,
+  peggyFeatureProfile,
+  withBackend
+} from '../src/index';
 
 interface ParserAdapterFixture {
   request: {
@@ -166,5 +173,25 @@ describe('tree-haver shared fixtures', () => {
         items: item.items
       }))
     ).toEqual(fixture.expected.imports);
+  });
+
+  it('exposes PEG backend references for parser-plurality slices', () => {
+    expect(PEGGY_BACKEND).toEqual({ id: 'peggy', family: 'peg' });
+    expect(peggyAdapterInfo.backendRef).toEqual({ id: 'peggy', family: 'peg' });
+    expect(peggyFeatureProfile.backendRef).toEqual({ id: 'peggy', family: 'peg' });
+  });
+
+  it('supports temporary backend context selection', () => {
+    expect(currentBackendId()).toBeUndefined();
+
+    withBackend('peggy', () => {
+      expect(currentBackendId()).toBe('peggy');
+      withBackend('kreuzberg-language-pack', () => {
+        expect(currentBackendId()).toBe('kreuzberg-language-pack');
+      });
+      expect(currentBackendId()).toBe('peggy');
+    });
+
+    expect(currentBackendId()).toBeUndefined();
   });
 });

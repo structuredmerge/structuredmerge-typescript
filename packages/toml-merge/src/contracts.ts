@@ -6,6 +6,13 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
+import {
+  createPeggyParser,
+  currentBackendId,
+  PEGGY_BACKEND,
+  type BackendReference,
+  parseWithPeggy
+} from '@structuredmerge/tree-haver';
 
 export type TomlDialect = 'toml';
 export type TomlRootKind = 'table';
@@ -69,10 +76,44 @@ export interface TomlFeatureProfile extends FamilyFeatureProfile {
   readonly supportedPolicies: readonly PolicyReference[];
 }
 
+export type TomlBackend = 'native' | 'peggy';
+
+export interface TomlBackendFeatureProfile extends TomlFeatureProfile {
+  readonly backend: TomlBackend;
+  readonly backendRef: BackendReference;
+}
+
 const destinationWinsArrayPolicy: PolicyReference = {
   surface: 'array',
   name: 'destination_wins_array'
 };
+const NATIVE_BACKEND: BackendReference = { id: 'native', family: 'builtin' };
+const TOML_PEGGY_GRAMMAR = String.raw`
+{
+  function text() { return input.substring(location().start.offset, location().end.offset); }
+}
+
+start = spacing document:document spacing EOF { return document; }
+document = (table / keyValue / blankLine / commentLine)*
+table = "[" keyPath "]" entryEnd
+keyValue = keyPath spacing "=" spacing value entryEnd
+keyPath = bareKey ("." bareKey)*
+value = array / string / boolean / number
+array = "[" spacing arrayValues? spacing "]"
+arrayValues = value (spacing "," spacing value)*
+string = "\"" chars:([^"\\] / "\\\"" / "\\\\" / "\\n" / "\\t")* "\""
+boolean = "true" / "false"
+number = "-"? [0-9]+ ("." [0-9]+)?
+bareKey = [A-Za-z0-9_-]+
+commentLine = spacing "#" [^\n\r]* newline
+blankLine = spacing newline
+entryEnd = spacing comment? (newline / EOF)
+comment = "#" [^\n\r]*
+newline = "\r\n" / "\n" / "\r"
+spacing = [ \t]*
+EOF = !.
+`;
+const tomlPeggyParser = createPeggyParser(TOML_PEGGY_GRAMMAR);
 
 function parseError(message: string): Diagnostic {
   return { severity: 'error', category: 'parse_error', message };
@@ -92,6 +133,24 @@ export function tomlFeatureProfile(): TomlFeatureProfile {
     supportedDialects: ['toml'],
     supportedPolicies: [destinationWinsArrayPolicy]
   };
+}
+
+export function availableTomlBackends(): readonly TomlBackend[] {
+  return ['native', 'peggy'];
+}
+
+export function tomlBackendFeatureProfile(backend?: TomlBackend): TomlBackendFeatureProfile {
+  const resolvedBackend = resolveBackend(backend);
+  return {
+    ...tomlFeatureProfile(),
+    backend: resolvedBackend,
+    backendRef: resolvedBackend === 'peggy' ? PEGGY_BACKEND : NATIVE_BACKEND
+  };
+}
+
+function resolveBackend(backend?: TomlBackend): TomlBackend {
+  if (backend) return backend;
+  return currentBackendId() === 'peggy' ? 'peggy' : 'native';
 }
 
 function isScalar(value: unknown): value is TomlScalar {
@@ -286,9 +345,30 @@ function analyzeTomlDocument(source: string): ParseResult<TomlAnalysis> {
   }
 }
 
-export function parseToml(source: string, dialect: TomlDialect): ParseResult<TomlAnalysis> {
+function validateTomlSyntax(source: string, backend: TomlBackend): ParseResult<undefined> {
+  if (backend === 'peggy') {
+    const result = parseWithPeggy(source, tomlPeggyParser);
+    return result.ok
+      ? { ok: true, diagnostics: [] }
+      : { ok: false, diagnostics: result.diagnostics };
+  }
+
+  return { ok: true, diagnostics: [] };
+}
+
+export function parseToml(
+  source: string,
+  dialect: TomlDialect,
+  backend?: TomlBackend
+): ParseResult<TomlAnalysis> {
   if (dialect !== 'toml') {
     return { ok: false, diagnostics: [unsupportedFeature(`Unsupported TOML dialect ${dialect}.`)] };
+  }
+
+  const resolvedBackend = resolveBackend(backend);
+  const syntax = validateTomlSyntax(source, resolvedBackend);
+  if (!syntax.ok) {
+    return { ok: false, diagnostics: syntax.diagnostics };
   }
 
   return analyzeTomlDocument(source);
@@ -317,14 +397,16 @@ export function matchTomlOwners(
 export function mergeToml(
   templateSource: string,
   destinationSource: string,
-  dialect: TomlDialect
+  dialect: TomlDialect,
+  backend?: TomlBackend
 ): MergeResult<string> {
-  const template = parseToml(templateSource, dialect);
+  const resolvedBackend = resolveBackend(backend);
+  const template = parseToml(templateSource, dialect, resolvedBackend);
   if (!template.ok || !template.analysis) {
     return { ok: false, diagnostics: template.diagnostics, policies: [] };
   }
 
-  const destination = parseToml(destinationSource, dialect);
+  const destination = parseToml(destinationSource, dialect, resolvedBackend);
   if (!destination.ok || !destination.analysis) {
     return {
       ok: false,

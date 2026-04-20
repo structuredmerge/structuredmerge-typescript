@@ -1,9 +1,18 @@
 export const packageName = '@structuredmerge/toml-merge';
 
-export { matchTomlOwners, mergeToml, parseToml, tomlFeatureProfile } from './contracts';
+export {
+  availableTomlBackends,
+  matchTomlOwners,
+  mergeToml,
+  parseToml,
+  tomlBackendFeatureProfile,
+  tomlFeatureProfile
+} from './contracts';
 
 export type {
   TomlAnalysis,
+  TomlBackend,
+  TomlBackendFeatureProfile,
   TomlAnalyzer,
   TomlDialect,
   TomlFeatureProfile,

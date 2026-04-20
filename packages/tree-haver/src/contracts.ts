@@ -1,4 +1,5 @@
 import type { Diagnostic, ParseResult, PolicyReference } from '@structuredmerge/ast-merge';
+import peggy from 'peggy';
 import {
   hasLanguage,
   init,
@@ -97,9 +98,17 @@ export interface LanguagePackProcessAnalysis extends AnalysisHandle {
   readonly backendRef: BackendReference;
 }
 
+export interface PeggyParser {
+  parse(source: string): unknown;
+}
+
 export const KREUZBERG_LANGUAGE_PACK_BACKEND: BackendReference = {
   id: 'kreuzberg-language-pack',
   family: 'tree-sitter'
+};
+export const PEGGY_BACKEND: BackendReference = {
+  id: 'peggy',
+  family: 'peg'
 };
 
 export const languagePackAdapterInfo: AdapterInfo = {
@@ -107,8 +116,80 @@ export const languagePackAdapterInfo: AdapterInfo = {
   backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND,
   supportsDialects: false
 };
+export const peggyAdapterInfo: AdapterInfo = {
+  backend: PEGGY_BACKEND.id,
+  backendRef: PEGGY_BACKEND,
+  supportsDialects: false
+};
+export const peggyFeatureProfile: FeatureProfile = {
+  backend: PEGGY_BACKEND.id,
+  backendRef: PEGGY_BACKEND,
+  supportsDialects: false
+};
 
 const initializedLanguages = new Set<string>();
+const backendRegistry = new Map<string, BackendReference>([
+  [KREUZBERG_LANGUAGE_PACK_BACKEND.id, KREUZBERG_LANGUAGE_PACK_BACKEND],
+  [PEGGY_BACKEND.id, PEGGY_BACKEND]
+]);
+let currentBackend: string | undefined;
+
+export function backendReference(id: string): BackendReference | undefined {
+  return backendRegistry.get(id);
+}
+
+export function currentBackendId(): string | undefined {
+  return currentBackend;
+}
+
+export function withBackend<T>(backendId: string, fn: () => T): T {
+  if (!backendRegistry.has(backendId)) {
+    throw new Error(`Unknown tree-haver backend ${backendId}.`);
+  }
+
+  const previousBackend = currentBackend;
+  currentBackend = backendId;
+  try {
+    return fn();
+  } finally {
+    currentBackend = previousBackend;
+  }
+}
+
+export function createPeggyParser(
+  grammar: string,
+  options?: peggy.ParserBuildOptions
+): PeggyParser {
+  return peggy.generate(grammar, { ...options, output: 'parser' }) as PeggyParser;
+}
+
+export function parseWithPeggy(
+  source: string,
+  parser: PeggyParser
+): ParseResult<{ kind: 'peggy'; backendRef: BackendReference }> {
+  try {
+    parser.parse(source);
+    return {
+      ok: true,
+      diagnostics: [],
+      analysis: {
+        kind: 'peggy',
+        backendRef: PEGGY_BACKEND
+      }
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'parse_error',
+          message: error instanceof Error ? error.message : 'Peggy parse failed.'
+        }
+      ]
+    };
+  }
+}
 
 function ensureLanguagePackLanguage(language: string): void {
   if (initializedLanguages.has(language) || hasLanguage(language)) {
