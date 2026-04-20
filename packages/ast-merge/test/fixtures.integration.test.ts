@@ -2494,6 +2494,58 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the backend-sensitive aggregate fixtures', () => {
+    const plansFixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: readonly NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-167-backend-sensitive-aggregate-suite-plans',
+      'backend-sensitive-aggregate-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        plansFixture.manifest,
+        Object.fromEntries(
+          Object.entries(plansFixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(plansFixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+
+    const reportFixtures = [
+      readFixture<ConformanceManifestReportFixture>(
+        'diagnostics',
+        'slice-168-backend-sensitive-aggregate-tree-sitter-report',
+        'backend-sensitive-aggregate-tree-sitter-report.json'
+      ),
+      readFixture<ConformanceManifestReportFixture>(
+        'diagnostics',
+        'slice-169-backend-sensitive-aggregate-native-report',
+        'backend-sensitive-aggregate-native-report.json'
+      )
+    ];
+
+    for (const fixture of reportFixtures) {
+      expect(
+        reportConformanceManifest(
+          fixture.manifest,
+          normalizeManifestPlanningOptions(fixture.options as never),
+          (run) => {
+            const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+            return (
+              fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+            );
+          }
+        )
+      ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+    }
+  });
+
   it('conforms to the slice-61 review host hints fixture', () => {
     const fixture = readFixture<ReviewHostHintsFixture>(
       ...diagnosticsFixturePath('review_host_hints')
