@@ -5,6 +5,8 @@ import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   groupProjectedChildReviewCases,
+  projectedChildGroupReviewRequest,
+  selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress,
   type ConformanceManifest
@@ -24,6 +26,39 @@ import {
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
+}
+
+interface FixtureProjectedChildGroup {
+  delegated_apply_group: string;
+  parent_operation_id: string;
+  child_operation_id: string;
+  delegated_runtime_surface_path: string;
+  case_ids: string[];
+  delegated_case_ids: string[];
+}
+
+interface MarkdownDelegatedChildReviewTransportFixture {
+  family: string;
+  group: FixtureProjectedChildGroup;
+  expected_request: {
+    id: string;
+    kind: 'delegated_child_group';
+    family: string;
+    message: string;
+    blocking: boolean;
+    delegated_group: FixtureProjectedChildGroup;
+    action_offers: Array<{
+      action: 'apply_delegated_child_group';
+      requires_context: boolean;
+    }>;
+    default_action: 'apply_delegated_child_group';
+  };
+  groups: FixtureProjectedChildGroup[];
+  decisions: Array<{
+    request_id: string;
+    action: 'apply_delegated_child_group';
+  }>;
+  expected_accepted_groups: FixtureProjectedChildGroup[];
 }
 
 describe('markdown-merge shared fixtures', () => {
@@ -445,6 +480,69 @@ describe('markdown-merge shared fixtures', () => {
       )
     ).toEqual(
       fixture.expected_ready_groups.map((entry) => ({
+        delegatedApplyGroup: entry.delegated_apply_group,
+        parentOperationId: entry.parent_operation_id,
+        childOperationId: entry.child_operation_id,
+        delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+        caseIds: entry.case_ids,
+        delegatedCaseIds: entry.delegated_case_ids
+      }))
+    );
+  });
+
+  it('conforms to the slice-238 delegated child review transport fixture', () => {
+    const fixture = readFixture<MarkdownDelegatedChildReviewTransportFixture>(
+      'markdown',
+      'slice-238-delegated-child-review-transport',
+      'fenced-code-review-transport.json'
+    );
+
+    const group = {
+      delegatedApplyGroup: fixture.group.delegated_apply_group,
+      parentOperationId: fixture.group.parent_operation_id,
+      childOperationId: fixture.group.child_operation_id,
+      delegatedRuntimeSurfacePath: fixture.group.delegated_runtime_surface_path,
+      caseIds: fixture.group.case_ids,
+      delegatedCaseIds: fixture.group.delegated_case_ids
+    };
+
+    expect(projectedChildGroupReviewRequest(group, fixture.family)).toEqual({
+      id: fixture.expected_request.id,
+      kind: fixture.expected_request.kind,
+      family: fixture.expected_request.family,
+      message: fixture.expected_request.message,
+      blocking: fixture.expected_request.blocking,
+      delegatedGroup: {
+        delegatedApplyGroup: fixture.expected_request.delegated_group.delegated_apply_group,
+        parentOperationId: fixture.expected_request.delegated_group.parent_operation_id,
+        childOperationId: fixture.expected_request.delegated_group.child_operation_id,
+        delegatedRuntimeSurfacePath:
+          fixture.expected_request.delegated_group.delegated_runtime_surface_path,
+        caseIds: fixture.expected_request.delegated_group.case_ids,
+        delegatedCaseIds: fixture.expected_request.delegated_group.delegated_case_ids
+      },
+      actionOffers: [{ action: 'apply_delegated_child_group', requiresContext: false }],
+      defaultAction: 'apply_delegated_child_group'
+    });
+
+    expect(
+      selectProjectedChildReviewGroupsAcceptedForApply(
+        fixture.groups.map((entry) => ({
+          delegatedApplyGroup: entry.delegated_apply_group,
+          parentOperationId: entry.parent_operation_id,
+          childOperationId: entry.child_operation_id,
+          delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+          caseIds: entry.case_ids,
+          delegatedCaseIds: entry.delegated_case_ids
+        })),
+        fixture.family,
+        fixture.decisions.map((entry) => ({
+          requestId: entry.request_id,
+          action: entry.action
+        }))
+      )
+    ).toEqual(
+      fixture.expected_accepted_groups.map((entry) => ({
         delegatedApplyGroup: entry.delegated_apply_group,
         parentOperationId: entry.parent_operation_id,
         childOperationId: entry.child_operation_id,

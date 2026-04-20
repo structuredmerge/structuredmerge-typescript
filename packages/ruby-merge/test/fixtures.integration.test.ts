@@ -3,6 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   groupProjectedChildReviewCases,
+  projectedChildGroupReviewRequest,
+  selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress
 } from '@structuredmerge/ast-merge';
@@ -73,6 +75,39 @@ function normalizeChildOperation(operation: FixtureChildOperation) {
     languageChain: operation.language_chain,
     surface: normalizeSurface(operation.surface)
   };
+}
+
+interface FixtureProjectedChildGroup {
+  delegated_apply_group: string;
+  parent_operation_id: string;
+  child_operation_id: string;
+  delegated_runtime_surface_path: string;
+  case_ids: string[];
+  delegated_case_ids: string[];
+}
+
+interface RubyDelegatedChildReviewTransportFixture {
+  family: string;
+  group: FixtureProjectedChildGroup;
+  expected_request: {
+    id: string;
+    kind: 'delegated_child_group';
+    family: string;
+    message: string;
+    blocking: boolean;
+    delegated_group: FixtureProjectedChildGroup;
+    action_offers: Array<{
+      action: 'apply_delegated_child_group';
+      requires_context: boolean;
+    }>;
+    default_action: 'apply_delegated_child_group';
+  };
+  groups: FixtureProjectedChildGroup[];
+  decisions: Array<{
+    request_id: string;
+    action: 'apply_delegated_child_group';
+  }>;
+  expected_accepted_groups: FixtureProjectedChildGroup[];
 }
 
 describe('ruby-merge shared fixtures', () => {
@@ -272,6 +307,66 @@ describe('ruby-merge shared fixtures', () => {
       )
     ).toEqual(
       readyFixture.expected_ready_groups.map((entry) => ({
+        delegatedApplyGroup: entry.delegated_apply_group,
+        parentOperationId: entry.parent_operation_id,
+        childOperationId: entry.child_operation_id,
+        delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+        caseIds: entry.case_ids,
+        delegatedCaseIds: entry.delegated_case_ids
+      }))
+    );
+
+    const transportFixture = readFixture<RubyDelegatedChildReviewTransportFixture>(
+      'ruby',
+      'slice-239-delegated-child-review-transport',
+      'yard-example-review-transport.json'
+    );
+    const transportGroup = {
+      delegatedApplyGroup: transportFixture.group.delegated_apply_group,
+      parentOperationId: transportFixture.group.parent_operation_id,
+      childOperationId: transportFixture.group.child_operation_id,
+      delegatedRuntimeSurfacePath: transportFixture.group.delegated_runtime_surface_path,
+      caseIds: transportFixture.group.case_ids,
+      delegatedCaseIds: transportFixture.group.delegated_case_ids
+    };
+    expect(projectedChildGroupReviewRequest(transportGroup, transportFixture.family)).toEqual({
+      id: transportFixture.expected_request.id,
+      kind: transportFixture.expected_request.kind,
+      family: transportFixture.expected_request.family,
+      message: transportFixture.expected_request.message,
+      blocking: transportFixture.expected_request.blocking,
+      delegatedGroup: {
+        delegatedApplyGroup:
+          transportFixture.expected_request.delegated_group.delegated_apply_group,
+        parentOperationId: transportFixture.expected_request.delegated_group.parent_operation_id,
+        childOperationId: transportFixture.expected_request.delegated_group.child_operation_id,
+        delegatedRuntimeSurfacePath:
+          transportFixture.expected_request.delegated_group.delegated_runtime_surface_path,
+        caseIds: transportFixture.expected_request.delegated_group.case_ids,
+        delegatedCaseIds: transportFixture.expected_request.delegated_group.delegated_case_ids
+      },
+      actionOffers: [{ action: 'apply_delegated_child_group', requiresContext: false }],
+      defaultAction: 'apply_delegated_child_group'
+    });
+
+    expect(
+      selectProjectedChildReviewGroupsAcceptedForApply(
+        transportFixture.groups.map((entry) => ({
+          delegatedApplyGroup: entry.delegated_apply_group,
+          parentOperationId: entry.parent_operation_id,
+          childOperationId: entry.child_operation_id,
+          delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+          caseIds: entry.case_ids,
+          delegatedCaseIds: entry.delegated_case_ids
+        })),
+        transportFixture.family,
+        transportFixture.decisions.map((entry) => ({
+          requestId: entry.request_id,
+          action: entry.action
+        }))
+      )
+    ).toEqual(
+      transportFixture.expected_accepted_groups.map((entry) => ({
         delegatedApplyGroup: entry.delegated_apply_group,
         parentOperationId: entry.parent_operation_id,
         childOperationId: entry.child_operation_id,

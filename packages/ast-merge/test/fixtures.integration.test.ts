@@ -53,6 +53,9 @@ import {
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   groupProjectedChildReviewCases,
+  projectedChildGroupReviewRequest,
+  reviewRequestIdForProjectedChildGroup,
+  selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress,
   conformanceFamilyFeatureProfilePath,
@@ -194,6 +197,35 @@ interface ProjectedChildReviewGroupProgressFixture {
     pending_case_ids: string[];
     complete: boolean;
   }>;
+}
+
+interface ProjectedChildGroupReviewRequestFixture {
+  family: string;
+  group: ProjectedChildReviewGroupsFixture['expected_groups'][number];
+  expected_request: {
+    id: string;
+    kind: ReviewRequest['kind'];
+    family: string;
+    message: string;
+    blocking: boolean;
+    delegated_group: ProjectedChildReviewGroupsFixture['expected_groups'][number];
+    action_offers: Array<{
+      action: ReviewActionOffer['action'];
+      requires_context: boolean;
+      payload_kind?: ReviewActionOffer['payloadKind'];
+    }>;
+    default_action?: ReviewRequest['defaultAction'];
+  };
+}
+
+interface ProjectedChildGroupsAcceptedForApplyFixture {
+  family: string;
+  groups: ProjectedChildReviewGroupsFixture['expected_groups'];
+  decisions: Array<{
+    request_id: string;
+    action: ReviewDecision['action'];
+  }>;
+  expected_accepted_groups: ProjectedChildReviewGroupsFixture['expected_groups'];
 }
 
 interface ProjectedChildReviewGroupsReadyForApplyFixture {
@@ -988,6 +1020,7 @@ function normalizeReviewRequest(raw: {
       supported_policies: PolicyReference[];
     };
   };
+  delegated_group?: ProjectedChildReviewGroupsFixture['expected_groups'][number];
   action_offers: Array<{
     action: ReviewActionOffer['action'];
     requires_context: boolean;
@@ -1003,6 +1036,9 @@ function normalizeReviewRequest(raw: {
     blocking: raw.blocking,
     proposedContext: raw.proposed_context
       ? normalizeFamilyPlanContext(raw.proposed_context)
+      : undefined,
+    delegatedGroup: raw.delegated_group
+      ? normalizeProjectedChildReviewGroup(raw.delegated_group)
       : undefined,
     actionOffers: raw.action_offers.map((offer) => ({
       action: offer.action,
@@ -3348,6 +3384,38 @@ describe('ast-merge shared fixtures', () => {
       )
     ).toEqual(
       fixture.expected_ready_groups.map((entry) => normalizeProjectedChildReviewGroup(entry))
+    );
+  });
+
+  it('conforms to the slice-236 delegated child group review request fixture', () => {
+    const fixture = readFixture<ProjectedChildGroupReviewRequestFixture>(
+      'diagnostics',
+      'slice-236-delegated-child-group-review-request',
+      'delegated-child-group-review-request.json'
+    );
+
+    const group = normalizeProjectedChildReviewGroup(fixture.group);
+    expect(reviewRequestIdForProjectedChildGroup(group)).toBe(fixture.expected_request.id);
+    expect(projectedChildGroupReviewRequest(group, fixture.family)).toEqual(
+      normalizeReviewRequest(fixture.expected_request)
+    );
+  });
+
+  it('conforms to the slice-237 delegated child groups accepted-for-apply fixture', () => {
+    const fixture = readFixture<ProjectedChildGroupsAcceptedForApplyFixture>(
+      'diagnostics',
+      'slice-237-delegated-child-group-accepted-for-apply',
+      'delegated-child-groups-accepted-for-apply.json'
+    );
+
+    expect(
+      selectProjectedChildReviewGroupsAcceptedForApply(
+        fixture.groups.map((entry) => normalizeProjectedChildReviewGroup(entry)),
+        fixture.family,
+        fixture.decisions.map((entry) => normalizeReviewDecision(entry))
+      )
+    ).toEqual(
+      fixture.expected_accepted_groups.map((entry) => normalizeProjectedChildReviewGroup(entry))
     );
   });
 

@@ -223,9 +223,12 @@ export interface ConformanceManifestReport {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-export type ReviewRequestKind = 'family_context';
+export type ReviewRequestKind = 'family_context' | 'delegated_child_group';
 
-export type ReviewDecisionAction = 'accept_default_context' | 'provide_explicit_context';
+export type ReviewDecisionAction =
+  | 'accept_default_context'
+  | 'provide_explicit_context'
+  | 'apply_delegated_child_group';
 
 export interface ReviewActionOffer {
   readonly action: ReviewDecisionAction;
@@ -240,6 +243,7 @@ export interface ReviewRequest {
   readonly message: string;
   readonly blocking: boolean;
   readonly proposedContext?: ConformanceFamilyPlanContext;
+  readonly delegatedGroup?: ProjectedChildReviewGroup;
   readonly actionOffers: readonly ReviewActionOffer[];
   readonly defaultAction?: ReviewDecisionAction;
 }
@@ -457,6 +461,47 @@ export function selectProjectedChildReviewGroupsReadyForApply(
   const resolved = new Set(resolvedCaseIds);
 
   return groups.filter((group) => group.caseIds.every((caseId) => resolved.has(caseId)));
+}
+
+export function reviewRequestIdForProjectedChildGroup(group: ProjectedChildReviewGroup): string {
+  return `projected_child_group:${group.delegatedApplyGroup}`;
+}
+
+export function projectedChildGroupReviewRequest(
+  group: ProjectedChildReviewGroup,
+  family: string
+): ReviewRequest {
+  return {
+    id: reviewRequestIdForProjectedChildGroup(group),
+    kind: 'delegated_child_group',
+    family,
+    message: `delegated child group ${group.delegatedApplyGroup} is ready to apply for ${family}.`,
+    blocking: true,
+    delegatedGroup: group,
+    actionOffers: [
+      {
+        action: 'apply_delegated_child_group',
+        requiresContext: false
+      }
+    ],
+    defaultAction: 'apply_delegated_child_group'
+  };
+}
+
+export function selectProjectedChildReviewGroupsAcceptedForApply(
+  groups: readonly ProjectedChildReviewGroup[],
+  _family: string,
+  decisions: readonly ReviewDecision[]
+): readonly ProjectedChildReviewGroup[] {
+  const acceptedRequestIds = new Set(
+    decisions
+      .filter((decision) => decision.action === 'apply_delegated_child_group')
+      .map((decision) => decision.requestId)
+  );
+
+  return groups.filter((group) =>
+    acceptedRequestIds.has(reviewRequestIdForProjectedChildGroup(group))
+  );
 }
 
 export function conformanceManifestReplayContext(
