@@ -23,6 +23,7 @@ export interface Diagnostic {
   readonly requestId?: string;
   readonly action?: ReviewDecisionAction;
   readonly reason?: ReviewDiagnosticReason;
+  readonly payloadKind?: 'conformance_family_context';
 }
 
 export interface ParseResult<TAnalysis> {
@@ -585,7 +586,8 @@ function reviewDecisionForFamilyContext(
             message: `review decision ${requestId} requires explicit context payload.`,
             requestId,
             action: 'provide_explicit_context',
-            reason: 'missing_required_payload'
+            reason: 'missing_required_payload',
+            payloadKind: 'conformance_family_context'
           }
         ]
       };

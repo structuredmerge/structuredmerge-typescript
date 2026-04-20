@@ -713,6 +713,7 @@ function normalizeDiagnostic(
   raw: Diagnostic & {
     request_id?: string;
     reason?: Diagnostic['reason'];
+    payload_kind?: Diagnostic['payloadKind'];
   }
 ): Diagnostic {
   return {
@@ -722,7 +723,8 @@ function normalizeDiagnostic(
     path: raw.path,
     requestId: raw.requestId ?? raw.request_id,
     action: raw.action,
-    reason: raw.reason
+    reason: raw.reason,
+    payloadKind: raw.payloadKind ?? raw.payload_kind
   };
 }
 
