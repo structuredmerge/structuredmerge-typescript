@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { groupProjectedChildReviewCases } from '@structuredmerge/ast-merge';
 import {
   matchRubyOwners,
   parseRuby,
@@ -136,5 +137,48 @@ describe('ruby-merge shared fixtures', () => {
     expect(
       rubyDelegatedChildOperations(childAnalysis.analysis!, childFixture.parent_operation_id)
     ).toEqual(childFixture.expected.map((operation) => normalizeChildOperation(operation)));
+
+    const groupedFixture = readFixture<{
+      cases: Array<{
+        case_id: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        surface_path: string;
+        delegated_case_id: string;
+        delegated_apply_group: string;
+        delegated_runtime_surface_path: string;
+      }>;
+      expected_groups: Array<{
+        delegated_apply_group: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        delegated_runtime_surface_path: string;
+        case_ids: string[];
+        delegated_case_ids: string[];
+      }>;
+    }>('ruby', 'slice-229-projected-child-review-groups', 'yard-example-review-groups.json');
+
+    expect(
+      groupProjectedChildReviewCases(
+        groupedFixture.cases.map((entry) => ({
+          caseId: entry.case_id,
+          parentOperationId: entry.parent_operation_id,
+          childOperationId: entry.child_operation_id,
+          surfacePath: entry.surface_path,
+          delegatedCaseId: entry.delegated_case_id,
+          delegatedApplyGroup: entry.delegated_apply_group,
+          delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path
+        }))
+      )
+    ).toEqual(
+      groupedFixture.expected_groups.map((entry) => ({
+        delegatedApplyGroup: entry.delegated_apply_group,
+        parentOperationId: entry.parent_operation_id,
+        childOperationId: entry.child_operation_id,
+        delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+        caseIds: entry.case_ids,
+        delegatedCaseIds: entry.delegated_case_ids
+      }))
+    );
   });
 });

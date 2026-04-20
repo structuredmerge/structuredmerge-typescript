@@ -33,6 +33,7 @@ import type {
   PolicySurface,
   Diagnostic,
   ProjectedChildReviewCase,
+  ProjectedChildReviewGroup,
   ReviewDecision,
   ReviewActionOffer,
   ReviewHostHints,
@@ -50,6 +51,7 @@ import {
   conformanceManifestReviewStateEnvelope,
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
+  groupProjectedChildReviewCases,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   conformanceSuiteDefinition,
@@ -163,6 +165,17 @@ interface ProjectedChildReviewCasesFixture {
     delegated_case_id: string;
     delegated_apply_group: string;
     delegated_runtime_surface_path: string;
+  }>;
+}
+
+interface ProjectedChildReviewGroupsFixture extends ProjectedChildReviewCasesFixture {
+  expected_groups: Array<{
+    delegated_apply_group: string;
+    parent_operation_id: string;
+    child_operation_id: string;
+    delegated_runtime_surface_path: string;
+    case_ids: string[];
+    delegated_case_ids: string[];
   }>;
 }
 
@@ -1122,6 +1135,19 @@ function normalizeProjectedChildReviewCase(
     delegatedCaseId: raw.delegated_case_id,
     delegatedApplyGroup: raw.delegated_apply_group,
     delegatedRuntimeSurfacePath: raw.delegated_runtime_surface_path
+  };
+}
+
+function normalizeProjectedChildReviewGroup(
+  raw: ProjectedChildReviewGroupsFixture['expected_groups'][number]
+): ProjectedChildReviewGroup {
+  return {
+    delegatedApplyGroup: raw.delegated_apply_group,
+    parentOperationId: raw.parent_operation_id,
+    childOperationId: raw.child_operation_id,
+    delegatedRuntimeSurfacePath: raw.delegated_runtime_surface_path,
+    caseIds: raw.case_ids,
+    delegatedCaseIds: raw.delegated_case_ids
   };
 }
 
@@ -3238,6 +3264,20 @@ describe('ast-merge shared fixtures', () => {
         )
       )
     ).toEqual(projectedCasesFixture.cases.map((entry) => normalizeProjectedChildReviewCase(entry)));
+  });
+
+  it('conforms to the slice-227 projected child-review groups fixture', () => {
+    const fixture = readFixture<ProjectedChildReviewGroupsFixture>(
+      'diagnostics',
+      'slice-227-projected-child-review-groups',
+      'projected-child-review-groups.json'
+    );
+
+    expect(
+      groupProjectedChildReviewCases(
+        fixture.cases.map((entry) => normalizeProjectedChildReviewCase(entry))
+      )
+    ).toEqual(fixture.expected_groups.map((entry) => normalizeProjectedChildReviewGroup(entry)));
   });
 
   it('conforms to the slice-71 review state JSON roundtrip fixture', () => {

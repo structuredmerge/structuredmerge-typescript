@@ -74,6 +74,15 @@ export interface ProjectedChildReviewCase {
   readonly delegatedRuntimeSurfacePath: string;
 }
 
+export interface ProjectedChildReviewGroup {
+  readonly delegatedApplyGroup: string;
+  readonly parentOperationId: string;
+  readonly childOperationId: string;
+  readonly delegatedRuntimeSurfacePath: string;
+  readonly caseIds: readonly string[];
+  readonly delegatedCaseIds: readonly string[];
+}
+
 export interface ParseResult<TAnalysis> {
   readonly ok: boolean;
   readonly diagnostics: readonly Diagnostic[];
@@ -374,6 +383,39 @@ export function conformanceReviewHostHints(
     interactive: options.interactive ?? false,
     requireExplicitContexts: options.requireExplicitContexts ?? false
   };
+}
+
+export function groupProjectedChildReviewCases(
+  cases: readonly ProjectedChildReviewCase[]
+): readonly ProjectedChildReviewGroup[] {
+  const groups = new Map<string, ProjectedChildReviewGroup>();
+  const order: string[] = [];
+
+  for (const entry of cases) {
+    const key = entry.delegatedApplyGroup;
+    const existing = groups.get(key);
+
+    if (existing) {
+      groups.set(key, {
+        ...existing,
+        caseIds: [...existing.caseIds, entry.caseId],
+        delegatedCaseIds: [...existing.delegatedCaseIds, entry.delegatedCaseId]
+      });
+      continue;
+    }
+
+    order.push(key);
+    groups.set(key, {
+      delegatedApplyGroup: entry.delegatedApplyGroup,
+      parentOperationId: entry.parentOperationId,
+      childOperationId: entry.childOperationId,
+      delegatedRuntimeSurfacePath: entry.delegatedRuntimeSurfacePath,
+      caseIds: [entry.caseId],
+      delegatedCaseIds: [entry.delegatedCaseId]
+    });
+  }
+
+  return order.map((key) => groups.get(key)!);
 }
 
 export function conformanceManifestReplayContext(
