@@ -714,6 +714,8 @@ function normalizeDiagnostic(
     request_id?: string;
     reason?: Diagnostic['reason'];
     payload_kind?: Diagnostic['payloadKind'];
+    expected_family?: string;
+    provided_family?: string;
   }
 ): Diagnostic {
   return {
@@ -724,7 +726,9 @@ function normalizeDiagnostic(
     requestId: raw.requestId ?? raw.request_id,
     action: raw.action,
     reason: raw.reason,
-    payloadKind: raw.payloadKind ?? raw.payload_kind
+    payloadKind: raw.payloadKind ?? raw.payload_kind,
+    expectedFamily: raw.expectedFamily ?? raw.expected_family,
+    providedFamily: raw.providedFamily ?? raw.provided_family
   };
 }
 

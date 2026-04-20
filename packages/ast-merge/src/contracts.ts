@@ -24,6 +24,8 @@ export interface Diagnostic {
   readonly action?: ReviewDecisionAction;
   readonly reason?: ReviewDiagnosticReason;
   readonly payloadKind?: 'conformance_family_context';
+  readonly expectedFamily?: string;
+  readonly providedFamily?: string;
 }
 
 export interface ParseResult<TAnalysis> {
@@ -604,7 +606,9 @@ function reviewDecisionForFamilyContext(
               message: `review decision ${requestId} provided context for ${decision.context.familyProfile.family}, expected ${family}.`,
               requestId,
               action: 'provide_explicit_context',
-              reason: 'family_mismatch'
+              reason: 'family_mismatch',
+              expectedFamily: family,
+              providedFamily: decision.context.familyProfile.family
             }
           ]
         };
