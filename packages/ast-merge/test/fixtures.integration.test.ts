@@ -1777,6 +1777,43 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
   });
 
+  it('conforms to the slice-138 TOML family suite-definitions fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      suite_names: string[];
+      definitions: Record<string, ConformanceSuiteDefinition>;
+    }>('diagnostics', 'slice-138-toml-family-suite-definitions', 'toml-suite-definitions.json');
+
+    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
+    expect(conformanceSuiteDefinition(fixture.manifest, 'toml_portable')).toEqual(
+      fixture.definitions.toml_portable
+    );
+  });
+
+  it('conforms to the slice-139 TOML family named suite-plans fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-139-toml-family-named-suite-plans',
+      'typescript-toml-named-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        fixture.manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
   it('conforms to the slice-51 named conformance suite-results fixture', () => {
     const fixture = readFixture<NamedSuiteResultsFixture>(
       ...diagnosticsFixturePath('named_suite_results')
@@ -1984,6 +2021,25 @@ describe('ast-merge shared fixtures', () => {
       'diagnostics',
       'slice-128-source-family-manifest-report',
       'source-manifest-report.json'
+    );
+
+    expect(
+      reportConformanceManifest(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+  });
+
+  it('conforms to the slice-140 TOML family manifest report fixture', () => {
+    const fixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-140-toml-family-manifest-report',
+      'typescript-toml-manifest-report.json'
     );
 
     expect(
