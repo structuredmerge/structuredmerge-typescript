@@ -9,6 +9,8 @@ import {
 import {
   availableMarkdownBackends,
   markdownBackendFeatureProfile,
+  markdownDelegatedChildOperations,
+  markdownDiscoveredSurfaces,
   markdownEmbeddedFamilies,
   markdownFeatureProfile,
   markdownPlanContext,
@@ -220,5 +222,88 @@ describe('markdown-merge shared fixtures', () => {
     const analysis = parseMarkdown(fixture.source, 'markdown', 'markdown-it');
     expect(analysis.ok).toBe(true);
     expect(markdownEmbeddedFamilies(analysis.analysis!)).toEqual(fixture.expected);
+  });
+
+  it('conforms to the slice-212 discovered-surfaces fixture', () => {
+    const fixture = readFixture<{
+      source: string;
+      expected: Array<{
+        surface_kind: string;
+        declared_language?: string;
+        effective_language: string;
+        address: string;
+        parent_address?: string;
+        owner: {
+          kind: 'structural_owner' | 'owned_region' | 'parent_surface';
+          address: string;
+        };
+        reconstruction_strategy: string;
+        metadata?: Record<string, unknown>;
+      }>;
+    }>('markdown', 'slice-212-discovered-surfaces', 'fenced-code-surfaces.json');
+
+    const analysis = parseMarkdown(fixture.source, 'markdown', 'markdown-it');
+    expect(analysis.ok).toBe(true);
+    expect(markdownDiscoveredSurfaces(analysis.analysis!)).toEqual(
+      fixture.expected.map((surface) => ({
+        surfaceKind: surface.surface_kind,
+        declaredLanguage: surface.declared_language,
+        effectiveLanguage: surface.effective_language,
+        address: surface.address,
+        parentAddress: surface.parent_address,
+        owner: surface.owner,
+        reconstructionStrategy: surface.reconstruction_strategy,
+        metadata: surface.metadata
+      }))
+    );
+  });
+
+  it('conforms to the slice-213 delegated child-operations fixture', () => {
+    const fixture = readFixture<{
+      source: string;
+      parent_operation_id: string;
+      expected: Array<{
+        operation_id: string;
+        parent_operation_id: string;
+        requested_strategy: 'delegate_child_surface';
+        language_chain: string[];
+        surface: {
+          surface_kind: string;
+          declared_language?: string;
+          effective_language: string;
+          address: string;
+          parent_address?: string;
+          owner: {
+            kind: 'structural_owner' | 'owned_region' | 'parent_surface';
+            address: string;
+          };
+          reconstruction_strategy: string;
+          metadata?: Record<string, unknown>;
+        };
+      }>;
+    }>('markdown', 'slice-213-delegated-child-operations', 'fenced-code-child-operations.json');
+
+    const analysis = parseMarkdown(fixture.source, 'markdown', 'markdown-it');
+    expect(analysis.ok).toBe(true);
+    expect(
+      markdownDelegatedChildOperations(analysis.analysis!, fixture.parent_operation_id)
+    ).toEqual(
+      fixture.expected.map((operation) => ({
+        operationId: operation.operation_id,
+        parentOperationId: operation.parent_operation_id,
+        requestedStrategy: operation.requested_strategy,
+        languageChain: operation.language_chain,
+        surface: {
+          surfaceKind: operation.surface.surface_kind,
+          declaredLanguage: operation.surface.declared_language,
+          effectiveLanguage: operation.surface.effective_language,
+          address: operation.surface.address,
+          parentAddress: operation.surface.parent_address,
+          owner: operation.surface.owner,
+          reconstructionStrategy: operation.surface.reconstruction_strategy,
+          metadata: operation.surface.metadata
+        }
+      }))
+    );
   });
 });

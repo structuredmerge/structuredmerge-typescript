@@ -24,12 +24,15 @@ import type {
   ConformanceSuitePlan,
   ConformanceSuiteReport,
   ConformanceSuiteSummary,
+  DelegatedChildOperation,
   DiagnosticCategory,
   DiagnosticSeverity,
+  DiscoveredSurface,
   FamilyFeatureProfile,
   PolicyReference,
   PolicySurface,
   Diagnostic,
+  ProjectedChildReviewCase,
   ReviewDecision,
   ReviewActionOffer,
   ReviewHostHints,
@@ -37,7 +40,9 @@ import type {
   ReviewReplayContext,
   ReviewDiagnosticReason,
   ReviewTransportImportError,
-  ReviewRequest
+  ReviewRequest,
+  SurfaceOwnerRef,
+  SurfaceSpan
 } from '../src/index';
 import {
   REVIEW_TRANSPORT_VERSION,
@@ -117,6 +122,48 @@ interface ConformanceRunnerFixture {
 interface ConformanceSummaryFixture {
   results: ConformanceCaseResult[];
   summary: ConformanceSuiteSummary;
+}
+
+interface SurfaceOwnershipFixture {
+  surface: {
+    surface_kind: string;
+    declared_language?: string;
+    effective_language: string;
+    address: string;
+    parent_address?: string;
+    span?: {
+      start_line: number;
+      end_line: number;
+    };
+    owner: {
+      kind: 'structural_owner' | 'owned_region' | 'parent_surface';
+      address: string;
+    };
+    reconstruction_strategy: string;
+    metadata?: Record<string, unknown>;
+  };
+}
+
+interface DelegatedChildOperationFixture {
+  operation: {
+    operation_id: string;
+    parent_operation_id: string;
+    requested_strategy: 'delegate_child_surface';
+    language_chain: string[];
+    surface: SurfaceOwnershipFixture['surface'];
+  };
+}
+
+interface ProjectedChildReviewCasesFixture {
+  cases: Array<{
+    case_id: string;
+    parent_operation_id: string;
+    child_operation_id: string;
+    surface_path: string;
+    delegated_case_id: string;
+    delegated_apply_group: string;
+    delegated_runtime_surface_path: string;
+  }>;
 }
 
 interface ConformanceSelectionFixtureCase {
@@ -1011,6 +1058,70 @@ function normalizeManifestReviewState(raw: {
     appliedDecisions: raw.applied_decisions.map((decision) => normalizeReviewDecision(decision)),
     hostHints: normalizeReviewHostHints(raw.host_hints),
     replayContext: normalizeReviewReplayContext(raw.replay_context)
+  };
+}
+
+function normalizeSurfaceOwnerRef(raw: {
+  kind: 'structural_owner' | 'owned_region' | 'parent_surface';
+  address: string;
+}): SurfaceOwnerRef {
+  return {
+    kind: raw.kind,
+    address: raw.address
+  };
+}
+
+function normalizeSurfaceSpan(raw?: {
+  start_line: number;
+  end_line: number;
+}): SurfaceSpan | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  return {
+    startLine: raw.start_line,
+    endLine: raw.end_line
+  };
+}
+
+function normalizeDiscoveredSurface(raw: SurfaceOwnershipFixture['surface']): DiscoveredSurface {
+  return {
+    surfaceKind: raw.surface_kind,
+    declaredLanguage: raw.declared_language,
+    effectiveLanguage: raw.effective_language,
+    address: raw.address,
+    parentAddress: raw.parent_address,
+    span: normalizeSurfaceSpan(raw.span),
+    owner: normalizeSurfaceOwnerRef(raw.owner),
+    reconstructionStrategy: raw.reconstruction_strategy,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeDelegatedChildOperation(
+  raw: DelegatedChildOperationFixture['operation']
+): DelegatedChildOperation {
+  return {
+    operationId: raw.operation_id,
+    parentOperationId: raw.parent_operation_id,
+    requestedStrategy: raw.requested_strategy,
+    languageChain: raw.language_chain,
+    surface: normalizeDiscoveredSurface(raw.surface)
+  };
+}
+
+function normalizeProjectedChildReviewCase(
+  raw: ProjectedChildReviewCasesFixture['cases'][number]
+): ProjectedChildReviewCase {
+  return {
+    caseId: raw.case_id,
+    parentOperationId: raw.parent_operation_id,
+    childOperationId: raw.child_operation_id,
+    surfacePath: raw.surface_path,
+    delegatedCaseId: raw.delegated_case_id,
+    delegatedApplyGroup: raw.delegated_apply_group,
+    delegatedRuntimeSurfacePath: raw.delegated_runtime_surface_path
   };
 }
 
@@ -3093,6 +3204,40 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-209 surface-ownership fixture', () => {
+    const surfaceFixture = readFixture<SurfaceOwnershipFixture>(
+      ...diagnosticsFixturePath('surface_ownership')
+    );
+
+    expect(JSON.parse(JSON.stringify(normalizeDiscoveredSurface(surfaceFixture.surface)))).toEqual(
+      normalizeDiscoveredSurface(surfaceFixture.surface)
+    );
+  });
+
+  it('conforms to the slice-210 delegated child-operation fixture', () => {
+    const childOperationFixture = readFixture<DelegatedChildOperationFixture>(
+      ...diagnosticsFixturePath('delegated_child_operation')
+    );
+
+    expect(
+      JSON.parse(JSON.stringify(normalizeDelegatedChildOperation(childOperationFixture.operation)))
+    ).toEqual(normalizeDelegatedChildOperation(childOperationFixture.operation));
+  });
+
+  it('conforms to the slice-211 projected child-review cases fixture', () => {
+    const projectedCasesFixture = readFixture<ProjectedChildReviewCasesFixture>(
+      ...diagnosticsFixturePath('projected_child_review_cases')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          projectedCasesFixture.cases.map((entry) => normalizeProjectedChildReviewCase(entry))
+        )
+      )
+    ).toEqual(projectedCasesFixture.cases.map((entry) => normalizeProjectedChildReviewCase(entry)));
   });
 
   it('conforms to the slice-71 review state JSON roundtrip fixture', () => {

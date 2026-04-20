@@ -2,6 +2,8 @@ import MarkdownIt from 'markdown-it';
 import type {
   ConformanceFamilyPlanContext,
   ConformanceManifest,
+  DelegatedChildOperation,
+  DiscoveredSurface,
   Diagnostic,
   FamilyFeatureProfile,
   ParseResult
@@ -323,6 +325,41 @@ export function markdownEmbeddedFamilies(
       }
     ];
   });
+}
+
+export function markdownDiscoveredSurfaces(
+  analysis: MarkdownAnalysis
+): readonly DiscoveredSurface[] {
+  return markdownEmbeddedFamilies(analysis).map((candidate) => ({
+    surfaceKind: 'markdown_fenced_code_block',
+    declaredLanguage: candidate.language,
+    effectiveLanguage: candidate.dialect,
+    address: `document[0] > fenced_code_block[${candidate.path}]`,
+    parentAddress: 'document[0]',
+    owner: {
+      kind: 'structural_owner',
+      address: candidate.path
+    },
+    reconstructionStrategy: 'portable_write',
+    metadata: {
+      family: candidate.family,
+      dialect: candidate.dialect,
+      path: candidate.path
+    }
+  }));
+}
+
+export function markdownDelegatedChildOperations(
+  analysis: MarkdownAnalysis,
+  parentOperationId = 'markdown-document-0'
+): readonly DelegatedChildOperation[] {
+  return markdownDiscoveredSurfaces(analysis).map((surface, index) => ({
+    operationId: `markdown-fence-${index}`,
+    parentOperationId,
+    requestedStrategy: 'delegate_child_surface',
+    languageChain: ['markdown', surface.effectiveLanguage],
+    surface
+  }));
 }
 
 export function markdownManifestRolePaths(manifest: ConformanceManifest): {

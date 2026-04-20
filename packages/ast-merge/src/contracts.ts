@@ -32,6 +32,48 @@ export interface Diagnostic {
   readonly review?: ReviewDiagnosticDetail;
 }
 
+export type SurfaceOwnerKind = 'structural_owner' | 'owned_region' | 'parent_surface';
+
+export interface SurfaceOwnerRef {
+  readonly kind: SurfaceOwnerKind;
+  readonly address: string;
+}
+
+export interface SurfaceSpan {
+  readonly startLine: number;
+  readonly endLine: number;
+}
+
+export interface DiscoveredSurface {
+  readonly surfaceKind: string;
+  readonly declaredLanguage?: string;
+  readonly effectiveLanguage: string;
+  readonly address: string;
+  readonly parentAddress?: string;
+  readonly span?: SurfaceSpan;
+  readonly owner: SurfaceOwnerRef;
+  readonly reconstructionStrategy: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface DelegatedChildOperation {
+  readonly operationId: string;
+  readonly parentOperationId: string;
+  readonly requestedStrategy: 'delegate_child_surface';
+  readonly languageChain: readonly string[];
+  readonly surface: DiscoveredSurface;
+}
+
+export interface ProjectedChildReviewCase {
+  readonly caseId: string;
+  readonly parentOperationId: string;
+  readonly childOperationId: string;
+  readonly surfacePath: string;
+  readonly delegatedCaseId: string;
+  readonly delegatedApplyGroup: string;
+  readonly delegatedRuntimeSurfacePath: string;
+}
+
 export interface ParseResult<TAnalysis> {
   readonly ok: boolean;
   readonly diagnostics: readonly Diagnostic[];

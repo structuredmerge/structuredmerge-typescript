@@ -17,6 +17,8 @@ export type {
 export {
   availableMarkdownBackends,
   collectMarkdownOwners,
+  markdownDelegatedChildOperations,
+  markdownDiscoveredSurfaces,
   markdownEmbeddedFamilies,
   markdownBackendFeatureProfile,
   markdownFeatureProfile,
