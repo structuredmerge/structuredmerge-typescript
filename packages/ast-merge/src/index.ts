@@ -68,6 +68,7 @@ export {
   groupProjectedChildReviewCases,
   projectedChildGroupReviewRequest,
   reviewProjectedChildGroups,
+  delegatedChildApplyPlan,
   reviewRequestIdForProjectedChildGroup,
   selectProjectedChildReviewGroupsAcceptedForApply,
   summarizeProjectedChildReviewGroupProgress,

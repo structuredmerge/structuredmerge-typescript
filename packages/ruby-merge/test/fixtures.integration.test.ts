@@ -2,12 +2,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  delegatedChildApplyPlan,
   groupProjectedChildReviewCases,
   projectedChildGroupReviewRequest,
   reviewProjectedChildGroups,
   selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
-  summarizeProjectedChildReviewGroupProgress
+  summarizeProjectedChildReviewGroupProgress,
+  type Diagnostic
 } from '@structuredmerge/ast-merge';
 import {
   matchRubyOwners,
@@ -45,6 +47,58 @@ interface FixtureChildOperation {
   readonly requested_strategy: string;
   readonly language_chain: string[];
   readonly surface: FixtureSurface;
+}
+
+interface RubyDelegatedChildApplyPlanFixture {
+  readonly family: string;
+  readonly review_state: {
+    readonly requests: Array<{
+      readonly id: string;
+      readonly kind: 'delegated_child_group';
+      readonly family: string;
+      readonly message: string;
+      readonly blocking: boolean;
+      readonly delegated_group: FixtureProjectedChildGroup;
+      readonly action_offers: Array<{
+        readonly action: 'apply_delegated_child_group';
+        readonly requires_context: boolean;
+      }>;
+      readonly default_action: 'apply_delegated_child_group';
+    }>;
+    readonly accepted_groups: FixtureProjectedChildGroup[];
+    readonly applied_decisions: Array<{
+      readonly request_id: string;
+      readonly action: 'apply_delegated_child_group';
+    }>;
+    readonly diagnostics: Array<{
+      readonly severity: string;
+      readonly category: string;
+      readonly message: string;
+    }>;
+  };
+  readonly expected_plan: {
+    readonly entries: Array<{
+      readonly request_id: string;
+      readonly family: string;
+      readonly delegated_group: FixtureProjectedChildGroup;
+      readonly decision: {
+        readonly request_id: string;
+        readonly action: 'apply_delegated_child_group';
+      };
+    }>;
+  };
+}
+
+function normalizeDiagnosticEntry(entry: {
+  readonly severity: string;
+  readonly category: string;
+  readonly message: string;
+}): Diagnostic {
+  return {
+    severity: entry.severity as Diagnostic['severity'],
+    category: entry.category as Diagnostic['category'],
+    message: entry.message
+  };
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -463,6 +517,67 @@ describe('ruby-merge shared fixtures', () => {
         action: entry.action
       })),
       diagnostics: stateFixture.expected_state.diagnostics
+    });
+
+    const applyPlanFixture = readFixture<RubyDelegatedChildApplyPlanFixture>(
+      'ruby',
+      'slice-245-delegated-child-apply-plan',
+      'yard-example-apply-plan.json'
+    );
+
+    expect(
+      delegatedChildApplyPlan(
+        {
+          requests: applyPlanFixture.review_state.requests.map((entry) => ({
+            id: entry.id,
+            kind: entry.kind,
+            family: entry.family,
+            message: entry.message,
+            blocking: entry.blocking,
+            delegatedGroup: {
+              delegatedApplyGroup: entry.delegated_group.delegated_apply_group,
+              parentOperationId: entry.delegated_group.parent_operation_id,
+              childOperationId: entry.delegated_group.child_operation_id,
+              delegatedRuntimeSurfacePath: entry.delegated_group.delegated_runtime_surface_path,
+              caseIds: entry.delegated_group.case_ids,
+              delegatedCaseIds: entry.delegated_group.delegated_case_ids
+            },
+            actionOffers: [{ action: 'apply_delegated_child_group', requiresContext: false }],
+            defaultAction: 'apply_delegated_child_group'
+          })),
+          acceptedGroups: applyPlanFixture.review_state.accepted_groups.map((entry) => ({
+            delegatedApplyGroup: entry.delegated_apply_group,
+            parentOperationId: entry.parent_operation_id,
+            childOperationId: entry.child_operation_id,
+            delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+            caseIds: entry.case_ids,
+            delegatedCaseIds: entry.delegated_case_ids
+          })),
+          appliedDecisions: applyPlanFixture.review_state.applied_decisions.map((entry) => ({
+            requestId: entry.request_id,
+            action: entry.action
+          })),
+          diagnostics: applyPlanFixture.review_state.diagnostics.map(normalizeDiagnosticEntry)
+        },
+        applyPlanFixture.family
+      )
+    ).toEqual({
+      entries: applyPlanFixture.expected_plan.entries.map((entry) => ({
+        requestId: entry.request_id,
+        family: entry.family,
+        delegatedGroup: {
+          delegatedApplyGroup: entry.delegated_group.delegated_apply_group,
+          parentOperationId: entry.delegated_group.parent_operation_id,
+          childOperationId: entry.delegated_group.child_operation_id,
+          delegatedRuntimeSurfacePath: entry.delegated_group.delegated_runtime_surface_path,
+          caseIds: entry.delegated_group.case_ids,
+          delegatedCaseIds: entry.delegated_group.delegated_case_ids
+        },
+        decision: {
+          requestId: entry.decision.request_id,
+          action: entry.decision.action
+        }
+      }))
     });
   });
 });

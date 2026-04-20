@@ -52,6 +52,7 @@ import {
   conformanceManifestReviewStateEnvelope,
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
+  delegatedChildApplyPlan,
   groupProjectedChildReviewCases,
   projectedChildGroupReviewRequest,
   reviewProjectedChildGroups,
@@ -116,6 +117,52 @@ interface FamilyFeatureProfileFixture {
     family: string;
     supported_dialects: string[];
     supported_policies: PolicyReference[];
+  };
+}
+
+interface DelegatedChildApplyPlanFixture {
+  family: string;
+  review_state: {
+    requests: ProjectedChildGroupReviewRequestFixture['expected_request'][];
+    accepted_groups: ProjectedChildReviewGroupsFixture['expected_groups'];
+    applied_decisions: ReviewDecisionFixture[];
+    diagnostics: DiagnosticFixtureEntry[];
+  };
+  expected_plan: {
+    entries: Array<{
+      request_id: string;
+      family: string;
+      delegated_group: ProjectedChildReviewGroupsFixture['expected_groups'][number];
+      decision: ReviewDecisionFixture;
+    }>;
+  };
+}
+
+interface ReviewDecisionFixture {
+  request_id: string;
+  action: ReviewDecision['action'];
+  context?: {
+    family_profile: NamedSuiteReportFixture['family_profile'];
+    feature_profile?: {
+      backend: string;
+      supports_dialects: boolean;
+      supported_policies: PolicyReference[];
+    };
+  };
+}
+
+interface DiagnosticFixtureEntry {
+  severity: DiagnosticSeverity;
+  category: DiagnosticCategory;
+  message: string;
+  path?: string;
+  review?: {
+    request_id?: string;
+    action?: ReviewDecision['action'];
+    reason?: ReviewDiagnosticReason;
+    payload_kind?: 'conformance_family_context';
+    expected_family?: string;
+    provided_family?: string;
   };
 }
 
@@ -3473,6 +3520,37 @@ describe('ast-merge shared fixtures', () => {
         normalizeReviewDecision(entry)
       ),
       diagnostics: fixture.expected_state.diagnostics.map((entry) => normalizeDiagnostic(entry))
+    });
+  });
+
+  it('conforms to the slice-243 delegated child apply-plan fixture', () => {
+    const fixture = readFixture<DelegatedChildApplyPlanFixture>(
+      'diagnostics',
+      'slice-243-delegated-child-apply-plan',
+      'delegated-child-apply-plan.json'
+    );
+
+    expect(
+      delegatedChildApplyPlan(
+        {
+          requests: fixture.review_state.requests.map((entry) => normalizeReviewRequest(entry)),
+          acceptedGroups: fixture.review_state.accepted_groups.map((entry) =>
+            normalizeProjectedChildReviewGroup(entry)
+          ),
+          appliedDecisions: fixture.review_state.applied_decisions.map((entry) =>
+            normalizeReviewDecision(entry)
+          ),
+          diagnostics: fixture.review_state.diagnostics.map((entry) => normalizeDiagnostic(entry))
+        },
+        fixture.family
+      )
+    ).toEqual({
+      entries: fixture.expected_plan.entries.map((entry) => ({
+        requestId: entry.request_id,
+        family: entry.family,
+        delegatedGroup: normalizeProjectedChildReviewGroup(entry.delegated_group),
+        decision: normalizeReviewDecision(entry.decision)
+      }))
     });
   });
 

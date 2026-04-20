@@ -261,6 +261,17 @@ export interface DelegatedChildGroupReviewState {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export interface DelegatedChildApplyPlanEntry {
+  readonly requestId: string;
+  readonly family: string;
+  readonly delegatedGroup: ProjectedChildReviewGroup;
+  readonly decision: ReviewDecision;
+}
+
+export interface DelegatedChildApplyPlan {
+  readonly entries: readonly DelegatedChildApplyPlanEntry[];
+}
+
 export interface ReviewReplayBundle {
   readonly replayContext: ReviewReplayContext;
   readonly decisions: readonly ReviewDecision[];
@@ -559,6 +570,35 @@ export function reviewProjectedChildGroups(
     acceptedGroups,
     appliedDecisions,
     diagnostics
+  };
+}
+
+export function delegatedChildApplyPlan(
+  state: DelegatedChildGroupReviewState,
+  family: string
+): DelegatedChildApplyPlan {
+  const decisionByRequestId = new Map(
+    state.appliedDecisions.map((decision) => [decision.requestId, decision] as const)
+  );
+
+  return {
+    entries: state.acceptedGroups.flatMap((group) => {
+      const requestId = reviewRequestIdForProjectedChildGroup(group);
+      const decision = decisionByRequestId.get(requestId);
+
+      if (!decision) {
+        return [];
+      }
+
+      return [
+        {
+          requestId,
+          family,
+          delegatedGroup: group,
+          decision
+        }
+      ];
+    })
   };
 }
 

@@ -4,12 +4,14 @@ import { describe, expect, it } from 'vitest';
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  delegatedChildApplyPlan,
   groupProjectedChildReviewCases,
   projectedChildGroupReviewRequest,
   reviewProjectedChildGroups,
   selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress,
+  type Diagnostic,
   type ConformanceManifest
 } from '@structuredmerge/ast-merge';
 import {
@@ -93,6 +95,34 @@ interface MarkdownDelegatedChildReviewStateFixture {
       category: string;
       message: string;
     }>;
+  };
+}
+
+interface MarkdownDelegatedChildApplyPlanFixture {
+  family: string;
+  review_state: MarkdownDelegatedChildReviewStateFixture['expected_state'];
+  expected_plan: {
+    entries: Array<{
+      request_id: string;
+      family: string;
+      delegated_group: FixtureProjectedChildGroup;
+      decision: {
+        request_id: string;
+        action: 'apply_delegated_child_group';
+      };
+    }>;
+  };
+}
+
+function normalizeDiagnosticEntry(entry: {
+  severity: string;
+  category: string;
+  message: string;
+}): Diagnostic {
+  return {
+    severity: entry.severity as Diagnostic['severity'],
+    category: entry.category as Diagnostic['category'],
+    message: entry.message
   };
 }
 
@@ -642,6 +672,69 @@ describe('markdown-merge shared fixtures', () => {
         action: entry.action
       })),
       diagnostics: fixture.expected_state.diagnostics
+    });
+  });
+
+  it('conforms to the slice-244 delegated child apply-plan fixture', () => {
+    const fixture = readFixture<MarkdownDelegatedChildApplyPlanFixture>(
+      'markdown',
+      'slice-244-delegated-child-apply-plan',
+      'fenced-code-apply-plan.json'
+    );
+
+    expect(
+      delegatedChildApplyPlan(
+        {
+          requests: fixture.review_state.requests.map((entry) => ({
+            id: entry.id,
+            kind: entry.kind,
+            family: entry.family,
+            message: entry.message,
+            blocking: entry.blocking,
+            delegatedGroup: {
+              delegatedApplyGroup: entry.delegated_group.delegated_apply_group,
+              parentOperationId: entry.delegated_group.parent_operation_id,
+              childOperationId: entry.delegated_group.child_operation_id,
+              delegatedRuntimeSurfacePath: entry.delegated_group.delegated_runtime_surface_path,
+              caseIds: entry.delegated_group.case_ids,
+              delegatedCaseIds: entry.delegated_group.delegated_case_ids
+            },
+            actionOffers: [{ action: 'apply_delegated_child_group', requiresContext: false }],
+            defaultAction: 'apply_delegated_child_group'
+          })),
+          acceptedGroups: fixture.review_state.accepted_groups.map((entry) => ({
+            delegatedApplyGroup: entry.delegated_apply_group,
+            parentOperationId: entry.parent_operation_id,
+            childOperationId: entry.child_operation_id,
+            delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+            caseIds: entry.case_ids,
+            delegatedCaseIds: entry.delegated_case_ids
+          })),
+          appliedDecisions: fixture.review_state.applied_decisions.map((entry) => ({
+            requestId: entry.request_id,
+            action: entry.action
+          })),
+          diagnostics: fixture.review_state.diagnostics.map(normalizeDiagnosticEntry)
+        },
+        fixture.family
+      )
+    ).toEqual({
+      entries: fixture.expected_plan.entries.map((entry) => ({
+        requestId: entry.request_id,
+        family: entry.family,
+        delegatedGroup: {
+          delegatedApplyGroup: entry.delegated_group.delegated_apply_group,
+          parentOperationId: entry.delegated_group.parent_operation_id,
+          childOperationId: entry.delegated_group.child_operation_id,
+          delegatedRuntimeSurfacePath: entry.delegated_group.delegated_runtime_surface_path,
+          caseIds: entry.delegated_group.case_ids,
+          delegatedCaseIds: entry.delegated_group.delegated_case_ids
+        },
+        decision: {
+          requestId: entry.decision.request_id,
+          action: entry.decision.action
+        }
+      }))
     });
   });
 });
