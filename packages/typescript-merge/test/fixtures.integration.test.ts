@@ -9,7 +9,8 @@ import {
   parseTypeScript,
   parseTypeScriptWithBackend,
   typeScriptBackendFeatureProfile,
-  typeScriptFeatureProfile
+  typeScriptFeatureProfile,
+  typeScriptPlanContext
 } from '../src/index';
 
 function readFixture<T>(...segments: string[]): T {
@@ -193,6 +194,60 @@ describe('typescript-merge shared fixtures', () => {
       backend: fixture.native.backend,
       supportsDialects: fixture.native.supports_dialects,
       supportedPolicies: fixture.native.supported_policies
+    });
+  });
+
+  it('conforms to the slice-123 backend plan-context fixtures', () => {
+    const fixture = readFixture<{
+      tree_sitter: {
+        family_profile: {
+          family: 'typescript';
+          supported_dialects: ['typescript'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+      native: {
+        family_profile: {
+          family: 'typescript';
+          supported_dialects: ['typescript'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+    }>('diagnostics', 'slice-123-source-family-plan-contexts', 'typescript-plan-contexts.json');
+
+    expect(typeScriptPlanContext('tree-sitter')).toEqual({
+      familyProfile: {
+        family: fixture.tree_sitter.family_profile.family,
+        supportedDialects: fixture.tree_sitter.family_profile.supported_dialects,
+        supportedPolicies: fixture.tree_sitter.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.tree_sitter.feature_profile.backend,
+        supportsDialects: fixture.tree_sitter.feature_profile.supports_dialects,
+        supportedPolicies: fixture.tree_sitter.feature_profile.supported_policies
+      }
+    });
+    expect(typeScriptPlanContext('native')).toEqual({
+      familyProfile: {
+        family: fixture.native.family_profile.family,
+        supportedDialects: fixture.native.family_profile.supported_dialects,
+        supportedPolicies: fixture.native.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.native.feature_profile.backend,
+        supportsDialects: fixture.native.feature_profile.supports_dialects,
+        supportedPolicies: fixture.native.feature_profile.supported_policies
+      }
     });
   });
 });

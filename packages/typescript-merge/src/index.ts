@@ -8,7 +8,8 @@ export {
   parseTypeScriptWithBackend,
   typeScriptBackendFeatureProfile,
   typeScriptBackends,
-  typeScriptFeatureProfile
+  typeScriptFeatureProfile,
+  typeScriptPlanContext
 } from './contracts';
 
 export type {

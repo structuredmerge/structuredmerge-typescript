@@ -1,5 +1,6 @@
 import type {
   ConformanceFeatureProfileView,
+  ConformanceFamilyPlanContext,
   FamilyFeatureProfile,
   MergeResult,
   ParseResult,
@@ -273,6 +274,13 @@ export function typeScriptBackendFeatureProfile(
     backend: languagePackAdapterInfo.backend,
     supportsDialects: true,
     supportedPolicies: [destinationWinsArrayPolicy]
+  };
+}
+
+export function typeScriptPlanContext(backend: TypeScriptBackend): ConformanceFamilyPlanContext {
+  return {
+    familyProfile: typeScriptFeatureProfile(),
+    featureProfile: typeScriptBackendFeatureProfile(backend)
   };
 }
 
