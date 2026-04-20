@@ -533,7 +533,12 @@ function reviewDecisionForFamilyContext(
   family: string,
   options: ConformanceManifestReviewOptions
 ):
-  | { context: ConformanceFamilyPlanContext; decision: ReviewDecision; assumedDefault: boolean }
+  | {
+      context?: ConformanceFamilyPlanContext;
+      decision?: ReviewDecision;
+      assumedDefault: boolean;
+      diagnostics: readonly Diagnostic[];
+    }
   | undefined {
   const requestId = reviewRequestIdForFamilyContext(family);
   const familyProfile = options.familyProfiles?.[family];
@@ -551,15 +556,43 @@ function reviewDecisionForFamilyContext(
       return {
         context: defaultConformanceFamilyContext(familyProfile),
         decision,
-        assumedDefault: true
+        assumedDefault: true,
+        diagnostics: []
+      };
+    }
+
+    if (decision.action === 'provide_explicit_context' && !decision.context) {
+      return {
+        assumedDefault: false,
+        diagnostics: [
+          {
+            severity: 'error',
+            category: 'configuration_error',
+            message: `review decision ${requestId} requires explicit context payload.`
+          }
+        ]
       };
     }
 
     if (decision.action === 'provide_explicit_context' && decision.context) {
+      if (decision.context.familyProfile.family !== family) {
+        return {
+          assumedDefault: false,
+          diagnostics: [
+            {
+              severity: 'error',
+              category: 'configuration_error',
+              message: `review decision ${requestId} provided context for ${decision.context.familyProfile.family}, expected ${family}.`
+            }
+          ]
+        };
+      }
+
       return {
         context: decision.context,
         decision,
-        assumedDefault: false
+        assumedDefault: false,
+        diagnostics: []
       };
     }
   }
@@ -615,7 +648,7 @@ export function reviewConformanceFamilyContext(
 
   const reviewedDecision = reviewDecisionForFamilyContext(family, options);
 
-  if (reviewedDecision) {
+  if (reviewedDecision && reviewedDecision.context && reviewedDecision.decision) {
     return {
       context: reviewedDecision.context,
       diagnostics: reviewedDecision.assumedDefault
@@ -633,13 +666,16 @@ export function reviewConformanceFamilyContext(
   }
 
   return {
-    diagnostics: [
-      {
-        severity: 'error',
-        category: 'configuration_error',
-        message: `missing explicit family context for ${family}.`
-      }
-    ],
+    diagnostics:
+      reviewedDecision && reviewedDecision.diagnostics.length > 0
+        ? reviewedDecision.diagnostics
+        : [
+            {
+              severity: 'error',
+              category: 'configuration_error',
+              message: `missing explicit family context for ${family}.`
+            }
+          ],
     requests: [
       {
         id: reviewRequestIdForFamilyContext(family),

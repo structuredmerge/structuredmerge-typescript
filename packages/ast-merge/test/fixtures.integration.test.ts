@@ -376,6 +376,18 @@ interface FamilyContextReviewRequestFixture {
   options: {
     family_profiles: Record<string, NamedSuiteReportFixture['family_profile']>;
     require_explicit_contexts: boolean;
+    review_decisions?: Array<{
+      request_id: string;
+      action: ReviewDecision['action'];
+      context?: {
+        family_profile: NamedSuiteReportFixture['family_profile'];
+        feature_profile?: {
+          backend: string;
+          supports_dialects: boolean;
+          supported_policies: PolicyReference[];
+        };
+      };
+    }>;
   };
   expected_diagnostic: Diagnostic;
   expected_request: {
@@ -2018,5 +2030,35 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-80 explicit review decision payload validation fixture', () => {
+    const fixture = readFixture<FamilyContextReviewRequestFixture>(
+      ...diagnosticsFixturePath('explicit_review_decision_missing_context')
+    );
+
+    const reviewed = reviewConformanceFamilyContext(
+      fixture.family,
+      normalizeManifestReviewOptions(fixture.options as never)
+    );
+
+    expect(reviewed.diagnostics).toEqual([normalizeDiagnostic(fixture.expected_diagnostic)]);
+    expect(reviewed.requests).toEqual([normalizeReviewRequest(fixture.expected_request)]);
+    expect(reviewed.context).toBeUndefined();
+  });
+
+  it('conforms to the slice-81 explicit review decision family validation fixture', () => {
+    const fixture = readFixture<FamilyContextReviewRequestFixture>(
+      ...diagnosticsFixturePath('explicit_review_decision_family_mismatch')
+    );
+
+    const reviewed = reviewConformanceFamilyContext(
+      fixture.family,
+      normalizeManifestReviewOptions(fixture.options as never)
+    );
+
+    expect(reviewed.diagnostics).toEqual([normalizeDiagnostic(fixture.expected_diagnostic)]);
+    expect(reviewed.requests).toEqual([normalizeReviewRequest(fixture.expected_request)]);
+    expect(reviewed.context).toBeUndefined();
   });
 });
