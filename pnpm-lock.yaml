@@ -59,6 +59,15 @@ importers:
         specifier: workspace:*
         version: link:../tree-haver
 
+  packages/markdown-it-merge:
+    dependencies:
+      '@structuredmerge/markdown-merge':
+        specifier: workspace:*
+        version: link:../markdown-merge
+      markdown-it:
+        specifier: ^14.1.0
+        version: 14.1.1
+
   packages/markdown-merge:
     dependencies:
       '@structuredmerge/ast-merge':

@@ -15,10 +15,12 @@ export type {
 
 export {
   availableMarkdownBackends,
+  collectMarkdownOwners,
   markdownBackendFeatureProfile,
   markdownFeatureProfile,
   markdownManifestRolePaths,
   markdownPlanContext,
   matchMarkdownOwners,
+  normalizeMarkdownSource,
   parseMarkdown
 } from './contracts';

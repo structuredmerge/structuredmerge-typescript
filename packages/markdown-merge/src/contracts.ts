@@ -58,7 +58,7 @@ function unsupportedFeature(message: string): Diagnostic {
   return { severity: 'error', category: 'unsupported_feature', message };
 }
 
-function normalizeSource(source: string): string {
+export function normalizeMarkdownSource(source: string): string {
   return source.replace(/\r\n?/g, '\n');
 }
 
@@ -73,9 +73,9 @@ function slugify(value: string): string {
   );
 }
 
-function collectMarkdownOwners(source: string): MarkdownOwner[] {
+export function collectMarkdownOwners(source: string): MarkdownOwner[] {
   const owners: MarkdownOwner[] = [];
-  const lines = normalizeSource(source).split('\n');
+  const lines = normalizeMarkdownSource(source).split('\n');
   let headingIndex = 0;
   let codeFenceIndex = 0;
 
@@ -208,7 +208,7 @@ export function parseMarkdown(
     };
   }
 
-  const normalizedSource = normalizeSource(source);
+  const normalizedSource = normalizeMarkdownSource(source);
   return {
     ok: true,
     diagnostics: [],
