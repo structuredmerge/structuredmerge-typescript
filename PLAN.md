@@ -39,6 +39,7 @@ Deferred:
 - TOML/YAML parity
 - CRISPR/ruleset execution parity
 - kettle-dev/kettle-test equivalents
+- PEG-backend parity beyond the first tree-sitter and native adapter slices
 
 ## Proposed Package Family
 
@@ -96,6 +97,9 @@ Current constraint:
 - Until that host/runtime constraint is resolved, TypeScript tree-sitter work
   should be treated as experimental and should not be assumed to move in lock
   step with Rust and Go backend adoption.
+- Once a second non-tree-sitter backend is intentionally pursued, the first PEG
+  candidate should be `Peggy`, because it provides a clear JavaScript-native
+  parser-generator path for exercising the `tree-haver` normalization seam.
 
 Requirements:
 
