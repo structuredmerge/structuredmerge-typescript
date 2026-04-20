@@ -153,6 +153,7 @@ export type ReviewDecisionAction = 'accept_default_context' | 'provide_explicit_
 export interface ReviewActionOffer {
   readonly action: ReviewDecisionAction;
   readonly requiresContext: boolean;
+  readonly payloadKind?: 'conformance_family_context';
 }
 
 export interface ReviewRequest {
@@ -691,7 +692,11 @@ export function reviewConformanceFamilyContext(
         proposedContext: defaultConformanceFamilyContext(familyProfile),
         actionOffers: [
           { action: 'accept_default_context', requiresContext: false },
-          { action: 'provide_explicit_context', requiresContext: true }
+          {
+            action: 'provide_explicit_context',
+            requiresContext: true,
+            payloadKind: 'conformance_family_context'
+          }
         ],
         defaultAction: 'accept_default_context'
       }

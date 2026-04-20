@@ -408,6 +408,7 @@ interface FamilyContextReviewRequestFixture {
     action_offers: Array<{
       action: ReviewActionOffer['action'];
       requires_context: boolean;
+      payload_kind?: ReviewActionOffer['payloadKind'];
     }>;
     default_action?: ReviewRequest['defaultAction'];
   };
@@ -454,6 +455,7 @@ interface ConformanceManifestReviewStateFixture {
       action_offers: Array<{
         action: ReviewActionOffer['action'];
         requires_context: boolean;
+        payload_kind?: ReviewActionOffer['payloadKind'];
       }>;
       default_action?: ReviewRequest['defaultAction'];
     }>;
@@ -840,6 +842,7 @@ function normalizeReviewRequest(raw: {
   action_offers: Array<{
     action: ReviewActionOffer['action'];
     requires_context: boolean;
+    payload_kind?: ReviewActionOffer['payloadKind'];
   }>;
   default_action?: ReviewRequest['defaultAction'];
 }): ReviewRequest {
@@ -854,7 +857,8 @@ function normalizeReviewRequest(raw: {
       : undefined,
     actionOffers: raw.action_offers.map((offer) => ({
       action: offer.action,
-      requiresContext: offer.requires_context
+      requiresContext: offer.requires_context,
+      payloadKind: offer.payload_kind
     })),
     defaultAction: raw.default_action
   };
@@ -916,6 +920,7 @@ function normalizeManifestReviewState(raw: {
     action_offers: Array<{
       action: ReviewActionOffer['action'];
       requires_context: boolean;
+      payload_kind?: ReviewActionOffer['payloadKind'];
     }>;
     default_action?: ReviewRequest['defaultAction'];
   }>;
