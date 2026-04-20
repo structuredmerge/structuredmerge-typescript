@@ -15,17 +15,21 @@ export type ReviewDiagnosticReason =
   | 'family_mismatch'
   | 'request_not_found';
 
-export interface Diagnostic {
-  readonly severity: DiagnosticSeverity;
-  readonly category: DiagnosticCategory;
-  readonly message: string;
-  readonly path?: string;
+export interface ReviewDiagnosticDetail {
   readonly requestId?: string;
   readonly action?: ReviewDecisionAction;
   readonly reason?: ReviewDiagnosticReason;
   readonly payloadKind?: 'conformance_family_context';
   readonly expectedFamily?: string;
   readonly providedFamily?: string;
+}
+
+export interface Diagnostic {
+  readonly severity: DiagnosticSeverity;
+  readonly category: DiagnosticCategory;
+  readonly message: string;
+  readonly path?: string;
+  readonly review?: ReviewDiagnosticDetail;
 }
 
 export interface ParseResult<TAnalysis> {
@@ -586,10 +590,12 @@ function reviewDecisionForFamilyContext(
             severity: 'error',
             category: 'configuration_error',
             message: `review decision ${requestId} requires explicit context payload.`,
-            requestId,
-            action: 'provide_explicit_context',
-            reason: 'missing_required_payload',
-            payloadKind: 'conformance_family_context'
+            review: {
+              requestId,
+              action: 'provide_explicit_context',
+              reason: 'missing_required_payload',
+              payloadKind: 'conformance_family_context'
+            }
           }
         ]
       };
@@ -604,11 +610,13 @@ function reviewDecisionForFamilyContext(
               severity: 'error',
               category: 'configuration_error',
               message: `review decision ${requestId} provided context for ${decision.context.familyProfile.family}, expected ${family}.`,
-              requestId,
-              action: 'provide_explicit_context',
-              reason: 'family_mismatch',
-              expectedFamily: family,
-              providedFamily: decision.context.familyProfile.family
+              review: {
+                requestId,
+                action: 'provide_explicit_context',
+                reason: 'family_mismatch',
+                expectedFamily: family,
+                providedFamily: decision.context.familyProfile.family
+              }
             }
           ]
         };
@@ -1211,9 +1219,11 @@ export function reviewConformanceManifest(
             severity: 'error',
             category: 'replay_rejected',
             message: `review decision ${decision.requestId} does not match any current review request.`,
-            requestId: decision.requestId,
-            action: decision.action,
-            reason: 'request_not_found'
+            review: {
+              requestId: decision.requestId,
+              action: decision.action,
+              reason: 'request_not_found'
+            }
           });
         }
       }

@@ -35,6 +35,7 @@ import type {
   ReviewHostHints,
   ReviewReplayBundleEnvelope,
   ReviewReplayContext,
+  ReviewDiagnosticReason,
   ReviewTransportImportError,
   ReviewRequest
 } from '../src/index';
@@ -711,24 +712,53 @@ function normalizeSuiteReportEnvelope(raw: {
 
 function normalizeDiagnostic(
   raw: Diagnostic & {
+    requestId?: string;
     request_id?: string;
-    reason?: Diagnostic['reason'];
-    payload_kind?: Diagnostic['payloadKind'];
+    action?: ReviewDecision['action'];
+    reason?: ReviewDiagnosticReason;
+    payloadKind?: 'conformance_family_context';
+    payload_kind?: 'conformance_family_context';
+    expectedFamily?: string;
     expected_family?: string;
+    providedFamily?: string;
     provided_family?: string;
+    review?: {
+      request_id?: string;
+      action?: ReviewDecision['action'];
+      reason?: ReviewDiagnosticReason;
+      payload_kind?: 'conformance_family_context';
+      expected_family?: string;
+      provided_family?: string;
+    };
   }
 ): Diagnostic {
+  const rawReview = raw.review;
   return {
     severity: raw.severity,
     category: raw.category,
     message: raw.message,
     path: raw.path,
-    requestId: raw.requestId ?? raw.request_id,
-    action: raw.action,
-    reason: raw.reason,
-    payloadKind: raw.payloadKind ?? raw.payload_kind,
-    expectedFamily: raw.expectedFamily ?? raw.expected_family,
-    providedFamily: raw.providedFamily ?? raw.provided_family
+    review:
+      rawReview ||
+      raw.requestId ||
+      raw.request_id ||
+      raw.action ||
+      raw.reason ||
+      raw.payloadKind ||
+      raw.payload_kind ||
+      raw.expectedFamily ||
+      raw.expected_family ||
+      raw.providedFamily ||
+      raw.provided_family
+        ? {
+            requestId: rawReview?.request_id ?? raw.requestId ?? raw.request_id,
+            action: rawReview?.action ?? raw.action,
+            reason: rawReview?.reason ?? raw.reason,
+            payloadKind: rawReview?.payload_kind ?? raw.payloadKind ?? raw.payload_kind,
+            expectedFamily: rawReview?.expected_family ?? raw.expectedFamily ?? raw.expected_family,
+            providedFamily: rawReview?.provided_family ?? raw.providedFamily ?? raw.provided_family
+          }
+        : undefined
   };
 }
 

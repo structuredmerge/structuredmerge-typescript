@@ -31,6 +31,7 @@ export type {
   Diagnostic,
   DiagnosticCategory,
   DiagnosticSeverity,
+  ReviewDiagnosticReason,
   MergeResult,
   FamilyFeatureProfile,
   PolicyReference,
