@@ -472,6 +472,10 @@ interface ReviewReplayBundleFixture {
   };
 }
 
+interface ReviewStateJsonRoundtripFixture {
+  state: ConformanceManifestReviewStateFixture['expected_state'];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -1743,5 +1747,28 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-71 review state JSON roundtrip fixture', () => {
+    const fixture = readFixture<ReviewStateJsonRoundtripFixture>(
+      ...diagnosticsFixturePath('review_state_json_roundtrip')
+    );
+    const state = normalizeManifestReviewState(fixture.state as never);
+
+    expect(JSON.parse(JSON.stringify(state))).toEqual(state);
+  });
+
+  it('conforms to the slice-72 review replay bundle JSON roundtrip fixture', () => {
+    const fixture = readFixture<ReviewReplayBundleFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_json_roundtrip')
+    );
+    const bundle = {
+      replayContext: normalizeReviewReplayContext(fixture.replay_bundle.replay_context),
+      decisions: fixture.replay_bundle.decisions.map((decision) =>
+        normalizeReviewDecision(decision)
+      )
+    };
+
+    expect(JSON.parse(JSON.stringify(bundle))).toEqual(bundle);
   });
 });
