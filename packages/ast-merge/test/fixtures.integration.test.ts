@@ -1753,6 +1753,30 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
   });
 
+  it('conforms to the slice-127 source-family native named suite-plans fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-127-source-family-native-suite-plans',
+      'source-native-named-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        fixture.manifest,
+        Object.fromEntries(
+          Object.entries(fixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(fixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+  });
+
   it('conforms to the slice-51 named conformance suite-results fixture', () => {
     const fixture = readFixture<NamedSuiteResultsFixture>(
       ...diagnosticsFixturePath('named_suite_results')
@@ -1941,6 +1965,25 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-60 conformance manifest diagnostics fixture', () => {
     const fixture = readFixture<ConformanceManifestReportFixture>(
       ...diagnosticsFixturePath('conformance_manifest_report')
+    );
+
+    expect(
+      reportConformanceManifest(
+        fixture.manifest,
+        normalizeManifestPlanningOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReport(fixture.expected_report as never));
+  });
+
+  it('conforms to the slice-128 source-family manifest report fixture', () => {
+    const fixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-128-source-family-manifest-report',
+      'source-manifest-report.json'
     );
 
     expect(
