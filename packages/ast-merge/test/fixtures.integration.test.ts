@@ -14,6 +14,7 @@ import type {
   ConformanceManifestReport,
   ConformanceManifestReviewOptions,
   ConformanceManifestReviewState,
+  ConformanceManifestReviewStateEnvelope,
   NamedConformanceSuiteReport,
   NamedConformanceSuitePlan,
   NamedConformanceSuiteResults,
@@ -31,11 +32,15 @@ import type {
   Diagnostic,
   ReviewDecision,
   ReviewHostHints,
+  ReviewReplayBundleEnvelope,
   ReviewReplayContext,
+  ReviewTransportImportError,
   ReviewRequest
 } from '../src/index';
 import {
+  REVIEW_TRANSPORT_VERSION,
   conformanceManifestReplayContext,
+  conformanceManifestReviewStateEnvelope,
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   conformanceFamilyFeatureProfilePath,
@@ -58,7 +63,10 @@ import {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  importConformanceManifestReviewStateEnvelope,
+  importReviewReplayBundleEnvelope,
   reviewReplayBundleInputs,
+  reviewReplayBundleEnvelope,
   reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
   runConformanceCase,
@@ -474,6 +482,31 @@ interface ReviewReplayBundleFixture {
 
 interface ReviewStateJsonRoundtripFixture {
   state: ConformanceManifestReviewStateFixture['expected_state'];
+}
+
+interface ReviewStateEnvelopeFixture {
+  state: ConformanceManifestReviewStateFixture['expected_state'];
+  expected_envelope: {
+    kind: 'conformance_manifest_review_state';
+    version: 1;
+    state: ConformanceManifestReviewStateFixture['expected_state'];
+  };
+}
+
+interface ReviewReplayBundleEnvelopeFixture extends ReviewReplayBundleFixture {
+  expected_envelope: {
+    kind: 'review_replay_bundle';
+    version: 1;
+    replay_bundle: ReviewReplayBundleFixture['replay_bundle'];
+  };
+}
+
+interface ReviewTransportRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: Record<string, unknown>;
+    expected_error: ReviewTransportImportError;
+  }>;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -1770,5 +1803,71 @@ describe('ast-merge shared fixtures', () => {
     };
 
     expect(JSON.parse(JSON.stringify(bundle))).toEqual(bundle);
+  });
+
+  it('conforms to the slice-73 review state transport envelope fixture', () => {
+    const fixture = readFixture<ReviewStateEnvelopeFixture>(
+      ...diagnosticsFixturePath('review_state_envelope')
+    );
+    const state = normalizeManifestReviewState(fixture.state as never);
+    const expected: ConformanceManifestReviewStateEnvelope = {
+      kind: fixture.expected_envelope.kind,
+      version: REVIEW_TRANSPORT_VERSION,
+      state: normalizeManifestReviewState(fixture.expected_envelope.state as never)
+    };
+
+    expect(conformanceManifestReviewStateEnvelope(state)).toEqual(expected);
+    expect(importConformanceManifestReviewStateEnvelope(expected)).toEqual({ state });
+  });
+
+  it('conforms to the slice-74 review replay bundle transport envelope fixture', () => {
+    const fixture = readFixture<ReviewReplayBundleEnvelopeFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_envelope')
+    );
+    const bundle = {
+      replayContext: normalizeReviewReplayContext(fixture.replay_bundle.replay_context),
+      decisions: fixture.replay_bundle.decisions.map((decision) =>
+        normalizeReviewDecision(decision)
+      )
+    };
+    const expected: ReviewReplayBundleEnvelope = {
+      kind: fixture.expected_envelope.kind,
+      version: REVIEW_TRANSPORT_VERSION,
+      replayBundle: {
+        replayContext: normalizeReviewReplayContext(
+          fixture.expected_envelope.replay_bundle.replay_context
+        ),
+        decisions: fixture.expected_envelope.replay_bundle.decisions.map((decision) =>
+          normalizeReviewDecision(decision)
+        )
+      }
+    };
+
+    expect(reviewReplayBundleEnvelope(bundle)).toEqual(expected);
+    expect(importReviewReplayBundleEnvelope(expected)).toEqual({ replayBundle: bundle });
+  });
+
+  it('conforms to the slice-75 review state transport rejection fixture', () => {
+    const fixture = readFixture<ReviewTransportRejectionFixture>(
+      ...diagnosticsFixturePath('review_state_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importConformanceManifestReviewStateEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-76 review replay bundle transport rejection fixture', () => {
+    const fixture = readFixture<ReviewTransportRejectionFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importReviewReplayBundleEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
   });
 });

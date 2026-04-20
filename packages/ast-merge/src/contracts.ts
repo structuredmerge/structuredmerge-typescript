@@ -170,6 +170,27 @@ export interface ReviewReplayBundle {
   readonly decisions: readonly ReviewDecision[];
 }
 
+export const REVIEW_TRANSPORT_VERSION = 1;
+
+export type ReviewTransportImportErrorCategory = 'kind_mismatch' | 'unsupported_version';
+
+export interface ReviewTransportImportError {
+  readonly category: ReviewTransportImportErrorCategory;
+  readonly message: string;
+}
+
+export interface ConformanceManifestReviewStateEnvelope {
+  readonly kind: 'conformance_manifest_review_state';
+  readonly version: typeof REVIEW_TRANSPORT_VERSION;
+  readonly state: ConformanceManifestReviewState;
+}
+
+export interface ReviewReplayBundleEnvelope {
+  readonly kind: 'review_replay_bundle';
+  readonly version: typeof REVIEW_TRANSPORT_VERSION;
+  readonly replayBundle: ReviewReplayBundle;
+}
+
 export interface ReviewHostHints {
   readonly interactive: boolean;
   readonly requireExplicitContexts: boolean;
@@ -336,6 +357,94 @@ export function reviewReplayBundleInputs(options: ConformanceManifestReviewOptio
     replayContext: options.reviewReplayContext,
     decisions: options.reviewDecisions ?? []
   };
+}
+
+export function conformanceManifestReviewStateEnvelope(
+  state: ConformanceManifestReviewState
+): ConformanceManifestReviewStateEnvelope {
+  return {
+    kind: 'conformance_manifest_review_state',
+    version: REVIEW_TRANSPORT_VERSION,
+    state
+  };
+}
+
+export function reviewReplayBundleEnvelope(
+  replayBundle: ReviewReplayBundle
+): ReviewReplayBundleEnvelope {
+  return {
+    kind: 'review_replay_bundle',
+    version: REVIEW_TRANSPORT_VERSION,
+    replayBundle
+  };
+}
+
+export function importConformanceManifestReviewStateEnvelope(value: unknown): {
+  state?: ConformanceManifestReviewState;
+  error?: ReviewTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'conformance_manifest_review_state'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected conformance_manifest_review_state envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    state: ConformanceManifestReviewState;
+  };
+
+  if (envelope.version !== REVIEW_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported conformance_manifest_review_state envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { state: envelope.state };
+}
+
+export function importReviewReplayBundleEnvelope(value: unknown): {
+  replayBundle?: ReviewReplayBundle;
+  error?: ReviewTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'review_replay_bundle'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected review_replay_bundle envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    replayBundle: ReviewReplayBundle;
+  };
+
+  if (envelope.version !== REVIEW_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported review_replay_bundle envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { replayBundle: envelope.replayBundle };
 }
 
 export function conformanceManifestReviewRequestIds(

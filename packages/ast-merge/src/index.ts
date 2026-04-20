@@ -23,6 +23,7 @@ export type {
   ConformanceManifestReport,
   ConformanceManifestReviewOptions,
   ConformanceManifestReviewState,
+  ConformanceManifestReviewStateEnvelope,
   ConformanceOutcome,
   ConformanceSelectionStatus,
   ConformanceSuiteReport,
@@ -38,14 +39,19 @@ export type {
   ReviewDecision,
   ReviewDecisionAction,
   ReviewHostHints,
+  ReviewReplayBundleEnvelope,
   ReviewReplayBundle,
   ReviewReplayContext,
+  ReviewTransportImportError,
+  ReviewTransportImportErrorCategory,
   ReviewRequest,
   ReviewRequestKind
 } from './contracts';
 
 export {
+  REVIEW_TRANSPORT_VERSION,
   conformanceManifestReplayContext,
+  conformanceManifestReviewStateEnvelope,
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   conformanceFamilyEntries,
@@ -69,7 +75,10 @@ export {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  importConformanceManifestReviewStateEnvelope,
+  importReviewReplayBundleEnvelope,
   reviewReplayBundleInputs,
+  reviewReplayBundleEnvelope,
   reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
   runConformanceCase,
