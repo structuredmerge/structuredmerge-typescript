@@ -7,6 +7,7 @@ import type {
 import {
   collectMarkdownOwners,
   type MarkdownAnalysis,
+  markdownEmbeddedFamilies as markdownEmbeddedFamiliesWithSubstrate,
   type MarkdownFeatureProfile,
   matchMarkdownOwners as matchMarkdownOwnersWithSubstrate,
   markdownFeatureProfile,
@@ -96,4 +97,5 @@ export function parseMarkdown(
 }
 
 export const matchMarkdownOwners = matchMarkdownOwnersWithSubstrate;
+export const markdownEmbeddedFamilies = markdownEmbeddedFamiliesWithSubstrate;
 export { markdownFeatureProfile };

@@ -40,6 +40,13 @@ export interface MarkdownAnalysis {
   readonly owners: readonly MarkdownOwner[];
 }
 
+export interface MarkdownEmbeddedFamilyCandidate {
+  readonly path: string;
+  readonly language: string;
+  readonly family: 'typescript' | 'rust' | 'go' | 'json' | 'yaml' | 'toml';
+  readonly dialect: string;
+}
+
 export interface MarkdownFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'markdown';
   readonly supportedDialects: readonly MarkdownDialect[];
@@ -241,6 +248,81 @@ export function matchMarkdownOwners(
       .map((owner) => owner.path)
       .filter((path) => !templatePaths.has(path))
   };
+}
+
+function codeFenceFamily(
+  infoString?: string
+): MarkdownEmbeddedFamilyCandidate['family'] | undefined {
+  switch ((infoString ?? '').toLowerCase()) {
+    case 'ts':
+    case 'typescript':
+      return 'typescript';
+    case 'rust':
+    case 'rs':
+      return 'rust';
+    case 'go':
+      return 'go';
+    case 'json':
+    case 'jsonc':
+      return 'json';
+    case 'yaml':
+    case 'yml':
+      return 'yaml';
+    case 'toml':
+      return 'toml';
+    default:
+      return undefined;
+  }
+}
+
+function codeFenceDialect(
+  infoString?: string,
+  family?: MarkdownEmbeddedFamilyCandidate['family']
+): string | undefined {
+  const language = (infoString ?? '').toLowerCase();
+  if (!family) {
+    return undefined;
+  }
+
+  switch (family) {
+    case 'typescript':
+      return 'typescript';
+    case 'rust':
+      return 'rust';
+    case 'go':
+      return 'go';
+    case 'json':
+      return language === 'jsonc' ? 'jsonc' : 'json';
+    case 'yaml':
+      return 'yaml';
+    case 'toml':
+      return 'toml';
+  }
+}
+
+export function markdownEmbeddedFamilies(
+  analysis: MarkdownAnalysis
+): readonly MarkdownEmbeddedFamilyCandidate[] {
+  return analysis.owners.flatMap((owner) => {
+    if (owner.ownerKind !== 'code_fence' || !owner.infoString) {
+      return [];
+    }
+
+    const family = codeFenceFamily(owner.infoString);
+    const dialect = codeFenceDialect(owner.infoString, family);
+    if (!family || !dialect) {
+      return [];
+    }
+
+    return [
+      {
+        path: owner.path,
+        language: owner.infoString,
+        family,
+        dialect
+      }
+    ];
+  });
 }
 
 export function markdownManifestRolePaths(manifest: ConformanceManifest): {

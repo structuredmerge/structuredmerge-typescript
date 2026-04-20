@@ -9,6 +9,7 @@ import {
 import {
   availableMarkdownBackends,
   markdownBackendFeatureProfile,
+  markdownEmbeddedFamilies,
   markdownFeatureProfile,
   markdownPlanContext,
   matchMarkdownOwners,
@@ -203,5 +204,21 @@ describe('markdown-merge shared fixtures', () => {
         unmatchedDestination: fixture.expected.unmatched_destination
       });
     }
+  });
+
+  it('conforms to the slice-208 embedded-family fixture', () => {
+    const fixture = readFixture<{
+      source: string;
+      expected: Array<{
+        path: string;
+        language: string;
+        family: 'typescript' | 'rust' | 'go' | 'json' | 'yaml' | 'toml';
+        dialect: string;
+      }>;
+    }>('markdown', 'slice-208-embedded-families', 'code-fence-families.json');
+
+    const analysis = parseMarkdown(fixture.source, 'markdown', 'markdown-it');
+    expect(analysis.ok).toBe(true);
+    expect(markdownEmbeddedFamilies(analysis.analysis!)).toEqual(fixture.expected);
   });
 });

@@ -10,6 +10,7 @@ import {
 } from '@structuredmerge/ast-merge';
 import {
   availableMarkdownBackends,
+  markdownEmbeddedFamilies,
   markdownBackendFeatureProfile,
   markdownFeatureProfile,
   markdownPlanContext,
@@ -118,6 +119,17 @@ describe('markdown-it-merge shared fixtures', () => {
     expect(result.unmatchedDestination).toEqual(
       (matchingFixture.expected as Record<string, unknown>).unmatched_destination as string[]
     );
+  });
+
+  it('conforms to the slice-208 embedded-family fixture', () => {
+    const fixture = readFixture(
+      'markdown',
+      'slice-208-embedded-families',
+      'code-fence-families.json'
+    );
+    const analysis = parseMarkdown(fixture.source as string, 'markdown');
+    expect(analysis.ok).toBe(true);
+    expect(markdownEmbeddedFamilies(analysis.analysis!)).toEqual(fixture.expected);
   });
 
   it('conforms to the provider named-suite plan fixture', () => {

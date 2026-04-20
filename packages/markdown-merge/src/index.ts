@@ -5,6 +5,7 @@ export type {
   MarkdownBackend,
   MarkdownBackendFeatureProfile,
   MarkdownDialect,
+  MarkdownEmbeddedFamilyCandidate,
   MarkdownFeatureProfile,
   MarkdownOwner,
   MarkdownOwnerKind,
@@ -16,6 +17,7 @@ export type {
 export {
   availableMarkdownBackends,
   collectMarkdownOwners,
+  markdownEmbeddedFamilies,
   markdownBackendFeatureProfile,
   markdownFeatureProfile,
   markdownManifestRolePaths,
