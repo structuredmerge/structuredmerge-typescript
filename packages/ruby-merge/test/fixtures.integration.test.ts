@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { groupProjectedChildReviewCases } from '@structuredmerge/ast-merge';
+import {
+  groupProjectedChildReviewCases,
+  summarizeProjectedChildReviewGroupProgress
+} from '@structuredmerge/ast-merge';
 import {
   matchRubyOwners,
   parseRuby,
@@ -178,6 +181,55 @@ describe('ruby-merge shared fixtures', () => {
         delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
         caseIds: entry.case_ids,
         delegatedCaseIds: entry.delegated_case_ids
+      }))
+    );
+
+    const progressFixture = readFixture<{
+      groups: Array<{
+        delegated_apply_group: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        delegated_runtime_surface_path: string;
+        case_ids: string[];
+        delegated_case_ids: string[];
+      }>;
+      resolved_case_ids: string[];
+      expected_progress: Array<{
+        delegated_apply_group: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        delegated_runtime_surface_path: string;
+        resolved_case_ids: string[];
+        pending_case_ids: string[];
+        complete: boolean;
+      }>;
+    }>(
+      'ruby',
+      'slice-232-projected-child-review-group-progress',
+      'yard-example-review-progress.json'
+    );
+
+    expect(
+      summarizeProjectedChildReviewGroupProgress(
+        progressFixture.groups.map((entry) => ({
+          delegatedApplyGroup: entry.delegated_apply_group,
+          parentOperationId: entry.parent_operation_id,
+          childOperationId: entry.child_operation_id,
+          delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+          caseIds: entry.case_ids,
+          delegatedCaseIds: entry.delegated_case_ids
+        })),
+        progressFixture.resolved_case_ids
+      )
+    ).toEqual(
+      progressFixture.expected_progress.map((entry) => ({
+        delegatedApplyGroup: entry.delegated_apply_group,
+        parentOperationId: entry.parent_operation_id,
+        childOperationId: entry.child_operation_id,
+        delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+        resolvedCaseIds: entry.resolved_case_ids,
+        pendingCaseIds: entry.pending_case_ids,
+        complete: entry.complete
       }))
     );
   });

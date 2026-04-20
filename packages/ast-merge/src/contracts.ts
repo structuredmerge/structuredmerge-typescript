@@ -83,6 +83,16 @@ export interface ProjectedChildReviewGroup {
   readonly delegatedCaseIds: readonly string[];
 }
 
+export interface ProjectedChildReviewGroupProgress {
+  readonly delegatedApplyGroup: string;
+  readonly parentOperationId: string;
+  readonly childOperationId: string;
+  readonly delegatedRuntimeSurfacePath: string;
+  readonly resolvedCaseIds: readonly string[];
+  readonly pendingCaseIds: readonly string[];
+  readonly complete: boolean;
+}
+
 export interface ParseResult<TAnalysis> {
   readonly ok: boolean;
   readonly diagnostics: readonly Diagnostic[];
@@ -416,6 +426,28 @@ export function groupProjectedChildReviewCases(
   }
 
   return order.map((key) => groups.get(key)!);
+}
+
+export function summarizeProjectedChildReviewGroupProgress(
+  groups: readonly ProjectedChildReviewGroup[],
+  resolvedCaseIds: readonly string[]
+): readonly ProjectedChildReviewGroupProgress[] {
+  const resolved = new Set(resolvedCaseIds);
+
+  return groups.map((group) => {
+    const resolvedGroupCaseIds = group.caseIds.filter((caseId) => resolved.has(caseId));
+    const pendingCaseIds = group.caseIds.filter((caseId) => !resolved.has(caseId));
+
+    return {
+      delegatedApplyGroup: group.delegatedApplyGroup,
+      parentOperationId: group.parentOperationId,
+      childOperationId: group.childOperationId,
+      delegatedRuntimeSurfacePath: group.delegatedRuntimeSurfacePath,
+      resolvedCaseIds: resolvedGroupCaseIds,
+      pendingCaseIds,
+      complete: pendingCaseIds.length === 0
+    };
+  });
 }
 
 export function conformanceManifestReplayContext(

@@ -34,6 +34,7 @@ import type {
   Diagnostic,
   ProjectedChildReviewCase,
   ProjectedChildReviewGroup,
+  ProjectedChildReviewGroupProgress,
   ReviewDecision,
   ReviewActionOffer,
   ReviewHostHints,
@@ -52,6 +53,7 @@ import {
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   groupProjectedChildReviewCases,
+  summarizeProjectedChildReviewGroupProgress,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   conformanceSuiteDefinition,
@@ -176,6 +178,20 @@ interface ProjectedChildReviewGroupsFixture extends ProjectedChildReviewCasesFix
     delegated_runtime_surface_path: string;
     case_ids: string[];
     delegated_case_ids: string[];
+  }>;
+}
+
+interface ProjectedChildReviewGroupProgressFixture {
+  groups: ProjectedChildReviewGroupsFixture['expected_groups'];
+  resolved_case_ids: string[];
+  expected_progress: Array<{
+    delegated_apply_group: string;
+    parent_operation_id: string;
+    child_operation_id: string;
+    delegated_runtime_surface_path: string;
+    resolved_case_ids: string[];
+    pending_case_ids: string[];
+    complete: boolean;
   }>;
 }
 
@@ -1148,6 +1164,20 @@ function normalizeProjectedChildReviewGroup(
     delegatedRuntimeSurfacePath: raw.delegated_runtime_surface_path,
     caseIds: raw.case_ids,
     delegatedCaseIds: raw.delegated_case_ids
+  };
+}
+
+function normalizeProjectedChildReviewGroupProgress(
+  raw: ProjectedChildReviewGroupProgressFixture['expected_progress'][number]
+): ProjectedChildReviewGroupProgress {
+  return {
+    delegatedApplyGroup: raw.delegated_apply_group,
+    parentOperationId: raw.parent_operation_id,
+    childOperationId: raw.child_operation_id,
+    delegatedRuntimeSurfacePath: raw.delegated_runtime_surface_path,
+    resolvedCaseIds: raw.resolved_case_ids,
+    pendingCaseIds: raw.pending_case_ids,
+    complete: raw.complete
   };
 }
 
@@ -3278,6 +3308,23 @@ describe('ast-merge shared fixtures', () => {
         fixture.cases.map((entry) => normalizeProjectedChildReviewCase(entry))
       )
     ).toEqual(fixture.expected_groups.map((entry) => normalizeProjectedChildReviewGroup(entry)));
+  });
+
+  it('conforms to the slice-230 projected child-review group progress fixture', () => {
+    const fixture = readFixture<ProjectedChildReviewGroupProgressFixture>(
+      'diagnostics',
+      'slice-230-projected-child-review-group-progress',
+      'projected-child-review-group-progress.json'
+    );
+
+    expect(
+      summarizeProjectedChildReviewGroupProgress(
+        fixture.groups.map((entry) => normalizeProjectedChildReviewGroup(entry)),
+        fixture.resolved_case_ids
+      )
+    ).toEqual(
+      fixture.expected_progress.map((entry) => normalizeProjectedChildReviewGroupProgress(entry))
+    );
   });
 
   it('conforms to the slice-71 review state JSON roundtrip fixture', () => {
