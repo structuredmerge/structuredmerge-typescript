@@ -254,6 +254,15 @@ interface ManifestBackendRequirementsFixture {
   expected: ConformanceSuitePlanFixture['expected'];
 }
 
+interface ManifestBackendReportFixture {
+  manifest: ConformanceManifest;
+  family: string;
+  roles: string[];
+  family_profile: ManifestRequirementsFixture['family_profile'];
+  feature_profile: ManifestBackendRequirementsFixture['feature_profile'];
+  expected_report: ConformanceSuiteReport;
+}
+
 interface SuiteDefinitionsFixture {
   suite_name: string;
   expected: ConformanceSuiteDefinition;
@@ -1473,6 +1482,33 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(expected);
+  });
+
+  it('conforms to the slice-121 manifest backend-report fixture', () => {
+    const fixture = readFixture<ManifestBackendReportFixture>(
+      ...diagnosticsFixturePath('manifest_backend_report')
+    );
+
+    expect(
+      reportPlannedConformanceSuite(
+        planConformanceSuite(
+          fixture.manifest,
+          fixture.family,
+          fixture.roles,
+          {
+            family: fixture.family_profile.family,
+            supportedDialects: fixture.family_profile.supported_dialects,
+            supportedPolicies: fixture.family_profile.supported_policies
+          },
+          {
+            backend: fixture.feature_profile.backend,
+            supportsDialects: fixture.feature_profile.supports_dialects,
+            supportedPolicies: fixture.feature_profile.supported_policies
+          }
+        ),
+        () => ({ outcome: 'failed', messages: ['unexpected execution'] })
+      )
+    ).toEqual(fixture.expected_report);
   });
 
   it('conforms to the slice-43 conformance suite-definitions fixture', () => {
