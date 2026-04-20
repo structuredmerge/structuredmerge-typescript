@@ -5,6 +5,7 @@ import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   groupProjectedChildReviewCases,
+  selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress,
   type ConformanceManifest
 } from '@structuredmerge/ast-merge';
@@ -401,6 +402,55 @@ describe('markdown-merge shared fixtures', () => {
         resolvedCaseIds: entry.resolved_case_ids,
         pendingCaseIds: entry.pending_case_ids,
         complete: entry.complete
+      }))
+    );
+  });
+
+  it('conforms to the slice-234 projected child-review groups ready-for-apply fixture', () => {
+    const fixture = readFixture<{
+      groups: Array<{
+        delegated_apply_group: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        delegated_runtime_surface_path: string;
+        case_ids: string[];
+        delegated_case_ids: string[];
+      }>;
+      resolved_case_ids: string[];
+      expected_ready_groups: Array<{
+        delegated_apply_group: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        delegated_runtime_surface_path: string;
+        case_ids: string[];
+        delegated_case_ids: string[];
+      }>;
+    }>(
+      'markdown',
+      'slice-234-projected-child-review-groups-ready-for-apply',
+      'fenced-code-ready-groups.json'
+    );
+
+    expect(
+      selectProjectedChildReviewGroupsReadyForApply(
+        fixture.groups.map((entry) => ({
+          delegatedApplyGroup: entry.delegated_apply_group,
+          parentOperationId: entry.parent_operation_id,
+          childOperationId: entry.child_operation_id,
+          delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+          caseIds: entry.case_ids,
+          delegatedCaseIds: entry.delegated_case_ids
+        })),
+        fixture.resolved_case_ids
+      )
+    ).toEqual(
+      fixture.expected_ready_groups.map((entry) => ({
+        delegatedApplyGroup: entry.delegated_apply_group,
+        parentOperationId: entry.parent_operation_id,
+        childOperationId: entry.child_operation_id,
+        delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+        caseIds: entry.case_ids,
+        delegatedCaseIds: entry.delegated_case_ids
       }))
     );
   });

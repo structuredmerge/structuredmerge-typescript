@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   groupProjectedChildReviewCases,
+  selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress
 } from '@structuredmerge/ast-merge';
 import {
@@ -230,6 +231,53 @@ describe('ruby-merge shared fixtures', () => {
         resolvedCaseIds: entry.resolved_case_ids,
         pendingCaseIds: entry.pending_case_ids,
         complete: entry.complete
+      }))
+    );
+
+    const readyFixture = readFixture<{
+      groups: Array<{
+        delegated_apply_group: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        delegated_runtime_surface_path: string;
+        case_ids: string[];
+        delegated_case_ids: string[];
+      }>;
+      resolved_case_ids: string[];
+      expected_ready_groups: Array<{
+        delegated_apply_group: string;
+        parent_operation_id: string;
+        child_operation_id: string;
+        delegated_runtime_surface_path: string;
+        case_ids: string[];
+        delegated_case_ids: string[];
+      }>;
+    }>(
+      'ruby',
+      'slice-235-projected-child-review-groups-ready-for-apply',
+      'yard-example-ready-groups.json'
+    );
+
+    expect(
+      selectProjectedChildReviewGroupsReadyForApply(
+        readyFixture.groups.map((entry) => ({
+          delegatedApplyGroup: entry.delegated_apply_group,
+          parentOperationId: entry.parent_operation_id,
+          childOperationId: entry.child_operation_id,
+          delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+          caseIds: entry.case_ids,
+          delegatedCaseIds: entry.delegated_case_ids
+        })),
+        readyFixture.resolved_case_ids
+      )
+    ).toEqual(
+      readyFixture.expected_ready_groups.map((entry) => ({
+        delegatedApplyGroup: entry.delegated_apply_group,
+        parentOperationId: entry.parent_operation_id,
+        childOperationId: entry.child_operation_id,
+        delegatedRuntimeSurfacePath: entry.delegated_runtime_surface_path,
+        caseIds: entry.case_ids,
+        delegatedCaseIds: entry.delegated_case_ids
       }))
     );
   });

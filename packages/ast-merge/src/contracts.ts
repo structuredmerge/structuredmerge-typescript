@@ -450,6 +450,15 @@ export function summarizeProjectedChildReviewGroupProgress(
   });
 }
 
+export function selectProjectedChildReviewGroupsReadyForApply(
+  groups: readonly ProjectedChildReviewGroup[],
+  resolvedCaseIds: readonly string[]
+): readonly ProjectedChildReviewGroup[] {
+  const resolved = new Set(resolvedCaseIds);
+
+  return groups.filter((group) => group.caseIds.every((caseId) => resolved.has(caseId)));
+}
+
 export function conformanceManifestReplayContext(
   manifest: ConformanceManifest,
   options: ConformanceManifestReviewOptions

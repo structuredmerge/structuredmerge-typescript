@@ -53,6 +53,7 @@ import {
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   groupProjectedChildReviewCases,
+  selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
@@ -193,6 +194,12 @@ interface ProjectedChildReviewGroupProgressFixture {
     pending_case_ids: string[];
     complete: boolean;
   }>;
+}
+
+interface ProjectedChildReviewGroupsReadyForApplyFixture {
+  groups: ProjectedChildReviewGroupsFixture['expected_groups'];
+  resolved_case_ids: string[];
+  expected_ready_groups: ProjectedChildReviewGroupsFixture['expected_groups'];
 }
 
 interface ConformanceSelectionFixtureCase {
@@ -3324,6 +3331,23 @@ describe('ast-merge shared fixtures', () => {
       )
     ).toEqual(
       fixture.expected_progress.map((entry) => normalizeProjectedChildReviewGroupProgress(entry))
+    );
+  });
+
+  it('conforms to the slice-233 projected child-review groups ready-for-apply fixture', () => {
+    const fixture = readFixture<ProjectedChildReviewGroupsReadyForApplyFixture>(
+      'diagnostics',
+      'slice-233-projected-child-review-groups-ready-for-apply',
+      'projected-child-review-groups-ready-for-apply.json'
+    );
+
+    expect(
+      selectProjectedChildReviewGroupsReadyForApply(
+        fixture.groups.map((entry) => normalizeProjectedChildReviewGroup(entry)),
+        fixture.resolved_case_ids
+      )
+    ).toEqual(
+      fixture.expected_ready_groups.map((entry) => normalizeProjectedChildReviewGroup(entry))
     );
   });
 

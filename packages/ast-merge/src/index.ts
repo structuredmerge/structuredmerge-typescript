@@ -66,6 +66,7 @@ export {
   conformanceReviewHostHints,
   groupProjectedChildReviewCases,
   summarizeProjectedChildReviewGroupProgress,
+  selectProjectedChildReviewGroupsReadyForApply,
   conformanceFamilyEntries,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
