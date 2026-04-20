@@ -2041,6 +2041,45 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual(normalizeManifestReport(fixture.expected_report as never));
   });
 
+  it('conforms to the slice-131 canonical manifest source-family paths', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'typescript')).toEqual([
+      'diagnostics',
+      'slice-101-typescript-family-feature-profile',
+      'typescript-feature-profile.json'
+    ]);
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'rust')).toEqual([
+      'diagnostics',
+      'slice-105-rust-family-feature-profile',
+      'rust-feature-profile.json'
+    ]);
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'go')).toEqual([
+      'diagnostics',
+      'slice-109-go-family-feature-profile',
+      'go-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'typescript', 'analysis')).toEqual([
+      'typescript',
+      'slice-102-analysis',
+      'module-owners.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'rust', 'matching')).toEqual([
+      'rust',
+      'slice-107-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'go', 'merge')).toEqual([
+      'go',
+      'slice-112-merge',
+      'module-merge.json'
+    ]);
+  });
+
   it('conforms to the slice-61 review host hints fixture', () => {
     const fixture = readFixture<ReviewHostHintsFixture>(
       ...diagnosticsFixturePath('review_host_hints')

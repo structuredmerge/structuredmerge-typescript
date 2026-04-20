@@ -284,4 +284,33 @@ describe('typescript-merge shared fixtures', () => {
       'module-merge.json'
     ]);
   });
+
+  it('conforms to the slice-131 canonical manifest fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'typescript')).toEqual([
+      'diagnostics',
+      'slice-101-typescript-family-feature-profile',
+      'typescript-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'typescript', 'analysis')).toEqual([
+      'typescript',
+      'slice-102-analysis',
+      'module-owners.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'typescript', 'matching')).toEqual([
+      'typescript',
+      'slice-103-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'typescript', 'merge')).toEqual([
+      'typescript',
+      'slice-104-merge',
+      'module-merge.json'
+    ]);
+  });
 });
