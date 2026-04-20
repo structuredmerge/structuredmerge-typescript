@@ -1,8 +1,14 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
+  type ConformanceManifest
+} from '@structuredmerge/ast-merge';
 import { withBackend } from '@structuredmerge/tree-haver';
 import {
+  tomlPlanContext,
   parseToml,
   matchTomlOwners,
   mergeToml,
@@ -31,6 +37,132 @@ describe('toml-merge shared fixtures', () => {
       supportedPolicies: fixture.feature_profile.supported_policies
     });
     expect(tomlBackendFeatureProfile('peggy').backendRef).toEqual({ id: 'peggy', family: 'peg' });
+  });
+
+  it('conforms to the slice-135 TOML backend feature profile fixture', () => {
+    const fixture = readFixture<{
+      native: {
+        backend: 'native';
+        supports_dialects: true;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+      peggy: {
+        backend: 'peggy';
+        supports_dialects: false;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+    }>(
+      'diagnostics',
+      'slice-135-toml-family-backend-feature-profiles',
+      'typescript-toml-backend-feature-profiles.json'
+    );
+
+    expect(tomlBackendFeatureProfile('native')).toMatchObject({
+      backend: fixture.native.backend,
+      supportedPolicies: fixture.native.supported_policies
+    });
+    expect(tomlPlanContext('native').featureProfile).toEqual({
+      backend: fixture.native.backend,
+      supportsDialects: fixture.native.supports_dialects,
+      supportedPolicies: fixture.native.supported_policies
+    });
+    expect(tomlBackendFeatureProfile('peggy')).toMatchObject({
+      backend: fixture.peggy.backend,
+      supportedPolicies: fixture.peggy.supported_policies
+    });
+    expect(tomlPlanContext('peggy').featureProfile).toEqual({
+      backend: fixture.peggy.backend,
+      supportsDialects: fixture.peggy.supports_dialects,
+      supportedPolicies: fixture.peggy.supported_policies
+    });
+  });
+
+  it('conforms to the slice-136 TOML plan-context fixture', () => {
+    const fixture = readFixture<{
+      native: {
+        family_profile: {
+          family: 'toml';
+          supported_dialects: ['toml'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: 'native';
+          supports_dialects: true;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+      peggy: {
+        family_profile: {
+          family: 'toml';
+          supported_dialects: ['toml'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: 'peggy';
+          supports_dialects: false;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+    }>('diagnostics', 'slice-136-toml-family-plan-contexts', 'typescript-toml-plan-contexts.json');
+
+    expect(tomlPlanContext('native')).toEqual({
+      familyProfile: {
+        family: fixture.native.family_profile.family,
+        supportedDialects: fixture.native.family_profile.supported_dialects,
+        supportedPolicies: fixture.native.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.native.feature_profile.backend,
+        supportsDialects: fixture.native.feature_profile.supports_dialects,
+        supportedPolicies: fixture.native.feature_profile.supported_policies
+      }
+    });
+    expect(tomlPlanContext('peggy')).toEqual({
+      familyProfile: {
+        family: fixture.peggy.family_profile.family,
+        supportedDialects: fixture.peggy.family_profile.supported_dialects,
+        supportedPolicies: fixture.peggy.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.peggy.feature_profile.backend,
+        supportsDialects: fixture.peggy.feature_profile.supports_dialects,
+        supportedPolicies: fixture.peggy.feature_profile.supported_policies
+      }
+    });
+  });
+
+  it('conforms to the slice-137 TOML family manifest fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-137-toml-family-manifest',
+      'toml-family-manifest.json'
+    );
+    const suites = manifest.suites as NonNullable<ConformanceManifest['suites']>;
+
+    expect(suites.toml_portable).toEqual({
+      family: 'toml',
+      roles: ['analysis', 'matching', 'merge']
+    });
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'toml')).toEqual([
+      'diagnostics',
+      'slice-90-toml-family-feature-profile',
+      'toml-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'toml', 'analysis')).toEqual([
+      'toml',
+      'slice-92-structure',
+      'table-and-array.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'toml', 'matching')).toEqual([
+      'toml',
+      'slice-93-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'toml', 'merge')).toEqual([
+      'toml',
+      'slice-94-merge',
+      'table-merge.json'
+    ]);
   });
 
   it('conforms to the slice-91 TOML parse fixtures', () => {

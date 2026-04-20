@@ -6,7 +6,8 @@ export {
   mergeToml,
   parseToml,
   tomlBackendFeatureProfile,
-  tomlFeatureProfile
+  tomlFeatureProfile,
+  tomlPlanContext
 } from './contracts';
 
 export type {

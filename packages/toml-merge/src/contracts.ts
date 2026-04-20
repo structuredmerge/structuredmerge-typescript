@@ -1,5 +1,7 @@
 import { parse as parseTomlDocument } from 'smol-toml';
 import type {
+  ConformanceFamilyPlanContext,
+  ConformanceFeatureProfileView,
   Diagnostic,
   FamilyFeatureProfile,
   MergeResult,
@@ -145,6 +147,20 @@ export function tomlBackendFeatureProfile(backend?: TomlBackend): TomlBackendFea
     ...tomlFeatureProfile(),
     backend: resolvedBackend,
     backendRef: resolvedBackend === 'peggy' ? PEGGY_BACKEND : NATIVE_BACKEND
+  };
+}
+
+export function tomlPlanContext(backend?: TomlBackend): ConformanceFamilyPlanContext {
+  const backendProfile = tomlBackendFeatureProfile(backend);
+  const featureProfile: ConformanceFeatureProfileView = {
+    backend: backendProfile.backend,
+    supportsDialects: backendProfile.backend !== 'peggy',
+    supportedPolicies: backendProfile.supportedPolicies
+  };
+
+  return {
+    familyProfile: tomlFeatureProfile(),
+    featureProfile
   };
 }
 
