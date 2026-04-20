@@ -8,6 +8,7 @@ import {
   mergeTypeScriptWithBackend,
   parseTypeScript,
   parseTypeScriptWithBackend,
+  typeScriptBackendFeatureProfile,
   typeScriptFeatureProfile
 } from '../src/index';
 
@@ -163,5 +164,35 @@ describe('typescript-merge shared fixtures', () => {
     );
     expect(mergeResult.ok).toBe(true);
     expect(mergeResult.output).toBe(fixture.expected.output);
+  });
+
+  it('conforms to the slice-122 backend feature-profile fixtures', () => {
+    const fixture = readFixture<{
+      tree_sitter: {
+        backend: string;
+        supports_dialects: boolean;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+      native: {
+        backend: string;
+        supports_dialects: boolean;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+    }>(
+      'diagnostics',
+      'slice-122-source-family-backend-feature-profiles',
+      'typescript-backend-feature-profiles.json'
+    );
+
+    expect(typeScriptBackendFeatureProfile('tree-sitter')).toEqual({
+      backend: fixture.tree_sitter.backend,
+      supportsDialects: fixture.tree_sitter.supports_dialects,
+      supportedPolicies: fixture.tree_sitter.supported_policies
+    });
+    expect(typeScriptBackendFeatureProfile('native')).toEqual({
+      backend: fixture.native.backend,
+      supportsDialects: fixture.native.supports_dialects,
+      supportedPolicies: fixture.native.supported_policies
+    });
   });
 });

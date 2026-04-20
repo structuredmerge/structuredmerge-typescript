@@ -1,4 +1,5 @@
 import type {
+  ConformanceFeatureProfileView,
   FamilyFeatureProfile,
   MergeResult,
   ParseResult,
@@ -6,6 +7,7 @@ import type {
 } from '@structuredmerge/ast-merge';
 import ts from 'typescript';
 import {
+  languagePackAdapterInfo,
   parseWithLanguagePack,
   processWithLanguagePack,
   type ParserRequest,
@@ -252,6 +254,24 @@ export function typeScriptFeatureProfile(): TypeScriptFeatureProfile {
   return {
     family: 'typescript',
     supportedDialects: ['typescript'],
+    supportedPolicies: [destinationWinsArrayPolicy]
+  };
+}
+
+export function typeScriptBackendFeatureProfile(
+  backend: TypeScriptBackend
+): ConformanceFeatureProfileView {
+  if (backend === 'native') {
+    return {
+      backend: 'typescript-compiler',
+      supportsDialects: true,
+      supportedPolicies: [destinationWinsArrayPolicy]
+    };
+  }
+
+  return {
+    backend: languagePackAdapterInfo.backend,
+    supportsDialects: true,
     supportedPolicies: [destinationWinsArrayPolicy]
   };
 }

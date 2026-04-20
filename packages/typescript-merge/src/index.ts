@@ -6,6 +6,7 @@ export {
   mergeTypeScriptWithBackend,
   parseTypeScript,
   parseTypeScriptWithBackend,
+  typeScriptBackendFeatureProfile,
   typeScriptBackends,
   typeScriptFeatureProfile
 } from './contracts';
