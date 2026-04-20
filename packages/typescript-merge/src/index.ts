@@ -3,12 +3,16 @@ export const packageName = '@structuredmerge/typescript-merge';
 export {
   matchTypeScriptOwners,
   mergeTypeScript,
+  mergeTypeScriptWithBackend,
   parseTypeScript,
+  parseTypeScriptWithBackend,
+  typeScriptBackends,
   typeScriptFeatureProfile
 } from './contracts';
 
 export type {
   TypeScriptAnalysis,
+  TypeScriptBackend,
   TypeScriptDialect,
   TypeScriptFeatureProfile,
   TypeScriptOwner,

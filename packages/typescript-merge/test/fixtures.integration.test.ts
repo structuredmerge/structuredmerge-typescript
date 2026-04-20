@@ -2,9 +2,12 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  typeScriptBackends,
   matchTypeScriptOwners,
   mergeTypeScript,
+  mergeTypeScriptWithBackend,
   parseTypeScript,
+  parseTypeScriptWithBackend,
   typeScriptFeatureProfile
 } from '../src/index';
 
@@ -119,5 +122,46 @@ describe('typescript-merge shared fixtures', () => {
     expect(
       invalidDestinationResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
     ).toEqual(invalidDestination.expected.diagnostics);
+  });
+
+  it('conforms to the slice-115 backend fixture', () => {
+    const fixture = readFixture<{
+      family: 'typescript';
+      backends: Array<'tree-sitter' | 'native'>;
+    }>('diagnostics', 'slice-115-typescript-family-backends', 'typescript-backends.json');
+
+    expect(typeScriptBackends()).toEqual(fixture.backends);
+  });
+
+  it('conforms to the slice-116 native backend parity fixture', () => {
+    const fixture = readFixture<{
+      dialect: 'typescript';
+      source: string;
+      template: string;
+      destination: string;
+      expected: {
+        owners: Array<{ path: string; owner_kind: string; match_key?: string }>;
+        output: string;
+      };
+    }>('typescript', 'slice-116-native', 'module-parity.json');
+
+    const result = parseTypeScriptWithBackend(fixture.source, fixture.dialect, 'native');
+    expect(result.ok).toBe(true);
+    expect(
+      result.analysis?.owners.map((owner) => ({
+        path: owner.path,
+        owner_kind: owner.ownerKind,
+        ...(owner.matchKey ? { match_key: owner.matchKey } : {})
+      }))
+    ).toEqual(fixture.expected.owners);
+
+    const mergeResult = mergeTypeScriptWithBackend(
+      fixture.template,
+      fixture.destination,
+      fixture.dialect,
+      'native'
+    );
+    expect(mergeResult.ok).toBe(true);
+    expect(mergeResult.output).toBe(fixture.expected.output);
   });
 });

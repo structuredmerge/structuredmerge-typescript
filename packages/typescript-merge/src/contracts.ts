@@ -4,6 +4,7 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
+import ts from 'typescript';
 import {
   parseWithLanguagePack,
   processWithLanguagePack,
@@ -13,6 +14,7 @@ import {
 } from '@structuredmerge/tree-haver';
 
 export type TypeScriptDialect = 'typescript';
+export type TypeScriptBackend = 'tree-sitter' | 'native';
 export type TypeScriptOwnerKind = 'import' | 'declaration';
 
 interface ModuleImport {
@@ -90,6 +92,109 @@ function importText(source: string, span: ProcessSpan): string {
 }
 
 function analyzeTypeScriptModule(source: string): ParseResult<TypeScriptAnalysis> {
+  return analyzeTypeScriptModuleWithBackend(source, 'tree-sitter');
+}
+
+function normalizeModuleSpecifier(moduleText: string): string {
+  return moduleText.replace(/^['"]|['"]$/g, '');
+}
+
+function nativeAnalyzeTypeScriptModule(source: string): ParseResult<TypeScriptAnalysis> {
+  const sourceFile = ts.createSourceFile(
+    'input.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+
+  const parseDiagnostics =
+    (
+      sourceFile as ts.SourceFile & {
+        parseDiagnostics?: readonly ts.DiagnosticWithLocation[];
+      }
+    ).parseDiagnostics ?? [];
+  if (parseDiagnostics.length > 0) {
+    return {
+      ok: false,
+      diagnostics: parseDiagnostics.map((diagnostic: ts.DiagnosticWithLocation) => ({
+        severity: 'error',
+        category: 'parse_error',
+        message: ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
+      }))
+    };
+  }
+
+  const imports: ModuleImport[] = [];
+  const declarations: ModuleDeclaration[] = [];
+  sourceFile.forEachChild((node) => {
+    if (ts.isImportDeclaration(node)) {
+      imports.push({
+        path: `/imports/${imports.length}`,
+        matchKey: normalizeModuleSpecifier(node.moduleSpecifier.getText(sourceFile)),
+        text: `${node.getText(sourceFile)}\n`
+      });
+      return;
+    }
+
+    if (
+      ts.isFunctionDeclaration(node) ||
+      ts.isInterfaceDeclaration(node) ||
+      ts.isClassDeclaration(node) ||
+      ts.isTypeAliasDeclaration(node) ||
+      ts.isEnumDeclaration(node)
+    ) {
+      const name = node.name?.getText(sourceFile);
+      if (!name) {
+        return;
+      }
+
+      declarations.push({
+        path: `/declarations/${name}`,
+        matchKey: name,
+        text: `${node.getText(sourceFile)}\n`
+      });
+    }
+  });
+
+  declarations.sort((left, right) =>
+    left.path < right.path ? -1 : left.path > right.path ? 1 : 0
+  );
+
+  return {
+    ok: true,
+    diagnostics: [],
+    analysis: {
+      kind: 'typescript',
+      dialect: 'typescript',
+      source,
+      owners: [
+        ...imports.map((item) => ({
+          path: item.path,
+          ownerKind: 'import' as const,
+          matchKey: item.matchKey
+        })),
+        ...declarations.map((item) => ({
+          path: item.path,
+          ownerKind: 'declaration' as const,
+          matchKey: item.matchKey
+        }))
+      ],
+      imports,
+      declarations
+    },
+    policies: []
+  };
+}
+
+function analyzeTypeScriptModuleWithBackend(
+  source: string,
+  backend: TypeScriptBackend
+): ParseResult<TypeScriptAnalysis> {
+  if (backend === 'native') {
+    return nativeAnalyzeTypeScriptModule(source);
+  }
+
   const parsed = parseWithLanguagePack(typeScriptParseRequest(source));
   if (!parsed.ok) {
     return { ok: false, diagnostics: parsed.diagnostics };
@@ -159,6 +264,19 @@ export function parseTypeScript(
   return analyzeTypeScriptModule(source);
 }
 
+export function typeScriptBackends(): readonly TypeScriptBackend[] {
+  return ['tree-sitter', 'native'];
+}
+
+export function parseTypeScriptWithBackend(
+  source: string,
+  dialect: TypeScriptDialect,
+  backend: TypeScriptBackend
+): ParseResult<TypeScriptAnalysis> {
+  void dialect;
+  return analyzeTypeScriptModuleWithBackend(source, backend);
+}
+
 export function matchTypeScriptOwners(
   template: TypeScriptAnalysis,
   destination: TypeScriptAnalysis
@@ -184,12 +302,21 @@ export function mergeTypeScript(
   destinationSource: string,
   dialect: TypeScriptDialect
 ): MergeResult<string> {
-  const template = parseTypeScript(templateSource, dialect);
+  return mergeTypeScriptWithBackend(templateSource, destinationSource, dialect, 'tree-sitter');
+}
+
+export function mergeTypeScriptWithBackend(
+  templateSource: string,
+  destinationSource: string,
+  dialect: TypeScriptDialect,
+  backend: TypeScriptBackend
+): MergeResult<string> {
+  const template = parseTypeScriptWithBackend(templateSource, dialect, backend);
   if (!template.ok || !template.analysis) {
     return { ok: false, diagnostics: template.diagnostics, policies: [] };
   }
 
-  const destination = parseTypeScript(destinationSource, dialect);
+  const destination = parseTypeScriptWithBackend(destinationSource, dialect, backend);
   if (!destination.ok || !destination.analysis) {
     return {
       ok: false,
