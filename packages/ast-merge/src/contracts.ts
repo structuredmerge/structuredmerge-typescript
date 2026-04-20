@@ -254,6 +254,13 @@ export interface ReviewDecision {
   readonly context?: ConformanceFamilyPlanContext;
 }
 
+export interface DelegatedChildGroupReviewState {
+  readonly requests: readonly ReviewRequest[];
+  readonly acceptedGroups: readonly ProjectedChildReviewGroup[];
+  readonly appliedDecisions: readonly ReviewDecision[];
+  readonly diagnostics: readonly Diagnostic[];
+}
+
 export interface ReviewReplayBundle {
   readonly replayContext: ReviewReplayContext;
   readonly decisions: readonly ReviewDecision[];
@@ -502,6 +509,57 @@ export function selectProjectedChildReviewGroupsAcceptedForApply(
   return groups.filter((group) =>
     acceptedRequestIds.has(reviewRequestIdForProjectedChildGroup(group))
   );
+}
+
+export function reviewProjectedChildGroups(
+  groups: readonly ProjectedChildReviewGroup[],
+  family: string,
+  decisions: readonly ReviewDecision[]
+): DelegatedChildGroupReviewState {
+  const requestIds = new Set(groups.map((group) => reviewRequestIdForProjectedChildGroup(group)));
+  const appliedDecisions: ReviewDecision[] = [];
+  const diagnostics: Diagnostic[] = [];
+
+  for (const decision of decisions) {
+    if (decision.action !== 'apply_delegated_child_group') {
+      continue;
+    }
+
+    if (requestIds.has(decision.requestId)) {
+      appliedDecisions.push(decision);
+      continue;
+    }
+
+    diagnostics.push({
+      severity: 'error',
+      category: 'replay_rejected',
+      message: `review decision ${decision.requestId} does not match any current delegated child review request.`,
+      review: {
+        requestId: decision.requestId,
+        action: decision.action,
+        reason: 'request_not_found'
+      }
+    });
+  }
+
+  const acceptedGroups = selectProjectedChildReviewGroupsAcceptedForApply(
+    groups,
+    family,
+    appliedDecisions
+  );
+  const acceptedRequestIds = new Set(
+    acceptedGroups.map((group) => reviewRequestIdForProjectedChildGroup(group))
+  );
+  const requests = groups
+    .filter((group) => !acceptedRequestIds.has(reviewRequestIdForProjectedChildGroup(group)))
+    .map((group) => projectedChildGroupReviewRequest(group, family));
+
+  return {
+    requests,
+    acceptedGroups,
+    appliedDecisions,
+    diagnostics
+  };
 }
 
 export function conformanceManifestReplayContext(
