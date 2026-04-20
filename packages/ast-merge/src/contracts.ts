@@ -15,6 +15,8 @@ export interface Diagnostic {
   readonly category: DiagnosticCategory;
   readonly message: string;
   readonly path?: string;
+  readonly requestId?: string;
+  readonly action?: ReviewDecisionAction;
 }
 
 export interface ParseResult<TAnalysis> {
@@ -574,7 +576,9 @@ function reviewDecisionForFamilyContext(
           {
             severity: 'error',
             category: 'configuration_error',
-            message: `review decision ${requestId} requires explicit context payload.`
+            message: `review decision ${requestId} requires explicit context payload.`,
+            requestId,
+            action: 'provide_explicit_context'
           }
         ]
       };
@@ -588,7 +592,9 @@ function reviewDecisionForFamilyContext(
             {
               severity: 'error',
               category: 'configuration_error',
-              message: `review decision ${requestId} provided context for ${decision.context.familyProfile.family}, expected ${family}.`
+              message: `review decision ${requestId} provided context for ${decision.context.familyProfile.family}, expected ${family}.`,
+              requestId,
+              action: 'provide_explicit_context'
             }
           ]
         };
@@ -1190,7 +1196,9 @@ export function reviewConformanceManifest(
           diagnostics.push({
             severity: 'error',
             category: 'replay_rejected',
-            message: `review decision ${decision.requestId} does not match any current review request.`
+            message: `review decision ${decision.requestId} does not match any current review request.`,
+            requestId: decision.requestId,
+            action: decision.action
           });
         }
       }

@@ -709,12 +709,18 @@ function normalizeSuiteReportEnvelope(raw: {
   };
 }
 
-function normalizeDiagnostic(raw: Diagnostic): Diagnostic {
+function normalizeDiagnostic(
+  raw: Diagnostic & {
+    request_id?: string;
+  }
+): Diagnostic {
   return {
     severity: raw.severity,
     category: raw.category,
     message: raw.message,
-    path: raw.path
+    path: raw.path,
+    requestId: raw.requestId ?? raw.request_id,
+    action: raw.action
   };
 }
 
