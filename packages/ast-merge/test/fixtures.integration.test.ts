@@ -2418,6 +2418,82 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the canonical widened-suite fixtures', () => {
+    const plansFixture = readFixture<{
+      manifest: ConformanceManifest;
+      contexts: Record<string, ConformanceFamilyPlanContext>;
+      expected_entries: readonly NamedConformanceSuitePlan[];
+    }>(
+      'diagnostics',
+      'slice-162-canonical-widened-suite-plans',
+      'canonical-widened-suite-plans.json'
+    );
+
+    expect(
+      planNamedConformanceSuites(
+        plansFixture.manifest,
+        Object.fromEntries(
+          Object.entries(plansFixture.contexts).map(([family, context]) => [
+            family,
+            normalizeFamilyPlanContext(context as never)
+          ])
+        )
+      )
+    ).toEqual(plansFixture.expected_entries.map((entry) => normalizeSuitePlan(entry as never)));
+
+    const reportFixture = readFixture<ConformanceManifestReportFixture>(
+      'diagnostics',
+      'slice-163-canonical-widened-suite-report',
+      'canonical-widened-suite-report.json'
+    );
+
+    expect(
+      reportConformanceManifest(
+        reportFixture.manifest,
+        normalizeManifestPlanningOptions(reportFixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return (
+            reportFixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+          );
+        }
+      )
+    ).toEqual(normalizeManifestReport(reportFixture.expected_report as never));
+
+    const reviewFixtures = [
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-164-canonical-widened-suite-review-state',
+        'canonical-widened-suite-review-state.json'
+      ),
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-165-canonical-widened-suite-reviewed-default',
+        'canonical-widened-suite-reviewed-default.json'
+      ),
+      readFixture<ConformanceManifestReviewStateFixture>(
+        'diagnostics',
+        'slice-166-canonical-widened-suite-replay-application',
+        'canonical-widened-suite-replay-application.json'
+      )
+    ];
+
+    for (const fixture of reviewFixtures) {
+      expect(
+        reviewConformanceManifest(
+          fixture.manifest,
+          normalizeManifestReviewOptions(fixture.options as never),
+          (run) => {
+            const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+            return (
+              fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+            );
+          }
+        )
+      ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+    }
+  });
+
   it('conforms to the slice-61 review host hints fixture', () => {
     const fixture = readFixture<ReviewHostHintsFixture>(
       ...diagnosticsFixturePath('review_host_hints')
