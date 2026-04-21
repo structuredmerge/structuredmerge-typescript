@@ -3,6 +3,7 @@ import type {
   Diagnostic,
   ParseResult
 } from '@structuredmerge/ast-merge';
+import { registerBackend } from '@structuredmerge/tree-haver';
 import {
   analyzeTomlSource,
   matchTomlOwners as matchTomlOwnersWithSubstrate,
@@ -16,6 +17,8 @@ import { createPeggyParser, parseWithPeggy } from '@structuredmerge/tree-haver';
 
 export const packageName = '@structuredmerge/peggy-toml-merge';
 export const backendId = 'peggy';
+
+registerBackend({ id: backendId, family: 'peg' });
 
 const TOML_PEGGY_GRAMMAR = String.raw`
 {

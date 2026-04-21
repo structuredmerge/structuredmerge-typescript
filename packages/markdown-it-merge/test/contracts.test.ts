@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   availableMarkdownBackends,
   markdownBackendFeatureProfile,
@@ -33,6 +34,7 @@ describe('markdown-it-merge contracts', () => {
         supportedPolicies: []
       }
     });
+    expect(registeredBackends()).toContainEqual({ id: 'markdown-it', family: 'native' });
   });
 
   it('rejects unsupported provider backend overrides', () => {

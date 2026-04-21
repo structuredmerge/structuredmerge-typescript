@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   availableTomlBackends,
   mergeToml,
@@ -34,6 +35,7 @@ describe('peggy-toml-merge contracts', () => {
         supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
       }
     });
+    expect(registeredBackends()).toContainEqual({ id: 'peggy', family: 'peg' });
   });
 
   it('rejects unsupported provider backend overrides', () => {

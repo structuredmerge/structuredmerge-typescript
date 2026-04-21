@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it';
+import { registerBackend } from '@structuredmerge/tree-haver';
 import type {
   ConformanceFamilyPlanContext,
   Diagnostic,
@@ -16,6 +17,8 @@ import {
 
 export const packageName = '@structuredmerge/markdown-it-merge';
 export const backendId = 'markdown-it';
+
+registerBackend({ id: backendId, family: 'native' });
 
 function parseError(message: string): Diagnostic {
   return { severity: 'error', category: 'parse_error', message };
