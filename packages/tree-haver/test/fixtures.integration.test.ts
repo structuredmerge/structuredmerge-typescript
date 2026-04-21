@@ -13,6 +13,8 @@ import {
   PEGGY_BACKEND,
   peggyAdapterInfo,
   peggyFeatureProfile,
+  registerBackend,
+  registeredBackends,
   withBackend
 } from '../src/index';
 
@@ -192,6 +194,14 @@ describe('tree-haver shared fixtures', () => {
       expect(currentBackendId()).toBe('peggy');
     });
 
+    expect(currentBackendId()).toBeUndefined();
+  });
+
+  it('supports runtime backend registration', () => {
+    registerBackend({ id: 'custom-markdown', family: 'native' });
+
+    expect(registeredBackends()).toContainEqual({ id: 'custom-markdown', family: 'native' });
+    expect(withBackend('custom-markdown', () => currentBackendId())).toBe('custom-markdown');
     expect(currentBackendId()).toBeUndefined();
   });
 });

@@ -134,8 +134,18 @@ const backendRegistry = new Map<string, BackendReference>([
 ]);
 let currentBackend: string | undefined;
 
+export function registerBackend(backend: BackendReference): void {
+  backendRegistry.set(backend.id, { ...backend });
+}
+
 export function backendReference(id: string): BackendReference | undefined {
-  return backendRegistry.get(id);
+  const backend = backendRegistry.get(id);
+
+  return backend ? { ...backend } : undefined;
+}
+
+export function registeredBackends(): BackendReference[] {
+  return [...backendRegistry.values()].map((backend) => ({ ...backend }));
 }
 
 export function currentBackendId(): string | undefined {

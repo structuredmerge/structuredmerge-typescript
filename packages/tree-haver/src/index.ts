@@ -28,5 +28,7 @@ export {
   processWithLanguagePack,
   parseWithLanguagePack,
   parseWithPeggy,
+  registerBackend,
+  registeredBackends,
   withBackend
 } from './contracts';
