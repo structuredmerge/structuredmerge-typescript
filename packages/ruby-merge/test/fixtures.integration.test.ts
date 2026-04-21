@@ -3,6 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
   delegatedChildApplyPlan,
   groupProjectedChildReviewCases,
   projectedChildGroupReviewRequest,
@@ -10,6 +12,7 @@ import {
   selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
   summarizeProjectedChildReviewGroupProgress,
+  type ConformanceManifest,
   type Diagnostic
 } from '@structuredmerge/ast-merge';
 import {
@@ -641,5 +644,26 @@ describe('ruby-merge shared fixtures', () => {
         supportedPolicies: planFixture.tree_sitter.feature_profile.supported_policies
       }
     });
+
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-217-ruby-family-manifest',
+      'ruby-family-manifest.json'
+    );
+    expect(conformanceFamilyFeatureProfilePath(manifest, 'ruby')).toEqual([
+      'diagnostics',
+      'slice-214-ruby-family-feature-profile',
+      'ruby-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'ruby', 'analysis')).toEqual([
+      'ruby',
+      'slice-218-analysis',
+      'module-owners.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'ruby', 'matching')).toEqual([
+      'ruby',
+      'slice-219-matching',
+      'path-equality.json'
+    ]);
   });
 });
