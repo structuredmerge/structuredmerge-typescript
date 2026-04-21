@@ -145,7 +145,6 @@ describe('markdown-merge shared fixtures', () => {
 
   it('conforms to the slice-195 Markdown backend feature profile fixture', () => {
     const fixture = readFixture<{
-      native: { backend: 'markdown-it'; supported_policies: [] };
       tree_sitter: { backend: 'kreuzberg-language-pack'; supported_policies: [] };
     }>(
       'diagnostics',
@@ -153,13 +152,7 @@ describe('markdown-merge shared fixtures', () => {
       'typescript-markdown-backend-feature-profiles.json'
     );
 
-    expect(availableMarkdownBackends()).toEqual(['markdown-it', 'kreuzberg-language-pack']);
-    expect(markdownBackendFeatureProfile('markdown-it')).toEqual({
-      family: 'markdown',
-      supportedDialects: ['markdown'],
-      supportedPolicies: fixture.native.supported_policies,
-      backend: fixture.native.backend
-    });
+    expect(availableMarkdownBackends()).toEqual(['kreuzberg-language-pack']);
     expect(markdownBackendFeatureProfile('kreuzberg-language-pack')).toEqual({
       family: 'markdown',
       supportedDialects: ['markdown'],
@@ -170,18 +163,6 @@ describe('markdown-merge shared fixtures', () => {
 
   it('conforms to the slice-196 Markdown plan-context fixture', () => {
     const fixture = readFixture<{
-      native: {
-        family_profile: {
-          family: 'markdown';
-          supported_dialects: ['markdown'];
-          supported_policies: [];
-        };
-        feature_profile: {
-          backend: 'markdown-it';
-          supports_dialects: true;
-          supported_policies: [];
-        };
-      };
       tree_sitter: {
         family_profile: {
           family: 'markdown';
@@ -200,18 +181,6 @@ describe('markdown-merge shared fixtures', () => {
       'typescript-markdown-plan-contexts.json'
     );
 
-    expect(markdownPlanContext('markdown-it')).toEqual({
-      familyProfile: {
-        family: fixture.native.family_profile.family,
-        supportedDialects: fixture.native.family_profile.supported_dialects,
-        supportedPolicies: fixture.native.family_profile.supported_policies
-      },
-      featureProfile: {
-        backend: fixture.native.feature_profile.backend,
-        supportsDialects: fixture.native.feature_profile.supports_dialects,
-        supportedPolicies: fixture.native.feature_profile.supported_policies
-      }
-    });
     expect(markdownPlanContext('kreuzberg-language-pack')).toEqual({
       familyProfile: {
         family: fixture.tree_sitter.family_profile.family,
@@ -322,7 +291,7 @@ describe('markdown-merge shared fixtures', () => {
       }>;
     }>('markdown', 'slice-208-embedded-families', 'code-fence-families.json');
 
-    const analysis = parseMarkdown(fixture.source, 'markdown', 'markdown-it');
+    const analysis = parseMarkdown(fixture.source, 'markdown');
     expect(analysis.ok).toBe(true);
     expect(markdownEmbeddedFamilies(analysis.analysis!)).toEqual(fixture.expected);
   });
@@ -345,7 +314,7 @@ describe('markdown-merge shared fixtures', () => {
       }>;
     }>('markdown', 'slice-212-discovered-surfaces', 'fenced-code-surfaces.json');
 
-    const analysis = parseMarkdown(fixture.source, 'markdown', 'markdown-it');
+    const analysis = parseMarkdown(fixture.source, 'markdown');
     expect(analysis.ok).toBe(true);
     expect(markdownDiscoveredSurfaces(analysis.analysis!)).toEqual(
       fixture.expected.map((surface) => ({
@@ -386,7 +355,7 @@ describe('markdown-merge shared fixtures', () => {
       }>;
     }>('markdown', 'slice-213-delegated-child-operations', 'fenced-code-child-operations.json');
 
-    const analysis = parseMarkdown(fixture.source, 'markdown', 'markdown-it');
+    const analysis = parseMarkdown(fixture.source, 'markdown');
     expect(analysis.ok).toBe(true);
     expect(
       markdownDelegatedChildOperations(analysis.analysis!, fixture.parent_operation_id)

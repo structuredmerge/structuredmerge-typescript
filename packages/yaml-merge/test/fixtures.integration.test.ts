@@ -184,10 +184,10 @@ describe('yaml-merge shared fixtures', () => {
       'slice-143-yaml-family-manifest',
       'yaml-family-manifest.json'
     );
-    const suites = manifest.suites as NonNullable<ConformanceManifest['suites']>;
 
-    expect(suites.yaml_portable).toEqual({
-      family: 'yaml',
+    expect(manifest.suite_descriptors).toContainEqual({
+      kind: 'portable',
+      subject: { grammar: 'yaml' },
       roles: ['analysis', 'matching', 'merge']
     });
     expect(conformanceFamilyFeatureProfilePath(manifest, 'yaml')).toEqual([

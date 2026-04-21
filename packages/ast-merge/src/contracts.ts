@@ -178,17 +178,28 @@ export interface ConformanceFamilyFeatureProfileEntry extends ConformanceManifes
 
 export interface ConformanceManifest {
   readonly family_feature_profiles: readonly ConformanceFamilyFeatureProfileEntry[];
-  readonly suites?: Readonly<Record<string, ConformanceSuiteDefinition>>;
+  readonly suite_descriptors?: readonly ConformanceSuiteDefinition[];
   readonly families: Readonly<Record<string, readonly ConformanceManifestEntry[]>>;
 }
 
+export interface ConformanceSuiteSubject {
+  readonly grammar: string;
+  readonly variant?: string;
+}
+
+export interface ConformanceSuiteSelector {
+  readonly kind: string;
+  readonly subject: ConformanceSuiteSubject;
+}
+
 export interface ConformanceSuiteDefinition {
-  readonly family: string;
+  readonly kind: string;
+  readonly subject: ConformanceSuiteSubject;
   readonly roles: readonly string[];
 }
 
 export interface NamedConformanceSuiteReport {
-  readonly suite: string;
+  readonly suite: ConformanceSuiteDefinition;
   readonly report: ConformanceSuiteReport;
 }
 
@@ -198,12 +209,12 @@ export interface ConformanceFamilyPlanContext {
 }
 
 export interface NamedConformanceSuitePlan {
-  readonly suite: string;
+  readonly suite: ConformanceSuiteDefinition;
   readonly plan: ConformanceSuitePlan;
 }
 
 export interface NamedConformanceSuiteResults {
-  readonly suite: string;
+  readonly suite: ConformanceSuiteDefinition;
   readonly results: readonly ConformanceCaseResult[];
 }
 
@@ -387,13 +398,21 @@ export function conformanceFamilyFeatureProfilePath(
 
 export function conformanceSuiteDefinition(
   manifest: ConformanceManifest,
-  suiteName: string
+  suiteSelector: ConformanceSuiteSelector
 ): ConformanceSuiteDefinition | undefined {
-  return manifest.suites?.[suiteName];
+  return manifest.suite_descriptors?.find(
+    (candidate): candidate is ConformanceSuiteDefinition =>
+      isSuiteDefinition(candidate) && suiteSelectorsEqual(candidate, suiteSelector)
+  );
 }
 
-export function conformanceSuiteNames(manifest: ConformanceManifest): readonly string[] {
-  return Object.keys(manifest.suites ?? {}).sort((left, right) => left.localeCompare(right));
+export function conformanceSuiteSelectors(
+  manifest: ConformanceManifest
+): readonly ConformanceSuiteSelector[] {
+  return [...(manifest.suite_descriptors ?? [])]
+    .filter(isSuiteDefinition)
+    .map((definition) => ({ kind: definition.kind, subject: definition.subject }))
+    .sort(compareSuiteSelectors);
 }
 
 export function defaultConformanceFamilyContext(
@@ -608,9 +627,7 @@ export function conformanceManifestReplayContext(
 ): ReviewReplayContext {
   const families = Array.from(
     new Set(
-      conformanceSuiteNames(manifest)
-        .map((suiteName) => conformanceSuiteDefinition(manifest, suiteName)?.family)
-        .filter((family): family is string => family !== undefined)
+      conformanceSuiteSelectors(manifest).map((suiteSelector) => suiteSelector.subject.grammar)
     )
   ).sort((left, right) => left.localeCompare(right));
 
@@ -749,19 +766,15 @@ export function conformanceManifestReviewRequestIds(
 
   const requestIds = new Set<string>();
 
-  for (const suiteName of conformanceSuiteNames(manifest)) {
-    const definition = conformanceSuiteDefinition(manifest, suiteName);
+  for (const suiteSelector of conformanceSuiteSelectors(manifest)) {
+    const family = suiteSelector.subject.grammar;
 
-    if (!definition) {
+    if (options.contexts?.[family]) {
       continue;
     }
 
-    if (options.contexts?.[definition.family]) {
-      continue;
-    }
-
-    if (options.familyProfiles?.[definition.family]) {
-      requestIds.add(reviewRequestIdForFamilyContext(definition.family));
+    if (options.familyProfiles?.[family]) {
+      requestIds.add(reviewRequestIdForFamilyContext(family));
     }
   }
 
@@ -1121,12 +1134,12 @@ export function runPlannedConformanceSuite(
 
 export function runNamedConformanceSuite(
   manifest: ConformanceManifest,
-  suiteName: string,
+  suiteSelector: ConformanceSuiteSelector,
   familyProfile: FamilyFeatureProfile,
   execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
   featureProfile?: ConformanceFeatureProfileView
 ): readonly ConformanceCaseResult[] | undefined {
-  const plan = planNamedConformanceSuite(manifest, suiteName, familyProfile, featureProfile);
+  const plan = planNamedConformanceSuite(manifest, suiteSelector, familyProfile, featureProfile);
 
   if (!plan) {
     return undefined;
@@ -1137,14 +1150,14 @@ export function runNamedConformanceSuite(
 
 export function runNamedConformanceSuiteEntry(
   manifest: ConformanceManifest,
-  suiteName: string,
+  suiteSelector: ConformanceSuiteSelector,
   familyProfile: FamilyFeatureProfile,
   execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
   featureProfile?: ConformanceFeatureProfileView
 ): NamedConformanceSuiteResults | undefined {
   const results = runNamedConformanceSuite(
     manifest,
-    suiteName,
+    suiteSelector,
     familyProfile,
     execute,
     featureProfile
@@ -1155,7 +1168,7 @@ export function runNamedConformanceSuiteEntry(
   }
 
   return {
-    suite: suiteName,
+    suite: conformanceSuiteDefinition(manifest, suiteSelector)!,
     results
   };
 }
@@ -1179,12 +1192,12 @@ export function reportPlannedConformanceSuite(
 
 export function reportNamedConformanceSuite(
   manifest: ConformanceManifest,
-  suiteName: string,
+  suiteSelector: ConformanceSuiteSelector,
   familyProfile: FamilyFeatureProfile,
   execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
   featureProfile?: ConformanceFeatureProfileView
 ): ConformanceSuiteReport | undefined {
-  const plan = planNamedConformanceSuite(manifest, suiteName, familyProfile, featureProfile);
+  const plan = planNamedConformanceSuite(manifest, suiteSelector, familyProfile, featureProfile);
 
   if (!plan) {
     return undefined;
@@ -1195,14 +1208,14 @@ export function reportNamedConformanceSuite(
 
 export function reportNamedConformanceSuiteEntry(
   manifest: ConformanceManifest,
-  suiteName: string,
+  suiteSelector: ConformanceSuiteSelector,
   familyProfile: FamilyFeatureProfile,
   execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
   featureProfile?: ConformanceFeatureProfileView
 ): NamedConformanceSuiteReport | undefined {
   const report = reportNamedConformanceSuite(
     manifest,
-    suiteName,
+    suiteSelector,
     familyProfile,
     execute,
     featureProfile
@@ -1213,7 +1226,7 @@ export function reportNamedConformanceSuiteEntry(
   }
 
   return {
-    suite: suiteName,
+    suite: conformanceSuiteDefinition(manifest, suiteSelector)!,
     report
   };
 }
@@ -1322,11 +1335,11 @@ export function planConformanceSuite(
 
 export function planNamedConformanceSuite(
   manifest: ConformanceManifest,
-  suiteName: string,
+  suiteSelector: ConformanceSuiteSelector,
   familyProfile: FamilyFeatureProfile,
   featureProfile?: ConformanceFeatureProfileView
 ): ConformanceSuitePlan | undefined {
-  const definition = conformanceSuiteDefinition(manifest, suiteName);
+  const definition = conformanceSuiteDefinition(manifest, suiteSelector);
 
   if (!definition) {
     return undefined;
@@ -1334,7 +1347,7 @@ export function planNamedConformanceSuite(
 
   return planConformanceSuite(
     manifest,
-    definition.family,
+    definition.subject.grammar,
     definition.roles,
     familyProfile,
     featureProfile
@@ -1343,12 +1356,12 @@ export function planNamedConformanceSuite(
 
 export function planNamedConformanceSuiteEntry(
   manifest: ConformanceManifest,
-  suiteName: string,
+  suiteSelector: ConformanceSuiteSelector,
   context: ConformanceFamilyPlanContext
 ): NamedConformanceSuitePlan | undefined {
   const plan = planNamedConformanceSuite(
     manifest,
-    suiteName,
+    suiteSelector,
     context.familyProfile,
     context.featureProfile
   );
@@ -1358,7 +1371,7 @@ export function planNamedConformanceSuiteEntry(
   }
 
   return {
-    suite: suiteName,
+    suite: conformanceSuiteDefinition(manifest, suiteSelector)!,
     plan
   };
 }
@@ -1371,27 +1384,27 @@ export function planNamedConformanceSuitesWithDiagnostics(
   const diagnostics: Diagnostic[] = [];
   const resolvedContexts = new Map<string, ConformanceFamilyPlanContext | undefined>();
 
-  for (const suiteName of conformanceSuiteNames(manifest)) {
-    const definition = conformanceSuiteDefinition(manifest, suiteName);
+  for (const suiteSelector of conformanceSuiteSelectors(manifest)) {
+    const definition = conformanceSuiteDefinition(manifest, suiteSelector);
 
     if (!definition) {
       continue;
     }
 
-    let context = resolvedContexts.get(definition.family);
+    let context = resolvedContexts.get(definition.subject.grammar);
 
-    if (context === undefined && !resolvedContexts.has(definition.family)) {
-      const resolved = resolveConformanceFamilyContext(definition.family, options);
+    if (context === undefined && !resolvedContexts.has(definition.subject.grammar)) {
+      const resolved = resolveConformanceFamilyContext(definition.subject.grammar, options);
       diagnostics.push(...resolved.diagnostics);
       context = resolved.context;
-      resolvedContexts.set(definition.family, context);
+      resolvedContexts.set(definition.subject.grammar, context);
     }
 
     if (!context) {
       continue;
     }
 
-    const plan = planNamedConformanceSuiteEntry(manifest, suiteName, context);
+    const plan = planNamedConformanceSuiteEntry(manifest, suiteSelector, context);
 
     if (!plan) {
       continue;
@@ -1401,7 +1414,7 @@ export function planNamedConformanceSuitesWithDiagnostics(
       diagnostics.push({
         severity: 'error',
         category: 'configuration_error',
-        message: `suite ${suiteName} declares missing roles: ${plan.plan.missingRoles.join(', ')}.`
+        message: `suite ${JSON.stringify(plan.suite)} declares missing roles: ${plan.plan.missingRoles.join(', ')}.`
       });
       continue;
     }
@@ -1419,21 +1432,21 @@ export function planNamedConformanceSuites(
   manifest: ConformanceManifest,
   contexts: Readonly<Record<string, ConformanceFamilyPlanContext>>
 ): readonly NamedConformanceSuitePlan[] {
-  return conformanceSuiteNames(manifest)
-    .map((suiteName) => {
-      const definition = conformanceSuiteDefinition(manifest, suiteName);
+  return conformanceSuiteSelectors(manifest)
+    .map((suiteSelector) => {
+      const definition = conformanceSuiteDefinition(manifest, suiteSelector);
 
       if (!definition) {
         return undefined;
       }
 
-      const context = contexts[definition.family];
+      const context = contexts[definition.subject.grammar];
 
       if (!context) {
         return undefined;
       }
 
-      return planNamedConformanceSuiteEntry(manifest, suiteName, context);
+      return planNamedConformanceSuiteEntry(manifest, suiteSelector, context);
     })
     .filter((entry): entry is NamedConformanceSuitePlan => entry !== undefined);
 }
@@ -1523,29 +1536,29 @@ export function reviewConformanceManifest(
   const appliedDecisions: ReviewDecision[] = [];
   const resolvedContexts = new Map<string, ConformanceFamilyPlanContext | undefined>();
 
-  for (const suiteName of conformanceSuiteNames(manifest)) {
-    const definition = conformanceSuiteDefinition(manifest, suiteName);
+  for (const suiteSelector of conformanceSuiteSelectors(manifest)) {
+    const definition = conformanceSuiteDefinition(manifest, suiteSelector);
 
     if (!definition) {
       continue;
     }
 
-    let context = resolvedContexts.get(definition.family);
+    let context = resolvedContexts.get(definition.subject.grammar);
 
-    if (context === undefined && !resolvedContexts.has(definition.family)) {
-      const reviewed = reviewConformanceFamilyContext(definition.family, effectiveOptions);
+    if (context === undefined && !resolvedContexts.has(definition.subject.grammar)) {
+      const reviewed = reviewConformanceFamilyContext(definition.subject.grammar, effectiveOptions);
       diagnostics.push(...reviewed.diagnostics);
       requests.push(...reviewed.requests);
       appliedDecisions.push(...reviewed.appliedDecisions);
       context = reviewed.context;
-      resolvedContexts.set(definition.family, context);
+      resolvedContexts.set(definition.subject.grammar, context);
     }
 
     if (!context) {
       continue;
     }
 
-    const plan = planNamedConformanceSuiteEntry(manifest, suiteName, context);
+    const plan = planNamedConformanceSuiteEntry(manifest, suiteSelector, context);
 
     if (!plan) {
       continue;
@@ -1555,7 +1568,7 @@ export function reviewConformanceManifest(
       diagnostics.push({
         severity: 'error',
         category: 'configuration_error',
-        message: `suite ${suiteName} declares missing roles: ${plan.plan.missingRoles.join(', ')}.`
+        message: `suite ${JSON.stringify(plan.suite)} declares missing roles: ${plan.plan.missingRoles.join(', ')}.`
       });
       continue;
     }
@@ -1573,4 +1586,30 @@ export function reviewConformanceManifest(
     hostHints: conformanceReviewHostHints(options),
     replayContext
   };
+}
+
+function suiteSelectorsEqual(
+  left: ConformanceSuiteSelector,
+  right: ConformanceSuiteSelector
+): boolean {
+  return left.kind === right.kind && left.subject.grammar === right.subject.grammar && left.subject.variant === right.subject.variant;
+}
+
+function isSuiteDefinition(value: unknown): value is ConformanceSuiteDefinition {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as { kind?: unknown }).kind === 'string' &&
+    typeof (value as { subject?: { grammar?: unknown } }).subject?.grammar === 'string' &&
+    Array.isArray((value as { roles?: unknown }).roles)
+  );
+}
+
+function compareSuiteSelectors(
+  left: ConformanceSuiteSelector,
+  right: ConformanceSuiteSelector
+): number {
+  const leftKey = `${left.kind}:${left.subject.grammar}:${left.subject.variant ?? ''}`;
+  const rightKey = `${right.kind}:${right.subject.grammar}:${right.subject.variant ?? ''}`;
+  return leftKey.localeCompare(rightKey);
 }

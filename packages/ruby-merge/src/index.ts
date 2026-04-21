@@ -1,13 +1,17 @@
 export {
+  availableRubyBackends,
   matchRubyOwners,
   parseRuby,
+  rubyBackendFeatureProfile,
   rubyDelegatedChildOperations,
   rubyDiscoveredSurfaces,
-  rubyFeatureProfile
+  rubyFeatureProfile,
+  rubyPlanContext
 } from './contracts';
 
 export type {
   RubyAnalysis,
+  RubyBackend,
   RubyDialect,
   RubyFeatureProfile,
   RubyOwner,

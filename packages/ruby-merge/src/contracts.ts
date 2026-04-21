@@ -1,4 +1,5 @@
 import type {
+  ConformanceFamilyPlanContext,
   DelegatedChildOperation,
   DiscoveredSurface,
   FamilyFeatureProfile,
@@ -41,6 +42,8 @@ export interface RubyFeatureProfile extends FamilyFeatureProfile {
   readonly supportedDialects: readonly RubyDialect[];
   readonly supportedPolicies: readonly PolicyReference[];
 }
+
+export type RubyBackend = 'kreuzberg-language-pack';
 
 const destinationWinsArrayPolicy: PolicyReference = {
   surface: 'array',
@@ -249,6 +252,37 @@ export function rubyFeatureProfile(): RubyFeatureProfile {
     family: 'ruby',
     supportedDialects: ['ruby'],
     supportedPolicies: [destinationWinsArrayPolicy]
+  };
+}
+
+export function availableRubyBackends(): readonly RubyBackend[] {
+  return ['kreuzberg-language-pack'];
+}
+
+export function rubyBackendFeatureProfile(
+  backend: RubyBackend = 'kreuzberg-language-pack'
+): RubyFeatureProfile & {
+  readonly backend: RubyBackend;
+  readonly supportsDialects: true;
+} {
+  return {
+    ...rubyFeatureProfile(),
+    backend,
+    supportsDialects: true
+  };
+}
+
+export function rubyPlanContext(
+  backend: RubyBackend = 'kreuzberg-language-pack'
+): ConformanceFamilyPlanContext {
+  const profile = rubyBackendFeatureProfile(backend);
+  return {
+    familyProfile: rubyFeatureProfile(),
+    featureProfile: {
+      backend: profile.backend,
+      supportsDialects: profile.supportsDialects,
+      supportedPolicies: profile.supportedPolicies
+    }
   };
 }
 

@@ -6,7 +6,6 @@
   "main": "./src/index.ts",
   "dependencies": {
     "@structuredmerge/ast-merge": "workspace:*",
-    "@structuredmerge/tree-haver": "workspace:*",
-    "markdown-it": "^14.1.0"
+    "@structuredmerge/tree-haver": "workspace:*"
   }
 }

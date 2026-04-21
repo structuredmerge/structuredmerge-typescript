@@ -137,10 +137,10 @@ describe('toml-merge shared fixtures', () => {
       'slice-137-toml-family-manifest',
       'toml-family-manifest.json'
     );
-    const suites = manifest.suites as NonNullable<ConformanceManifest['suites']>;
 
-    expect(suites.toml_portable).toEqual({
-      family: 'toml',
+    expect(manifest.suite_descriptors).toContainEqual({
+      kind: 'portable',
+      subject: { grammar: 'toml' },
       roles: ['analysis', 'matching', 'merge']
     });
     expect(conformanceFamilyFeatureProfilePath(manifest, 'toml')).toEqual([

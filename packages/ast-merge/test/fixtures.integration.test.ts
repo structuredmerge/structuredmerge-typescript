@@ -20,6 +20,7 @@ import type {
   NamedConformanceSuiteResults,
   NamedConformanceSuiteReportEnvelope,
   ConformanceOutcome,
+  ConformanceSuiteSelector,
   ConformanceSuiteDefinition,
   ConformanceSuitePlan,
   ConformanceSuiteReport,
@@ -63,7 +64,7 @@ import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
   conformanceSuiteDefinition,
-  conformanceSuiteNames,
+  conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
   planConformanceSuite,
   planNamedConformanceSuiteEntry,
@@ -458,12 +459,12 @@ interface ManifestBackendReportFixture {
 }
 
 interface SuiteDefinitionsFixture {
-  suite_name: string;
+  suite_selector: ConformanceSuiteSelector;
   expected: ConformanceSuiteDefinition;
 }
 
 interface NamedSuiteReportFixture {
-  suite_name: string;
+  suite_selector: ConformanceSuiteSelector;
   family_profile: {
     family: string;
     supported_dialects: string[];
@@ -474,18 +475,18 @@ interface NamedSuiteReportFixture {
 }
 
 interface NamedSuiteRunnerFixture {
-  suite_name: string;
+  suite_selector: ConformanceSuiteSelector;
   family_profile: NamedSuiteReportFixture['family_profile'];
   executions: Record<string, ConformanceCaseExecution>;
   expected_results: ConformanceCaseResult[];
 }
 
 interface SuiteNamesFixture {
-  suite_names: string[];
+  suite_selectors: ConformanceSuiteSelector[];
 }
 
 interface NamedSuiteEntryFixture {
-  suite_name: string;
+  suite_selector: ConformanceSuiteSelector;
   family_profile: NamedSuiteReportFixture['family_profile'];
   executions: Record<string, ConformanceCaseExecution>;
   expected_entry: NamedConformanceSuiteReport;
@@ -496,7 +497,7 @@ interface FamilyPlanContextFixture {
 }
 
 interface NamedSuitePlanEntryFixture {
-  suite_name: string;
+  suite_selector: ConformanceSuiteSelector;
   context: ConformanceFamilyPlanContext;
   expected_entry: NamedConformanceSuitePlan;
 }
@@ -507,7 +508,7 @@ interface NamedSuitePlansFixture {
 }
 
 interface NamedSuiteResultsFixture {
-  suite_name: string;
+  suite_selector: ConformanceSuiteSelector;
   family_profile: NamedSuiteReportFixture['family_profile'];
   executions: Record<string, ConformanceCaseExecution>;
   expected_entry: NamedConformanceSuiteResults;
@@ -857,7 +858,7 @@ function normalizeFamilyPlanContext(raw: {
 }
 
 function normalizeSuitePlan(raw: {
-  suite: string;
+  suite: ConformanceSuiteDefinition;
   plan: {
     family: string;
     entries: Array<{
@@ -907,7 +908,7 @@ function normalizeSuitePlan(raw: {
 }
 
 function normalizeSuiteResults(raw: {
-  suite: string;
+  suite: ConformanceSuiteDefinition;
   results: ConformanceCaseResult[];
 }): NamedConformanceSuiteResults {
   return {
@@ -1810,9 +1811,9 @@ describe('ast-merge shared fixtures', () => {
       'family-feature-profiles.json'
     );
 
-    expect(conformanceSuiteDefinition(manifest, fixture.suite_name)).toEqual(fixture.expected);
+    expect(conformanceSuiteDefinition(manifest, fixture.suite_selector)).toEqual(fixture.expected);
     expect(
-      planNamedConformanceSuite(manifest, fixture.suite_name, {
+      planNamedConformanceSuite(manifest, fixture.suite_selector, {
         family: 'json',
         supportedDialects: ['json', 'jsonc'],
         supportedPolicies: [
@@ -1821,7 +1822,7 @@ describe('ast-merge shared fixtures', () => {
         ]
       })
     ).toEqual(
-      planConformanceSuite(manifest, fixture.expected.family, fixture.expected.roles, {
+      planConformanceSuite(manifest, fixture.expected.subject.grammar, fixture.expected.roles, {
         family: 'json',
         supportedDialects: ['json', 'jsonc'],
         supportedPolicies: [
@@ -1835,19 +1836,13 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-125 source-family suite-definitions fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
-      suite_names: string[];
-      definitions: Record<string, ConformanceSuiteDefinition>;
+      suite_selectors: ConformanceSuiteSelector[];
+      suite_definitions: ConformanceSuiteDefinition[];
     }>('diagnostics', 'slice-125-source-family-suite-definitions', 'source-suite-definitions.json');
 
-    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
-    expect(conformanceSuiteDefinition(fixture.manifest, 'typescript_portable')).toEqual(
-      fixture.definitions.typescript_portable
-    );
-    expect(conformanceSuiteDefinition(fixture.manifest, 'rust_portable')).toEqual(
-      fixture.definitions.rust_portable
-    );
-    expect(conformanceSuiteDefinition(fixture.manifest, 'go_portable')).toEqual(
-      fixture.definitions.go_portable
+    expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
+    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
+      fixture.suite_definitions
     );
   });
 
@@ -1864,7 +1859,7 @@ describe('ast-merge shared fixtures', () => {
     expect(
       reportNamedConformanceSuite(
         manifest,
-        fixture.suite_name,
+        fixture.suite_selector,
         {
           family: fixture.family_profile.family,
           supportedDialects: fixture.family_profile.supported_dialects,
@@ -1896,7 +1891,7 @@ describe('ast-merge shared fixtures', () => {
     expect(
       runNamedConformanceSuite(
         manifest,
-        fixture.suite_name,
+        fixture.suite_selector,
         {
           family: fixture.family_profile.family,
           supportedDialects: fixture.family_profile.supported_dialects,
@@ -1923,7 +1918,7 @@ describe('ast-merge shared fixtures', () => {
       'family-feature-profiles.json'
     );
 
-    expect(conformanceSuiteNames(manifest)).toEqual(fixture.suite_names);
+    expect(conformanceSuiteSelectors(manifest)).toEqual(fixture.suite_selectors);
   });
 
   it('conforms to the slice-47 named conformance suite-entry fixture', () => {
@@ -1939,7 +1934,7 @@ describe('ast-merge shared fixtures', () => {
     expect(
       reportNamedConformanceSuiteEntry(
         manifest,
-        fixture.suite_name,
+        fixture.suite_selector,
         {
           family: fixture.family_profile.family,
           supportedDialects: fixture.family_profile.supported_dialects,
@@ -1971,7 +1966,7 @@ describe('ast-merge shared fixtures', () => {
     expect(
       planNamedConformanceSuiteEntry(
         manifest,
-        fixture.suite_name,
+        fixture.suite_selector,
         normalizeFamilyPlanContext(fixture.context as never)
       )
     ).toEqual(normalizeSuitePlan(fixture.expected_entry as never));
@@ -2069,13 +2064,13 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-138 TOML family suite-definitions fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
-      suite_names: string[];
-      definitions: Record<string, ConformanceSuiteDefinition>;
+      suite_selectors: ConformanceSuiteSelector[];
+      suite_definitions: ConformanceSuiteDefinition[];
     }>('diagnostics', 'slice-138-toml-family-suite-definitions', 'toml-suite-definitions.json');
 
-    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
-    expect(conformanceSuiteDefinition(fixture.manifest, 'toml_portable')).toEqual(
-      fixture.definitions.toml_portable
+    expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
+    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
+      fixture.suite_definitions
     );
   });
 
@@ -2116,7 +2111,7 @@ describe('ast-merge shared fixtures', () => {
     expect(
       runNamedConformanceSuiteEntry(
         manifest,
-        fixture.suite_name,
+        fixture.suite_selector,
         {
           family: fixture.family_profile.family,
           supportedDialects: fixture.family_profile.supported_dialects,
@@ -2346,13 +2341,13 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-144 YAML family suite-definitions fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
-      suite_names: string[];
-      definitions: Record<string, ConformanceSuiteDefinition>;
+      suite_selectors: ConformanceSuiteSelector[];
+      suite_definitions: ConformanceSuiteDefinition[];
     }>('diagnostics', 'slice-144-yaml-family-suite-definitions', 'yaml-suite-definitions.json');
 
-    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
-    expect(conformanceSuiteDefinition(fixture.manifest, 'yaml_portable')).toEqual(
-      fixture.definitions.yaml_portable
+    expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
+    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
+      fixture.suite_definitions
     );
   });
 
@@ -2402,17 +2397,17 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-200 Markdown family suite-definitions fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
-      suite_names: string[];
-      definitions: Record<string, ConformanceSuiteDefinition>;
+      suite_selectors: ConformanceSuiteSelector[];
+      suite_definitions: ConformanceSuiteDefinition[];
     }>(
       'diagnostics',
       'slice-200-markdown-family-suite-definitions',
       'markdown-suite-definitions.json'
     );
 
-    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
-    expect(conformanceSuiteDefinition(fixture.manifest, 'markdown_portable')).toEqual(
-      fixture.definitions.markdown_portable
+    expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
+    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
+      fixture.suite_definitions
     );
   });
 
@@ -2462,17 +2457,17 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-246 Markdown nested suite-definitions fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
-      suite_names: string[];
-      definitions: Record<string, ConformanceSuiteDefinition>;
+      suite_selectors: ConformanceSuiteSelector[];
+      suite_definitions: ConformanceSuiteDefinition[];
     }>(
       'diagnostics',
       'slice-246-markdown-nested-suite-definitions',
       'markdown-nested-suite-definitions.json'
     );
 
-    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
-    expect(conformanceSuiteDefinition(fixture.manifest, 'markdown_nested_portable')).toEqual(
-      fixture.definitions.markdown_nested_portable
+    expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
+    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
+      fixture.suite_definitions
     );
   });
 
@@ -2522,17 +2517,17 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-249 Ruby nested suite-definitions fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
-      suite_names: string[];
-      definitions: Record<string, ConformanceSuiteDefinition>;
+      suite_selectors: ConformanceSuiteSelector[];
+      suite_definitions: ConformanceSuiteDefinition[];
     }>(
       'diagnostics',
       'slice-249-ruby-nested-suite-definitions',
       'ruby-nested-suite-definitions.json'
     );
 
-    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
-    expect(conformanceSuiteDefinition(fixture.manifest, 'ruby_nested_portable')).toEqual(
-      fixture.definitions.ruby_nested_portable
+    expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
+    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
+      fixture.suite_definitions
     );
   });
 
@@ -2668,22 +2663,13 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-148 config-family aggregate manifest fixture', () => {
     const fixture = readFixture<{
       manifest: ConformanceManifest;
-      suite_names: string[];
-      definitions: Record<string, ConformanceSuiteDefinition>;
+      suite_selectors: ConformanceSuiteSelector[];
+      suite_definitions: ConformanceSuiteDefinition[];
     }>('diagnostics', 'slice-148-config-family-aggregate-manifest', 'config-family-aggregate.json');
 
-    expect(conformanceSuiteNames(fixture.manifest)).toEqual(fixture.suite_names);
-    expect(conformanceSuiteDefinition(fixture.manifest, 'json_portable')).toEqual(
-      fixture.definitions.json_portable
-    );
-    expect(conformanceSuiteDefinition(fixture.manifest, 'text_portable')).toEqual(
-      fixture.definitions.text_portable
-    );
-    expect(conformanceSuiteDefinition(fixture.manifest, 'toml_portable')).toEqual(
-      fixture.definitions.toml_portable
-    );
-    expect(conformanceSuiteDefinition(fixture.manifest, 'yaml_portable')).toEqual(
-      fixture.definitions.yaml_portable
+    expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
+    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
+      fixture.suite_definitions
     );
   });
 

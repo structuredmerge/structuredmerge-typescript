@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { withBackend } from '@structuredmerge/tree-haver';
 import {
   availableMarkdownBackends,
   markdownBackendFeatureProfile,
@@ -18,28 +17,24 @@ describe('markdown-merge contracts', () => {
   });
 
   it('resolves the backend from tree-haver context', () => {
-    expect(availableMarkdownBackends()).toEqual(['markdown-it', 'kreuzberg-language-pack']);
-
-    withBackend('kreuzberg-language-pack', () => {
-      expect(markdownBackendFeatureProfile()).toEqual({
-        family: 'markdown',
-        supportedDialects: ['markdown'],
-        supportedPolicies: [],
-        backend: 'kreuzberg-language-pack'
-      });
-      expect(markdownPlanContext().featureProfile).toEqual({
-        backend: 'kreuzberg-language-pack',
-        supportsDialects: false,
-        supportedPolicies: []
-      });
+    expect(availableMarkdownBackends()).toEqual(['kreuzberg-language-pack']);
+    expect(markdownBackendFeatureProfile()).toEqual({
+      family: 'markdown',
+      supportedDialects: ['markdown'],
+      supportedPolicies: [],
+      backend: 'kreuzberg-language-pack'
+    });
+    expect(markdownPlanContext().featureProfile).toEqual({
+      backend: 'kreuzberg-language-pack',
+      supportsDialects: false,
+      supportedPolicies: []
     });
   });
 
   it('extracts headings and code fences from Markdown analysis', () => {
     const result = parseMarkdown(
       "# Title\n\n```ts\nconsole.log('hi')\n```\n",
-      'markdown',
-      'markdown-it'
+      'markdown'
     );
     expect(result.ok).toBe(true);
     expect(result.analysis?.owners).toEqual([

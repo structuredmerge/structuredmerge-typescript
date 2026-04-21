@@ -12,11 +12,14 @@ import {
   type Diagnostic
 } from '@structuredmerge/ast-merge';
 import {
+  availableRubyBackends,
   matchRubyOwners,
   parseRuby,
+  rubyBackendFeatureProfile,
   rubyDelegatedChildOperations,
   rubyDiscoveredSurfaces,
-  rubyFeatureProfile
+  rubyFeatureProfile,
+  rubyPlanContext
 } from '../src/index';
 
 interface FixtureSurfaceOwner {
@@ -578,6 +581,58 @@ describe('ruby-merge shared fixtures', () => {
           action: entry.decision.action
         }
       }))
+    });
+  });
+
+  it('conforms to the Ruby family backend and plan-context fixtures', () => {
+    const backendFixture = readFixture<{
+      tree_sitter: {
+        backend: 'kreuzberg-language-pack';
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+    }>(
+      'diagnostics',
+      'slice-215-ruby-family-backend-feature-profiles',
+      'ruby-ruby-backend-feature-profiles.json'
+    );
+    const planFixture = readFixture<{
+      tree_sitter: {
+        family_profile: {
+          family: 'ruby';
+          supported_dialects: ['ruby'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: 'kreuzberg-language-pack';
+          supports_dialects: true;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+    }>(
+      'diagnostics',
+      'slice-216-ruby-family-plan-contexts',
+      'ruby-ruby-plan-contexts.json'
+    );
+
+    expect(availableRubyBackends()).toEqual(['kreuzberg-language-pack']);
+    expect(rubyBackendFeatureProfile()).toEqual({
+      family: 'ruby',
+      supportedDialects: ['ruby'],
+      supportedPolicies: backendFixture.tree_sitter.supported_policies,
+      backend: backendFixture.tree_sitter.backend,
+      supportsDialects: true
+    });
+    expect(rubyPlanContext()).toEqual({
+      familyProfile: {
+        family: planFixture.tree_sitter.family_profile.family,
+        supportedDialects: planFixture.tree_sitter.family_profile.supported_dialects,
+        supportedPolicies: planFixture.tree_sitter.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: planFixture.tree_sitter.feature_profile.backend,
+        supportsDialects: planFixture.tree_sitter.feature_profile.supports_dialects,
+        supportedPolicies: planFixture.tree_sitter.feature_profile.supported_policies
+      }
     });
   });
 });

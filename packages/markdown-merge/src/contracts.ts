@@ -1,4 +1,3 @@
-import MarkdownIt from 'markdown-it';
 import type {
   ConformanceFamilyPlanContext,
   ConformanceManifest,
@@ -8,10 +7,10 @@ import type {
   FamilyFeatureProfile,
   ParseResult
 } from '@structuredmerge/ast-merge';
-import { currentBackendId, parseWithLanguagePack } from '@structuredmerge/tree-haver';
+import { parseWithLanguagePack } from '@structuredmerge/tree-haver';
 
 export type MarkdownDialect = 'markdown';
-export type MarkdownBackend = 'markdown-it' | 'kreuzberg-language-pack';
+export type MarkdownBackend = 'kreuzberg-language-pack';
 export type MarkdownRootKind = 'document';
 export type MarkdownOwnerKind = 'heading' | 'code_fence';
 
@@ -57,10 +56,6 @@ export interface MarkdownFeatureProfile extends FamilyFeatureProfile {
 
 export interface MarkdownBackendFeatureProfile extends MarkdownFeatureProfile {
   readonly backend: MarkdownBackend;
-}
-
-function parseError(message: string): Diagnostic {
-  return { severity: 'error', category: 'parse_error', message };
 }
 
 function unsupportedFeature(message: string): Diagnostic {
@@ -135,16 +130,9 @@ export function collectMarkdownOwners(source: string): MarkdownOwner[] {
   return owners;
 }
 
-function validateNativeMarkdown(source: string): void {
-  const parser = new MarkdownIt();
-  parser.parse(source, {});
-}
-
 function resolveBackend(backend?: MarkdownBackend): MarkdownBackend {
   if (backend) return backend;
-  return currentBackendId() === 'kreuzberg-language-pack'
-    ? 'kreuzberg-language-pack'
-    : 'markdown-it';
+  return 'kreuzberg-language-pack';
 }
 
 export function markdownFeatureProfile(): MarkdownFeatureProfile {
@@ -156,7 +144,7 @@ export function markdownFeatureProfile(): MarkdownFeatureProfile {
 }
 
 export function availableMarkdownBackends(): readonly MarkdownBackend[] {
-  return ['markdown-it', 'kreuzberg-language-pack'];
+  return ['kreuzberg-language-pack'];
 }
 
 export function markdownBackendFeatureProfile(
@@ -174,7 +162,7 @@ export function markdownPlanContext(backend?: MarkdownBackend): ConformanceFamil
     familyProfile: markdownFeatureProfile(),
     featureProfile: {
       backend: resolvedBackend,
-      supportsDialects: resolvedBackend !== 'kreuzberg-language-pack',
+      supportsDialects: false,
       supportedPolicies: []
     }
   };
@@ -194,27 +182,16 @@ export function parseMarkdown(
 
   const resolvedBackend = resolveBackend(backend);
 
-  if (resolvedBackend === 'kreuzberg-language-pack') {
-    const syntax = parseWithLanguagePack({ source, language: 'markdown', dialect });
-    if (!syntax.ok) {
-      return { ok: false, diagnostics: syntax.diagnostics };
-    }
-  } else if (resolvedBackend === 'markdown-it') {
-    try {
-      validateNativeMarkdown(source);
-    } catch (error) {
-      return {
-        ok: false,
-        diagnostics: [
-          parseError(error instanceof Error ? error.message : 'markdown-it parse failed.')
-        ]
-      };
-    }
-  } else {
+  if (resolvedBackend !== 'kreuzberg-language-pack') {
     return {
       ok: false,
       diagnostics: [unsupportedFeature(`Unsupported Markdown backend ${resolvedBackend}.`)]
     };
+  }
+
+  const syntax = parseWithLanguagePack({ source, language: 'markdown', dialect });
+  if (!syntax.ok) {
+    return { ok: false, diagnostics: syntax.diagnostics };
   }
 
   const normalizedSource = normalizeMarkdownSource(source);
