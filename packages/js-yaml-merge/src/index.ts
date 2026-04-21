@@ -1,5 +1,5 @@
 import { load as loadJsYaml } from 'js-yaml';
-import { registerBackend } from '@structuredmerge/tree-haver';
+import { registerBackend, type BackendReference } from '@structuredmerge/tree-haver';
 import type {
   ConformanceFamilyPlanContext,
   Diagnostic,
@@ -35,10 +35,12 @@ export function availableYamlBackends(): readonly ['js-yaml'] {
 
 export function yamlBackendFeatureProfile(): YamlFeatureProfile & {
   readonly backend: 'js-yaml';
+  readonly backendRef: BackendReference;
 } {
   return {
     ...yamlFeatureProfile(),
-    backend: 'js-yaml'
+    backend: 'js-yaml',
+    backendRef: { id: 'js-yaml', family: 'native' }
   };
 }
 

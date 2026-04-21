@@ -20,7 +20,8 @@ describe('markdown-it-merge contracts', () => {
       family: 'markdown',
       supportedDialects: ['markdown'],
       supportedPolicies: [],
-      backend: 'markdown-it'
+      backend: 'markdown-it',
+      backendRef: { id: 'markdown-it', family: 'native' }
     });
     expect(markdownPlanContext()).toEqual({
       familyProfile: {

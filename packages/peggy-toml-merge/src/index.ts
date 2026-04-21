@@ -3,7 +3,7 @@ import type {
   Diagnostic,
   ParseResult
 } from '@structuredmerge/ast-merge';
-import { registerBackend } from '@structuredmerge/tree-haver';
+import { registerBackend, type BackendReference } from '@structuredmerge/tree-haver';
 import {
   analyzeTomlSource,
   matchTomlOwners as matchTomlOwnersWithSubstrate,
@@ -57,10 +57,12 @@ export function availableTomlBackends(): readonly ['peggy'] {
 
 export function tomlBackendFeatureProfile(): TomlFeatureProfile & {
   readonly backend: 'peggy';
+  readonly backendRef: BackendReference;
 } {
   return {
     ...tomlFeatureProfile(),
-    backend: 'peggy'
+    backend: 'peggy',
+    backendRef: { id: 'peggy', family: 'peg' }
   };
 }
 

@@ -21,7 +21,8 @@ describe('peggy-toml-merge contracts', () => {
       family: 'toml',
       supportedDialects: ['toml'],
       supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }],
-      backend: 'peggy'
+      backend: 'peggy',
+      backendRef: { id: 'peggy', family: 'peg' }
     });
     expect(tomlPlanContext()).toEqual({
       familyProfile: {

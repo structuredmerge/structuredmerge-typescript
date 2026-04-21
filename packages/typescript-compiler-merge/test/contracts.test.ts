@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   availableTypeScriptBackends,
   backendId,
@@ -17,7 +18,8 @@ describe('typescript-compiler-merge contracts', () => {
     expect(availableTypeScriptBackends()).toEqual(['typescript-compiler']);
     expect(typeScriptBackendFeatureProfile()).toEqual({
       ...typeScriptFeatureProfile(),
-      backend: 'typescript-compiler'
+      backend: 'typescript-compiler',
+      backendRef: { id: 'typescript-compiler', family: 'native' }
     });
     expect(typeScriptPlanContext()).toEqual({
       familyProfile: typeScriptFeatureProfile(),
@@ -27,6 +29,7 @@ describe('typescript-compiler-merge contracts', () => {
         supportedPolicies: typeScriptFeatureProfile().supportedPolicies
       }
     });
+    expect(registeredBackends()).toContainEqual({ id: 'typescript-compiler', family: 'native' });
   });
 
   it('rejects unsupported backend overrides', () => {

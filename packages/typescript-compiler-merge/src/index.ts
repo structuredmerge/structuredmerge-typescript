@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { registerBackend } from '@structuredmerge/tree-haver';
+import { registerBackend, type BackendReference } from '@structuredmerge/tree-haver';
 import type {
   ConformanceFamilyPlanContext,
   Diagnostic,
@@ -137,10 +137,12 @@ export function availableTypeScriptBackends(): readonly ['typescript-compiler'] 
 
 export function typeScriptBackendFeatureProfile(): TypeScriptFeatureProfile & {
   readonly backend: 'typescript-compiler';
+  readonly backendRef: BackendReference;
 } {
   return {
     ...typeScriptFeatureProfile(),
-    backend: 'typescript-compiler'
+    backend: 'typescript-compiler',
+    backendRef: { id: 'typescript-compiler', family: 'native' }
   };
 }
 

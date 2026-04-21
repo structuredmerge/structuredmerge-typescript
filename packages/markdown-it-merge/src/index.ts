@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it';
-import { registerBackend } from '@structuredmerge/tree-haver';
+import { registerBackend, type BackendReference } from '@structuredmerge/tree-haver';
 import type {
   ConformanceFamilyPlanContext,
   Diagnostic,
@@ -34,10 +34,12 @@ export function availableMarkdownBackends(): readonly ['markdown-it'] {
 
 export function markdownBackendFeatureProfile(): MarkdownFeatureProfile & {
   readonly backend: 'markdown-it';
+  readonly backendRef: BackendReference;
 } {
   return {
     ...markdownFeatureProfile(),
-    backend: 'markdown-it'
+    backend: 'markdown-it',
+    backendRef: { id: 'markdown-it', family: 'native' }
   };
 }
 

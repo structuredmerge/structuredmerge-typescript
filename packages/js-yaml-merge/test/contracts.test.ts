@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   availableYamlBackends,
   backendId,
@@ -17,7 +18,8 @@ describe('js-yaml-merge contracts', () => {
     expect(availableYamlBackends()).toEqual(['js-yaml']);
     expect(yamlBackendFeatureProfile()).toEqual({
       ...yamlFeatureProfile(),
-      backend: 'js-yaml'
+      backend: 'js-yaml',
+      backendRef: { id: 'js-yaml', family: 'native' }
     });
     expect(yamlPlanContext()).toEqual({
       familyProfile: yamlFeatureProfile(),
@@ -27,6 +29,7 @@ describe('js-yaml-merge contracts', () => {
         supportedPolicies: yamlFeatureProfile().supportedPolicies
       }
     });
+    expect(registeredBackends()).toContainEqual({ id: 'js-yaml', family: 'native' });
   });
 
   it('rejects unsupported backend overrides', () => {
