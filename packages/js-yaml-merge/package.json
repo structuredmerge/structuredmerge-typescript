@@ -1,5 +1,5 @@
 {
-  "name": "@structuredmerge/yaml-merge",
+  "name": "@structuredmerge/js-yaml-merge",
   "version": "0.0.0",
   "private": false,
   "type": "module",
@@ -7,6 +7,7 @@
   "dependencies": {
     "@structuredmerge/ast-merge": "workspace:*",
     "@structuredmerge/tree-haver": "workspace:*",
-    "yaml": "^2.8.1"
+    "@structuredmerge/yaml-merge": "workspace:*",
+    "js-yaml": "^4.1.1"
   }
 }

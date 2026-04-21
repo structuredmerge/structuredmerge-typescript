@@ -29,6 +29,12 @@ export default defineConfig({
       ),
       '@structuredmerge/typescript-compiler-merge': fileURLToPath(
         new URL('./packages/typescript-compiler-merge/src/index.ts', import.meta.url)
+      ),
+      '@structuredmerge/yaml-merge': fileURLToPath(
+        new URL('./packages/yaml-merge/src/index.ts', import.meta.url)
+      ),
+      '@structuredmerge/js-yaml-merge': fileURLToPath(
+        new URL('./packages/js-yaml-merge/src/index.ts', import.meta.url)
       )
     }
   },

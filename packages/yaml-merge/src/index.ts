@@ -1,9 +1,12 @@
 export const packageName = '@structuredmerge/yaml-merge';
 
 export {
+  analyzeYamlParsedDocument,
   availableYamlBackends,
   matchYamlOwners,
+  mergeYamlAnalyses,
   mergeYaml,
+  mergeYamlWithParser,
   parseYaml,
   yamlBackendFeatureProfile,
   yamlFeatureProfile,

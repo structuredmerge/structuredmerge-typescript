@@ -1,4 +1,3 @@
-import { load as loadJsYaml } from 'js-yaml';
 import { parseDocument } from 'yaml';
 import type {
   ConformanceFamilyPlanContext,
@@ -9,10 +8,10 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
-import { currentBackendId, parseWithLanguagePack } from '@structuredmerge/tree-haver';
+import { parseWithLanguagePack } from '@structuredmerge/tree-haver';
 
 export type YamlDialect = 'yaml';
-export type YamlBackend = 'yaml' | 'js-yaml' | 'kreuzberg-language-pack';
+export type YamlBackend = 'kreuzberg-language-pack';
 export type YamlRootKind = 'mapping';
 export type YamlOwnerKind = 'mapping' | 'key_value' | 'sequence_item';
 
@@ -100,7 +99,7 @@ export function yamlFeatureProfile(): YamlFeatureProfile {
 }
 
 export function availableYamlBackends(): readonly YamlBackend[] {
-  return ['yaml', 'js-yaml', 'kreuzberg-language-pack'];
+  return ['kreuzberg-language-pack'];
 }
 
 export function yamlBackendFeatureProfile(backend?: YamlBackend): YamlBackendFeatureProfile {
@@ -115,7 +114,7 @@ export function yamlPlanContext(backend?: YamlBackend): ConformanceFamilyPlanCon
   const resolvedBackend = resolveBackend(backend);
   const featureProfile: ConformanceFeatureProfileView = {
     backend: resolvedBackend,
-    supportsDialects: resolvedBackend !== 'kreuzberg-language-pack',
+    supportsDialects: false,
     supportedPolicies: yamlFeatureProfile().supportedPolicies
   };
 
@@ -126,8 +125,7 @@ export function yamlPlanContext(backend?: YamlBackend): ConformanceFamilyPlanCon
 }
 
 function resolveBackend(backend?: YamlBackend): YamlBackend {
-  if (backend) return backend;
-  return currentBackendId() === 'kreuzberg-language-pack' ? 'kreuzberg-language-pack' : 'yaml';
+  return backend ?? 'kreuzberg-language-pack';
 }
 
 function isScalar(value: unknown): value is YamlScalar {
@@ -287,68 +285,17 @@ function mergeYamlMappings(template: YamlMapping, destination: YamlMapping): Yam
   return merged;
 }
 
-function parseYamlMapping(source: string, backend: YamlBackend): ParseResult<YamlMapping> {
-  if (backend === 'yaml') {
-    const document = parseDocument(source, { uniqueKeys: false, merge: false });
-
-    if (document.errors.length > 0) {
-      return {
-        ok: false,
-        diagnostics: [parseError(document.errors[0]?.message ?? 'YAML parse failed.')]
-      };
-    }
-
-    const parsed = document.toJS();
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {
-        ok: false,
-        diagnostics: [parseError('YAML documents must parse to a mapping root.')]
-      };
-    }
-
-    const validated = validateYamlNode(parsed, '');
-    if (!validated.ok) {
-      return { ok: false, diagnostics: [validated.diagnostic] };
-    }
-
-    return {
-      ok: true,
-      diagnostics: [],
-      analysis: validated.value as YamlMapping
-    };
-  }
-
-  try {
-    const parsed = loadJsYaml(source);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {
-        ok: false,
-        diagnostics: [parseError('YAML documents must parse to a mapping root.')]
-      };
-    }
-
-    const validated = validateYamlNode(parsed, '');
-    if (!validated.ok) {
-      return { ok: false, diagnostics: [validated.diagnostic] };
-    }
-
-    return {
-      ok: true,
-      diagnostics: [],
-      analysis: validated.value as YamlMapping
-    };
-  } catch (error) {
+export function analyzeYamlParsedDocument(parsed: unknown): ParseResult<YamlAnalysis> {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return {
       ok: false,
-      diagnostics: [parseError(error instanceof Error ? error.message : 'YAML parse failed.')]
+      diagnostics: [parseError('YAML documents must parse to a mapping root.')]
     };
   }
-}
 
-function analyzeYamlDocument(source: string, backend: YamlBackend): ParseResult<YamlAnalysis> {
-  const parsed = parseYamlMapping(source, backend);
-  if (!parsed.ok || !parsed.analysis) {
-    return { ok: false, diagnostics: parsed.diagnostics };
+  const validated = validateYamlNode(parsed, '');
+  if (!validated.ok) {
+    return { ok: false, diagnostics: [validated.diagnostic] };
   }
 
   return {
@@ -357,11 +304,36 @@ function analyzeYamlDocument(source: string, backend: YamlBackend): ParseResult<
     analysis: {
       kind: 'yaml',
       dialect: 'yaml',
-      normalizedSource: canonicalYaml(parsed.analysis),
+      normalizedSource: canonicalYaml(validated.value as YamlMapping),
       rootKind: 'mapping',
-      owners: collectYamlOwners(parsed.analysis)
+      owners: collectYamlOwners(validated.value as YamlMapping)
     },
     policies: []
+  };
+}
+
+function parseYamlMapping(source: string): ParseResult<YamlMapping> {
+  const document = parseDocument(source, { uniqueKeys: false, merge: false });
+
+  if (document.errors.length > 0) {
+    return {
+      ok: false,
+      diagnostics: [parseError(document.errors[0]?.message ?? 'YAML parse failed.')]
+    };
+  }
+
+  const analyzed = analyzeYamlParsedDocument(document.toJS());
+  if (!analyzed.ok || !analyzed.analysis) {
+    return { ok: false, diagnostics: analyzed.diagnostics };
+  }
+
+  return {
+    ok: true,
+    diagnostics: [],
+    analysis: parseDocument(analyzed.analysis.normalizedSource, {
+      uniqueKeys: false,
+      merge: false
+    }).toJS() as YamlMapping
   };
 }
 
@@ -375,16 +347,20 @@ export function parseYaml(
   }
 
   const resolvedBackend = resolveBackend(backend);
-  if (resolvedBackend === 'kreuzberg-language-pack') {
-    const syntaxResult = parseWithLanguagePack({ source, language: 'yaml', dialect });
-    if (!syntaxResult.ok) {
-      return { ok: false, diagnostics: [...syntaxResult.diagnostics] };
-    }
+  if (resolvedBackend !== 'kreuzberg-language-pack') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported YAML backend ${resolvedBackend}.`)]
+    };
   }
 
-  return analyzeYamlDocument(
-    source,
-    resolvedBackend === 'kreuzberg-language-pack' ? 'yaml' : resolvedBackend
+  const syntaxResult = parseWithLanguagePack({ source, language: 'yaml', dialect });
+  if (!syntaxResult.ok) {
+    return { ok: false, diagnostics: [...syntaxResult.diagnostics] };
+  }
+
+  return analyzeYamlParsedDocument(
+    parseDocument(source, { uniqueKeys: false, merge: false }).toJS()
   );
 }
 
@@ -414,7 +390,6 @@ export function mergeYaml(
   dialect: YamlDialect,
   backend?: YamlBackend
 ): MergeResult<string> {
-  const resolvedBackend = resolveBackend(backend);
   const template = parseYaml(templateSource, dialect, backend);
   if (!template.ok || !template.analysis) {
     return { ok: false, diagnostics: template.diagnostics, policies: [] };
@@ -433,11 +408,42 @@ export function mergeYaml(
     };
   }
 
-  const templateMapping = parseYamlMapping(template.analysis.normalizedSource, resolvedBackend);
-  const destinationMapping = parseYamlMapping(
-    destination.analysis.normalizedSource,
-    resolvedBackend
-  );
+  return mergeYamlAnalyses(template.analysis, destination.analysis);
+}
+
+export function mergeYamlWithParser(
+  templateSource: string,
+  destinationSource: string,
+  dialect: YamlDialect,
+  parser: (source: string, dialect: YamlDialect) => ParseResult<YamlAnalysis>
+): MergeResult<string> {
+  const template = parser(templateSource, dialect);
+  if (!template.ok || !template.analysis) {
+    return { ok: false, diagnostics: template.diagnostics, policies: [] };
+  }
+
+  const destination = parser(destinationSource, dialect);
+  if (!destination.ok || !destination.analysis) {
+    return {
+      ok: false,
+      diagnostics: destination.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        category:
+          diagnostic.category === 'parse_error' ? 'destination_parse_error' : diagnostic.category
+      })),
+      policies: []
+    };
+  }
+
+  return mergeYamlAnalyses(template.analysis, destination.analysis);
+}
+
+export function mergeYamlAnalyses(
+  template: YamlAnalysis,
+  destination: YamlAnalysis
+): MergeResult<string> {
+  const templateMapping = parseYamlMapping(template.normalizedSource);
+  const destinationMapping = parseYamlMapping(destination.normalizedSource);
   if (!templateMapping.ok || !templateMapping.analysis) {
     return { ok: false, diagnostics: templateMapping.diagnostics, policies: [] };
   }
