@@ -1,18 +1,23 @@
 import type {
+  ConformanceFeatureProfileView,
+  ConformanceFamilyPlanContext,
   FamilyFeatureProfile,
   MergeResult,
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
 import {
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  type BackendReference,
   type ParserRequest,
   type ProcessRequest,
   type ProcessSpan
 } from '@structuredmerge/tree-haver';
 
 export type GoDialect = 'go';
+export type GoBackend = 'kreuzberg-language-pack';
 export type GoOwnerKind = 'import' | 'declaration';
 
 interface ModuleImport {
@@ -57,6 +62,12 @@ export interface GoFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'go';
   readonly supportedDialects: readonly GoDialect[];
   readonly supportedPolicies: readonly PolicyReference[];
+}
+
+export interface GoBackendFeatureProfile extends ConformanceFeatureProfileView {
+  readonly backend: GoBackend;
+  readonly backendRef: BackendReference;
+  readonly supportsDialects: true;
 }
 
 const destinationWinsArrayPolicy: PolicyReference = {
@@ -165,6 +176,35 @@ export function goFeatureProfile(): GoFeatureProfile {
     supportedDialects: ['go'],
     supportedPolicies: [destinationWinsArrayPolicy]
   };
+}
+
+export function goBackendFeatureProfile(
+  backend: GoBackend = 'kreuzberg-language-pack'
+): GoBackendFeatureProfile {
+  return {
+    backend,
+    backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND,
+    supportsDialects: true,
+    supportedPolicies: [destinationWinsArrayPolicy]
+  };
+}
+
+export function goPlanContext(
+  backend: GoBackend = 'kreuzberg-language-pack'
+): ConformanceFamilyPlanContext {
+  const featureProfile = goBackendFeatureProfile(backend);
+  return {
+    familyProfile: goFeatureProfile(),
+    featureProfile: {
+      backend: featureProfile.backend,
+      supportsDialects: featureProfile.supportsDialects,
+      supportedPolicies: featureProfile.supportedPolicies
+    }
+  };
+}
+
+export function goBackends(): readonly GoBackend[] {
+  return ['kreuzberg-language-pack'];
 }
 
 export function parseGo(source: string, dialect: GoDialect): ParseResult<GoAnalysis> {
