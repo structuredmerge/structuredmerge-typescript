@@ -589,6 +589,7 @@ describe('ruby-merge shared fixtures', () => {
     const backendFixture = readFixture<{
       tree_sitter: {
         backend: 'kreuzberg-language-pack';
+        backend_ref: { id: 'kreuzberg-language-pack'; family: 'tree-sitter' };
         supported_policies: Array<{ surface: 'array'; name: string }>;
       };
     }>(
@@ -625,6 +626,7 @@ describe('ruby-merge shared fixtures', () => {
       supportedDialects: ['ruby'],
       supportedPolicies: backendFixture.tree_sitter.supported_policies,
       backend: backendFixture.tree_sitter.backend,
+      backendRef: backendFixture.tree_sitter.backend_ref,
       supportsDialects: true
     });
     expect(rubyPlanContext()).toEqual({

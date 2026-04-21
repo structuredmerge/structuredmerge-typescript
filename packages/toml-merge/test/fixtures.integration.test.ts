@@ -44,6 +44,7 @@ describe('toml-merge shared fixtures', () => {
       tree_sitter: {
         backend: 'kreuzberg-language-pack';
         supported_policies: Array<{ surface: 'array'; name: string }>;
+        backend_ref: { id: 'kreuzberg-language-pack'; family: 'tree-sitter' };
       };
     }>(
       'diagnostics',
@@ -51,8 +52,11 @@ describe('toml-merge shared fixtures', () => {
       'typescript-toml-backend-feature-profiles.json'
     );
 
-    expect(tomlBackendFeatureProfile()).toMatchObject({
+    expect(tomlBackendFeatureProfile()).toEqual({
+      family: 'toml',
+      supportedDialects: ['toml'],
       backend: fixture.tree_sitter.backend,
+      backendRef: fixture.tree_sitter.backend_ref,
       supportedPolicies: fixture.tree_sitter.supported_policies
     });
     expect(tomlPlanContext().featureProfile).toEqual({

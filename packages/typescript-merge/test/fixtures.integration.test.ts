@@ -143,6 +143,7 @@ describe('typescript-merge shared fixtures', () => {
     const fixture = readFixture<{
       tree_sitter: {
         backend: string;
+        backend_ref: { id: 'kreuzberg-language-pack'; family: 'tree-sitter' };
         supports_dialects: boolean;
         supported_policies: Array<{ surface: 'array'; name: string }>;
       };
@@ -154,6 +155,7 @@ describe('typescript-merge shared fixtures', () => {
 
     expect(typeScriptBackendFeatureProfile('kreuzberg-language-pack')).toEqual({
       backend: fixture.tree_sitter.backend,
+      backendRef: fixture.tree_sitter.backend_ref,
       supportsDialects: fixture.tree_sitter.supports_dialects,
       supportedPolicies: fixture.tree_sitter.supported_policies
     });
@@ -187,6 +189,7 @@ describe('typescript-merge shared fixtures', () => {
       },
       featureProfile: {
         backend: fixture.tree_sitter.feature_profile.backend,
+        backendRef: fixture.tree_sitter.backend_ref,
         supportsDialects: fixture.tree_sitter.feature_profile.supports_dialects,
         supportedPolicies: fixture.tree_sitter.feature_profile.supported_policies
       }

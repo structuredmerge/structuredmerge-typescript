@@ -8,7 +8,11 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
-import { parseWithLanguagePack } from '@structuredmerge/tree-haver';
+import {
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
+  parseWithLanguagePack,
+  type BackendReference
+} from '@structuredmerge/tree-haver';
 
 export type YamlDialect = 'yaml';
 export type YamlBackend = 'kreuzberg-language-pack';
@@ -75,6 +79,7 @@ export interface YamlFeatureProfile extends FamilyFeatureProfile {
 
 export interface YamlBackendFeatureProfile extends YamlFeatureProfile {
   readonly backend: YamlBackend;
+  readonly backendRef: BackendReference;
 }
 
 const destinationWinsArrayPolicy: PolicyReference = {
@@ -106,7 +111,8 @@ export function yamlBackendFeatureProfile(backend?: YamlBackend): YamlBackendFea
   const resolvedBackend = resolveBackend(backend);
   return {
     ...yamlFeatureProfile(),
-    backend: resolvedBackend
+    backend: resolvedBackend,
+    backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND
   };
 }
 

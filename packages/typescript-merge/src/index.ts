@@ -17,6 +17,7 @@ export {
 export type {
   TypeScriptAnalysis,
   TypeScriptBackend,
+  TypeScriptBackendFeatureProfile,
   TypeScriptDialect,
   TypeScriptFeatureProfile,
   TypeScriptOwner,

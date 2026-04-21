@@ -145,7 +145,11 @@ describe('markdown-merge shared fixtures', () => {
 
   it('conforms to the slice-195 Markdown backend feature profile fixture', () => {
     const fixture = readFixture<{
-      tree_sitter: { backend: 'kreuzberg-language-pack'; supported_policies: [] };
+      tree_sitter: {
+        backend: 'kreuzberg-language-pack';
+        supported_policies: [];
+        backend_ref: { id: 'kreuzberg-language-pack'; family: 'tree-sitter' };
+      };
     }>(
       'diagnostics',
       'slice-195-markdown-family-backend-feature-profiles',
@@ -157,7 +161,8 @@ describe('markdown-merge shared fixtures', () => {
       family: 'markdown',
       supportedDialects: ['markdown'],
       supportedPolicies: fixture.tree_sitter.supported_policies,
-      backend: fixture.tree_sitter.backend
+      backend: fixture.tree_sitter.backend,
+      backendRef: fixture.tree_sitter.backend_ref
     });
   });
 

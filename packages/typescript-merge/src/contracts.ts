@@ -7,9 +7,11 @@ import type {
   PolicyReference
 } from '@structuredmerge/ast-merge';
 import {
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
   languagePackAdapterInfo,
   parseWithLanguagePack,
   processWithLanguagePack,
+  type BackendReference,
   type ParserRequest,
   type ProcessRequest,
   type ProcessSpan
@@ -61,6 +63,12 @@ export interface TypeScriptFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'typescript';
   readonly supportedDialects: readonly TypeScriptDialect[];
   readonly supportedPolicies: readonly PolicyReference[];
+}
+
+export interface TypeScriptBackendFeatureProfile extends ConformanceFeatureProfileView {
+  readonly backend: TypeScriptBackend;
+  readonly backendRef: BackendReference;
+  readonly supportsDialects: true;
 }
 
 const destinationWinsArrayPolicy: PolicyReference = {
@@ -177,9 +185,10 @@ export function typeScriptFeatureProfile(): TypeScriptFeatureProfile {
 
 export function typeScriptBackendFeatureProfile(
   backend: TypeScriptBackend = 'kreuzberg-language-pack'
-): ConformanceFeatureProfileView {
+): TypeScriptBackendFeatureProfile {
   return {
     backend,
+    backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND,
     supportsDialects: true,
     supportedPolicies: [destinationWinsArrayPolicy]
   };
@@ -188,9 +197,14 @@ export function typeScriptBackendFeatureProfile(
 export function typeScriptPlanContext(
   backend: TypeScriptBackend = 'kreuzberg-language-pack'
 ): ConformanceFamilyPlanContext {
+  const featureProfile = typeScriptBackendFeatureProfile(backend);
   return {
     familyProfile: typeScriptFeatureProfile(),
-    featureProfile: typeScriptBackendFeatureProfile(backend)
+    featureProfile: {
+      backend: featureProfile.backend,
+      supportsDialects: featureProfile.supportsDialects,
+      supportedPolicies: featureProfile.supportedPolicies
+    }
   };
 }
 

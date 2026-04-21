@@ -6,7 +6,12 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
-import { parseWithLanguagePack, type ParserRequest } from '@structuredmerge/tree-haver';
+import {
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
+  parseWithLanguagePack,
+  type BackendReference,
+  type ParserRequest
+} from '@structuredmerge/tree-haver';
 
 export type RubyDialect = 'ruby';
 export type RubyOwnerKind = 'require' | 'declaration';
@@ -263,11 +268,13 @@ export function rubyBackendFeatureProfile(
   backend: RubyBackend = 'kreuzberg-language-pack'
 ): RubyFeatureProfile & {
   readonly backend: RubyBackend;
+  readonly backendRef: BackendReference;
   readonly supportsDialects: true;
 } {
   return {
     ...rubyFeatureProfile(),
     backend,
+    backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND,
     supportsDialects: true
   };
 }

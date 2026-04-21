@@ -23,7 +23,8 @@ describe('markdown-merge contracts', () => {
       family: 'markdown',
       supportedDialects: ['markdown'],
       supportedPolicies: [],
-      backend: 'kreuzberg-language-pack'
+      backend: 'kreuzberg-language-pack',
+      backendRef: { id: 'kreuzberg-language-pack', family: 'tree-sitter' }
     });
     expect(markdownPlanContext().featureProfile).toEqual({
       backend: 'kreuzberg-language-pack',

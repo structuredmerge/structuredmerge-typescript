@@ -63,6 +63,7 @@ describe('yaml-merge shared fixtures', () => {
         backend: 'kreuzberg-language-pack';
         supports_dialects: false;
         supported_policies: Array<{ surface: 'array'; name: string }>;
+        backend_ref: { id: 'kreuzberg-language-pack'; family: 'tree-sitter' };
       };
     }>(
       'diagnostics',
@@ -71,8 +72,11 @@ describe('yaml-merge shared fixtures', () => {
     );
 
     expect(availableYamlBackends()).toEqual(['kreuzberg-language-pack']);
-    expect(yamlBackendFeatureProfile('kreuzberg-language-pack')).toMatchObject({
+    expect(yamlBackendFeatureProfile('kreuzberg-language-pack')).toEqual({
+      family: 'yaml',
+      supportedDialects: ['yaml'],
       backend: fixture.tree_sitter.backend,
+      backendRef: fixture.tree_sitter.backend_ref,
       supportedPolicies: fixture.tree_sitter.supported_policies
     });
   });

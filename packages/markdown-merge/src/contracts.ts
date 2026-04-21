@@ -7,7 +7,11 @@ import type {
   FamilyFeatureProfile,
   ParseResult
 } from '@structuredmerge/ast-merge';
-import { parseWithLanguagePack } from '@structuredmerge/tree-haver';
+import {
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
+  parseWithLanguagePack,
+  type BackendReference
+} from '@structuredmerge/tree-haver';
 
 export type MarkdownDialect = 'markdown';
 export type MarkdownBackend = 'kreuzberg-language-pack';
@@ -56,6 +60,7 @@ export interface MarkdownFeatureProfile extends FamilyFeatureProfile {
 
 export interface MarkdownBackendFeatureProfile extends MarkdownFeatureProfile {
   readonly backend: MarkdownBackend;
+  readonly backendRef: BackendReference;
 }
 
 function unsupportedFeature(message: string): Diagnostic {
@@ -152,7 +157,8 @@ export function markdownBackendFeatureProfile(
 ): MarkdownBackendFeatureProfile {
   return {
     ...markdownFeatureProfile(),
-    backend: resolveBackend(backend)
+    backend: resolveBackend(backend),
+    backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND
   };
 }
 
