@@ -2,6 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  conformanceFamilyFeatureProfilePath,
+  conformanceFixturePath,
+  type ConformanceManifest
+} from '@structuredmerge/ast-merge';
+import {
   matchRustOwners,
   mergeRust,
   parseRust,
@@ -165,5 +170,57 @@ describe('rust-merge shared fixtures', () => {
         supportedPolicies: fixture.tree_sitter.feature_profile.supported_policies
       }
     });
+
+    const sourceManifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-124-source-family-manifest',
+      'source-family-manifest.json'
+    );
+    expect(conformanceFamilyFeatureProfilePath(sourceManifest, 'rust')).toEqual([
+      'diagnostics',
+      'slice-105-rust-family-feature-profile',
+      'rust-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(sourceManifest, 'rust', 'analysis')).toEqual([
+      'rust',
+      'slice-106-analysis',
+      'module-owners.json'
+    ]);
+    expect(conformanceFixturePath(sourceManifest, 'rust', 'matching')).toEqual([
+      'rust',
+      'slice-107-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(sourceManifest, 'rust', 'merge')).toEqual([
+      'rust',
+      'slice-108-merge',
+      'module-merge.json'
+    ]);
+
+    const canonicalManifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    expect(conformanceFamilyFeatureProfilePath(canonicalManifest, 'rust')).toEqual([
+      'diagnostics',
+      'slice-105-rust-family-feature-profile',
+      'rust-feature-profile.json'
+    ]);
+    expect(conformanceFixturePath(canonicalManifest, 'rust', 'analysis')).toEqual([
+      'rust',
+      'slice-106-analysis',
+      'module-owners.json'
+    ]);
+    expect(conformanceFixturePath(canonicalManifest, 'rust', 'matching')).toEqual([
+      'rust',
+      'slice-107-matching',
+      'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(canonicalManifest, 'rust', 'merge')).toEqual([
+      'rust',
+      'slice-108-merge',
+      'module-merge.json'
+    ]);
   });
 });
