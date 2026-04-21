@@ -1,7 +1,17 @@
-export { matchRustOwners, mergeRust, parseRust, rustFeatureProfile } from './contracts';
+export {
+  matchRustOwners,
+  mergeRust,
+  parseRust,
+  rustBackendFeatureProfile,
+  rustBackends,
+  rustFeatureProfile,
+  rustPlanContext
+} from './contracts';
 
 export type {
   RustAnalysis,
+  RustBackend,
+  RustBackendFeatureProfile,
   RustDialect,
   RustFeatureProfile,
   RustOwner,

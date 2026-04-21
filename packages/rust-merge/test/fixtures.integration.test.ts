@@ -1,7 +1,14 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { matchRustOwners, mergeRust, parseRust, rustFeatureProfile } from '../src/index';
+import {
+  matchRustOwners,
+  mergeRust,
+  parseRust,
+  rustBackendFeatureProfile,
+  rustFeatureProfile,
+  rustPlanContext
+} from '../src/index';
 
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
@@ -106,5 +113,57 @@ describe('rust-merge shared fixtures', () => {
     expect(
       invalidDestinationResult.diagnostics.map(({ severity, category }) => ({ severity, category }))
     ).toEqual(invalidDestination.expected.diagnostics);
+  });
+
+  it('conforms to the slice-122 Rust backend feature profile fixture', () => {
+    const fixture = readFixture<{
+      tree_sitter: {
+        backend: 'kreuzberg-language-pack';
+        supports_dialects: true;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+        backend_ref: { id: 'kreuzberg-language-pack'; family: 'tree-sitter' };
+      };
+    }>(
+      'diagnostics',
+      'slice-122-source-family-backend-feature-profiles',
+      'rust-backend-feature-profiles.json'
+    );
+
+    expect(rustBackendFeatureProfile()).toEqual({
+      backend: fixture.tree_sitter.backend,
+      supportsDialects: fixture.tree_sitter.supports_dialects,
+      supportedPolicies: fixture.tree_sitter.supported_policies,
+      backendRef: fixture.tree_sitter.backend_ref
+    });
+  });
+
+  it('conforms to the slice-123 Rust plan-context fixture', () => {
+    const fixture = readFixture<{
+      tree_sitter: {
+        family_profile: {
+          family: 'rust';
+          supported_dialects: ['rust'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: 'kreuzberg-language-pack';
+          supports_dialects: true;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+    }>('diagnostics', 'slice-123-source-family-plan-contexts', 'rust-plan-contexts.json');
+
+    expect(rustPlanContext()).toEqual({
+      familyProfile: {
+        family: fixture.tree_sitter.family_profile.family,
+        supportedDialects: fixture.tree_sitter.family_profile.supported_dialects,
+        supportedPolicies: fixture.tree_sitter.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.tree_sitter.feature_profile.backend,
+        supportsDialects: fixture.tree_sitter.feature_profile.supports_dialects,
+        supportedPolicies: fixture.tree_sitter.feature_profile.supported_policies
+      }
+    });
   });
 });

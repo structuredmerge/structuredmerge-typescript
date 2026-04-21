@@ -1,18 +1,23 @@
 import type {
+  ConformanceFeatureProfileView,
+  ConformanceFamilyPlanContext,
   FamilyFeatureProfile,
   MergeResult,
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
 import {
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  type BackendReference,
   type ParserRequest,
   type ProcessRequest,
   type ProcessSpan
 } from '@structuredmerge/tree-haver';
 
 export type RustDialect = 'rust';
+export type RustBackend = 'kreuzberg-language-pack';
 export type RustOwnerKind = 'import' | 'declaration';
 
 interface ModuleImport {
@@ -57,6 +62,12 @@ export interface RustFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'rust';
   readonly supportedDialects: readonly RustDialect[];
   readonly supportedPolicies: readonly PolicyReference[];
+}
+
+export interface RustBackendFeatureProfile extends ConformanceFeatureProfileView {
+  readonly backend: RustBackend;
+  readonly backendRef: BackendReference;
+  readonly supportsDialects: true;
 }
 
 const destinationWinsArrayPolicy: PolicyReference = {
@@ -154,6 +165,35 @@ export function rustFeatureProfile(): RustFeatureProfile {
     supportedDialects: ['rust'],
     supportedPolicies: [destinationWinsArrayPolicy]
   };
+}
+
+export function rustBackendFeatureProfile(
+  backend: RustBackend = 'kreuzberg-language-pack'
+): RustBackendFeatureProfile {
+  return {
+    backend,
+    backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND,
+    supportsDialects: true,
+    supportedPolicies: [destinationWinsArrayPolicy]
+  };
+}
+
+export function rustPlanContext(
+  backend: RustBackend = 'kreuzberg-language-pack'
+): ConformanceFamilyPlanContext {
+  const featureProfile = rustBackendFeatureProfile(backend);
+  return {
+    familyProfile: rustFeatureProfile(),
+    featureProfile: {
+      backend: featureProfile.backend,
+      supportsDialects: featureProfile.supportsDialects,
+      supportedPolicies: featureProfile.supportedPolicies
+    }
+  };
+}
+
+export function rustBackends(): readonly RustBackend[] {
+  return ['kreuzberg-language-pack'];
 }
 
 export function parseRust(source: string, dialect: RustDialect): ParseResult<RustAnalysis> {
