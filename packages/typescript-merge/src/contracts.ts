@@ -6,7 +6,6 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
-import ts from 'typescript';
 import {
   languagePackAdapterInfo,
   parseWithLanguagePack,
@@ -17,7 +16,7 @@ import {
 } from '@structuredmerge/tree-haver';
 
 export type TypeScriptDialect = 'typescript';
-export type TypeScriptBackend = 'tree-sitter' | 'native';
+export type TypeScriptBackend = 'kreuzberg-language-pack';
 export type TypeScriptOwnerKind = 'import' | 'declaration';
 
 interface ModuleImport {
@@ -95,107 +94,24 @@ function importText(source: string, span: ProcessSpan): string {
 }
 
 function analyzeTypeScriptModule(source: string): ParseResult<TypeScriptAnalysis> {
-  return analyzeTypeScriptModuleWithBackend(source, 'tree-sitter');
-}
-
-function normalizeModuleSpecifier(moduleText: string): string {
-  return moduleText.replace(/^['"]|['"]$/g, '');
-}
-
-function nativeAnalyzeTypeScriptModule(source: string): ParseResult<TypeScriptAnalysis> {
-  const sourceFile = ts.createSourceFile(
-    'input.ts',
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS
-  );
-
-  const parseDiagnostics =
-    (
-      sourceFile as ts.SourceFile & {
-        parseDiagnostics?: readonly ts.DiagnosticWithLocation[];
-      }
-    ).parseDiagnostics ?? [];
-  if (parseDiagnostics.length > 0) {
-    return {
-      ok: false,
-      diagnostics: parseDiagnostics.map((diagnostic: ts.DiagnosticWithLocation) => ({
-        severity: 'error',
-        category: 'parse_error',
-        message: ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
-      }))
-    };
-  }
-
-  const imports: ModuleImport[] = [];
-  const declarations: ModuleDeclaration[] = [];
-  sourceFile.forEachChild((node) => {
-    if (ts.isImportDeclaration(node)) {
-      imports.push({
-        path: `/imports/${imports.length}`,
-        matchKey: normalizeModuleSpecifier(node.moduleSpecifier.getText(sourceFile)),
-        text: `${node.getText(sourceFile)}\n`
-      });
-      return;
-    }
-
-    if (
-      ts.isFunctionDeclaration(node) ||
-      ts.isInterfaceDeclaration(node) ||
-      ts.isClassDeclaration(node) ||
-      ts.isTypeAliasDeclaration(node) ||
-      ts.isEnumDeclaration(node)
-    ) {
-      const name = node.name?.getText(sourceFile);
-      if (!name) {
-        return;
-      }
-
-      declarations.push({
-        path: `/declarations/${name}`,
-        matchKey: name,
-        text: `${node.getText(sourceFile)}\n`
-      });
-    }
-  });
-
-  declarations.sort((left, right) =>
-    left.path < right.path ? -1 : left.path > right.path ? 1 : 0
-  );
-
-  return {
-    ok: true,
-    diagnostics: [],
-    analysis: {
-      kind: 'typescript',
-      dialect: 'typescript',
-      source,
-      owners: [
-        ...imports.map((item) => ({
-          path: item.path,
-          ownerKind: 'import' as const,
-          matchKey: item.matchKey
-        })),
-        ...declarations.map((item) => ({
-          path: item.path,
-          ownerKind: 'declaration' as const,
-          matchKey: item.matchKey
-        }))
-      ],
-      imports,
-      declarations
-    },
-    policies: []
-  };
+  return analyzeTypeScriptModuleWithBackend(source, 'kreuzberg-language-pack');
 }
 
 function analyzeTypeScriptModuleWithBackend(
   source: string,
   backend: TypeScriptBackend
 ): ParseResult<TypeScriptAnalysis> {
-  if (backend === 'native') {
-    return nativeAnalyzeTypeScriptModule(source);
+  if (backend !== 'kreuzberg-language-pack') {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'unsupported_feature',
+          message: `Unsupported TypeScript backend ${backend}.`
+        }
+      ]
+    };
   }
 
   const parsed = parseWithLanguagePack(typeScriptParseRequest(source));
@@ -260,24 +176,18 @@ export function typeScriptFeatureProfile(): TypeScriptFeatureProfile {
 }
 
 export function typeScriptBackendFeatureProfile(
-  backend: TypeScriptBackend
+  backend: TypeScriptBackend = 'kreuzberg-language-pack'
 ): ConformanceFeatureProfileView {
-  if (backend === 'native') {
-    return {
-      backend: 'typescript-compiler',
-      supportsDialects: true,
-      supportedPolicies: [destinationWinsArrayPolicy]
-    };
-  }
-
   return {
-    backend: languagePackAdapterInfo.backend,
+    backend,
     supportsDialects: true,
     supportedPolicies: [destinationWinsArrayPolicy]
   };
 }
 
-export function typeScriptPlanContext(backend: TypeScriptBackend): ConformanceFamilyPlanContext {
+export function typeScriptPlanContext(
+  backend: TypeScriptBackend = 'kreuzberg-language-pack'
+): ConformanceFamilyPlanContext {
   return {
     familyProfile: typeScriptFeatureProfile(),
     featureProfile: typeScriptBackendFeatureProfile(backend)
@@ -293,7 +203,7 @@ export function parseTypeScript(
 }
 
 export function typeScriptBackends(): readonly TypeScriptBackend[] {
-  return ['tree-sitter', 'native'];
+  return ['kreuzberg-language-pack'];
 }
 
 export function parseTypeScriptWithBackend(
@@ -330,21 +240,26 @@ export function mergeTypeScript(
   destinationSource: string,
   dialect: TypeScriptDialect
 ): MergeResult<string> {
-  return mergeTypeScriptWithBackend(templateSource, destinationSource, dialect, 'tree-sitter');
+  return mergeTypeScriptWithBackend(
+    templateSource,
+    destinationSource,
+    dialect,
+    'kreuzberg-language-pack'
+  );
 }
 
-export function mergeTypeScriptWithBackend(
+export function mergeTypeScriptWithParser(
   templateSource: string,
   destinationSource: string,
   dialect: TypeScriptDialect,
-  backend: TypeScriptBackend
+  parser: (source: string, dialect: TypeScriptDialect) => ParseResult<TypeScriptAnalysis>
 ): MergeResult<string> {
-  const template = parseTypeScriptWithBackend(templateSource, dialect, backend);
+  const template = parser(templateSource, dialect);
   if (!template.ok || !template.analysis) {
     return { ok: false, diagnostics: template.diagnostics, policies: [] };
   }
 
-  const destination = parseTypeScriptWithBackend(destinationSource, dialect, backend);
+  const destination = parser(destinationSource, dialect);
   if (!destination.ok || !destination.analysis) {
     return {
       ok: false,
@@ -357,16 +272,23 @@ export function mergeTypeScriptWithBackend(
     };
   }
 
+  return mergeTypeScriptAnalyses(template.analysis, destination.analysis);
+}
+
+export function mergeTypeScriptAnalyses(
+  template: TypeScriptAnalysis,
+  destination: TypeScriptAnalysis
+): MergeResult<string> {
   const destinationDeclarations = new Map(
-    destination.analysis.declarations.map((item) => [item.path, item])
+    destination.declarations.map((item) => [item.path, item])
   );
   const mergedDeclarationTexts = [
-    ...destination.analysis.declarations.map((item) => item.text),
-    ...template.analysis.declarations
+    ...destination.declarations.map((item) => item.text),
+    ...template.declarations
       .filter((item) => !destinationDeclarations.has(item.path))
       .map((item) => item.text)
   ];
-  const importBlock = destination.analysis.imports.map((item) => item.text).join('');
+  const importBlock = destination.imports.map((item) => item.text).join('');
   const declarationBlock = mergedDeclarationTexts.join('\n').trimEnd();
   const sections = [importBlock.trimEnd(), declarationBlock].filter(
     (section) => section.length > 0
@@ -378,4 +300,15 @@ export function mergeTypeScriptWithBackend(
     output: `${sections.join('\n\n').trimEnd()}\n`,
     policies: [destinationWinsArrayPolicy]
   };
+}
+
+export function mergeTypeScriptWithBackend(
+  templateSource: string,
+  destinationSource: string,
+  dialect: TypeScriptDialect,
+  backend: TypeScriptBackend
+): MergeResult<string> {
+  return mergeTypeScriptWithParser(templateSource, destinationSource, dialect, (source, current) =>
+    parseTypeScriptWithBackend(source, current, backend)
+  );
 }

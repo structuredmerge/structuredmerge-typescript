@@ -9,7 +9,9 @@
       "@structuredmerge/text-merge": ["./packages/text-merge/src/index.ts"],
       "@structuredmerge/json-merge": ["./packages/json-merge/src/index.ts"],
       "@structuredmerge/toml-merge": ["./packages/toml-merge/src/index.ts"],
-      "@structuredmerge/peggy-toml-merge": ["./packages/peggy-toml-merge/src/index.ts"]
+      "@structuredmerge/peggy-toml-merge": ["./packages/peggy-toml-merge/src/index.ts"],
+      "@structuredmerge/typescript-merge": ["./packages/typescript-merge/src/index.ts"],
+      "@structuredmerge/typescript-compiler-merge": ["./packages/typescript-compiler-merge/src/index.ts"]
     },
     "types": ["node", "vitest/globals"]
   },

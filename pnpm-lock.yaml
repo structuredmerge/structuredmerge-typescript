@@ -76,9 +76,18 @@ importers:
       '@structuredmerge/tree-haver':
         specifier: workspace:*
         version: link:../tree-haver
-      markdown-it:
-        specifier: ^14.1.0
-        version: 14.1.1
+
+  packages/peggy-toml-merge:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/toml-merge':
+        specifier: workspace:*
+        version: link:../toml-merge
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
 
   packages/ruby-merge:
     dependencies:
@@ -115,9 +124,6 @@ importers:
       '@structuredmerge/tree-haver':
         specifier: workspace:*
         version: link:../tree-haver
-      smol-toml:
-        specifier: ^1.4.2
-        version: 1.6.1
 
   packages/tree-haver:
     dependencies:
@@ -130,6 +136,21 @@ importers:
       peggy:
         specifier: ^5.1.0
         version: 5.1.0
+
+  packages/typescript-compiler-merge:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
+      '@structuredmerge/typescript-merge':
+        specifier: workspace:*
+        version: link:../typescript-merge
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
 
   packages/typescript-merge:
     dependencies:
@@ -1016,10 +1037,6 @@ packages:
 
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
-
-  smol-toml@1.6.1:
-    resolution: {integrity: sha512-dWUG8F5sIIARXih1DTaQAX4SsiTXhInKf1buxdY9DIg4ZYPZK5nGM1VRIYmEbDbsHt7USo99xSLFu5Q1IqTmsg==}
-    engines: {node: '>= 18'}
 
   source-map-generator@2.0.6:
     resolution: {integrity: sha512-IlassDs1Ve8nV6uyQZXF9kdkJpVKnMte2JZQXu13M0A5zwc+vu6+LNHfmxsHBMDtoZE21RHiKI0/xvpecZRCNg==}
@@ -1980,8 +1997,6 @@ snapshots:
   shebang-regex@3.0.0: {}
 
   siginfo@2.0.0: {}
-
-  smol-toml@1.6.1: {}
 
   source-map-generator@2.0.6: {}
 

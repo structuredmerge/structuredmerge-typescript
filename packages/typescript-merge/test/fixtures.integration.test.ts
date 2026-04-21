@@ -10,9 +10,7 @@ import {
   typeScriptBackends,
   matchTypeScriptOwners,
   mergeTypeScript,
-  mergeTypeScriptWithBackend,
   parseTypeScript,
-  parseTypeScriptWithBackend,
   typeScriptBackendFeatureProfile,
   typeScriptFeatureProfile,
   typeScriptPlanContext
@@ -134,52 +132,15 @@ describe('typescript-merge shared fixtures', () => {
   it('conforms to the slice-115 backend fixture', () => {
     const fixture = readFixture<{
       family: 'typescript';
-      backends: Array<'tree-sitter' | 'native'>;
+      backends: Array<'kreuzberg-language-pack'>;
     }>('diagnostics', 'slice-115-typescript-family-backends', 'typescript-backends.json');
 
     expect(typeScriptBackends()).toEqual(fixture.backends);
   });
 
-  it('conforms to the slice-116 native backend parity fixture', () => {
-    const fixture = readFixture<{
-      dialect: 'typescript';
-      source: string;
-      template: string;
-      destination: string;
-      expected: {
-        owners: Array<{ path: string; owner_kind: string; match_key?: string }>;
-        output: string;
-      };
-    }>('typescript', 'slice-116-native', 'module-parity.json');
-
-    const result = parseTypeScriptWithBackend(fixture.source, fixture.dialect, 'native');
-    expect(result.ok).toBe(true);
-    expect(
-      result.analysis?.owners.map((owner) => ({
-        path: owner.path,
-        owner_kind: owner.ownerKind,
-        ...(owner.matchKey ? { match_key: owner.matchKey } : {})
-      }))
-    ).toEqual(fixture.expected.owners);
-
-    const mergeResult = mergeTypeScriptWithBackend(
-      fixture.template,
-      fixture.destination,
-      fixture.dialect,
-      'native'
-    );
-    expect(mergeResult.ok).toBe(true);
-    expect(mergeResult.output).toBe(fixture.expected.output);
-  });
-
   it('conforms to the slice-122 backend feature-profile fixtures', () => {
     const fixture = readFixture<{
       tree_sitter: {
-        backend: string;
-        supports_dialects: boolean;
-        supported_policies: Array<{ surface: 'array'; name: string }>;
-      };
-      native: {
         backend: string;
         supports_dialects: boolean;
         supported_policies: Array<{ surface: 'array'; name: string }>;
@@ -190,15 +151,10 @@ describe('typescript-merge shared fixtures', () => {
       'typescript-backend-feature-profiles.json'
     );
 
-    expect(typeScriptBackendFeatureProfile('tree-sitter')).toEqual({
+    expect(typeScriptBackendFeatureProfile('kreuzberg-language-pack')).toEqual({
       backend: fixture.tree_sitter.backend,
       supportsDialects: fixture.tree_sitter.supports_dialects,
       supportedPolicies: fixture.tree_sitter.supported_policies
-    });
-    expect(typeScriptBackendFeatureProfile('native')).toEqual({
-      backend: fixture.native.backend,
-      supportsDialects: fixture.native.supports_dialects,
-      supportedPolicies: fixture.native.supported_policies
     });
   });
 
@@ -216,21 +172,9 @@ describe('typescript-merge shared fixtures', () => {
           supported_policies: Array<{ surface: 'array'; name: string }>;
         };
       };
-      native: {
-        family_profile: {
-          family: 'typescript';
-          supported_dialects: ['typescript'];
-          supported_policies: Array<{ surface: 'array'; name: string }>;
-        };
-        feature_profile: {
-          backend: string;
-          supports_dialects: boolean;
-          supported_policies: Array<{ surface: 'array'; name: string }>;
-        };
-      };
     }>('diagnostics', 'slice-123-source-family-plan-contexts', 'typescript-plan-contexts.json');
 
-    expect(typeScriptPlanContext('tree-sitter')).toEqual({
+    expect(typeScriptPlanContext('kreuzberg-language-pack')).toEqual({
       familyProfile: {
         family: fixture.tree_sitter.family_profile.family,
         supportedDialects: fixture.tree_sitter.family_profile.supported_dialects,
@@ -240,18 +184,6 @@ describe('typescript-merge shared fixtures', () => {
         backend: fixture.tree_sitter.feature_profile.backend,
         supportsDialects: fixture.tree_sitter.feature_profile.supports_dialects,
         supportedPolicies: fixture.tree_sitter.feature_profile.supported_policies
-      }
-    });
-    expect(typeScriptPlanContext('native')).toEqual({
-      familyProfile: {
-        family: fixture.native.family_profile.family,
-        supportedDialects: fixture.native.family_profile.supported_dialects,
-        supportedPolicies: fixture.native.family_profile.supported_policies
-      },
-      featureProfile: {
-        backend: fixture.native.feature_profile.backend,
-        supportsDialects: fixture.native.feature_profile.supports_dialects,
-        supportedPolicies: fixture.native.feature_profile.supported_policies
       }
     });
   });

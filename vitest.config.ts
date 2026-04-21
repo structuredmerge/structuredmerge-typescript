@@ -23,6 +23,12 @@ export default defineConfig({
       ),
       '@structuredmerge/peggy-toml-merge': fileURLToPath(
         new URL('./packages/peggy-toml-merge/src/index.ts', import.meta.url)
+      ),
+      '@structuredmerge/typescript-merge': fileURLToPath(
+        new URL('./packages/typescript-merge/src/index.ts', import.meta.url)
+      ),
+      '@structuredmerge/typescript-compiler-merge': fileURLToPath(
+        new URL('./packages/typescript-compiler-merge/src/index.ts', import.meta.url)
       )
     }
   },

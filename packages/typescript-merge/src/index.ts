@@ -2,8 +2,10 @@ export const packageName = '@structuredmerge/typescript-merge';
 
 export {
   matchTypeScriptOwners,
+  mergeTypeScriptAnalyses,
   mergeTypeScript,
   mergeTypeScriptWithBackend,
+  mergeTypeScriptWithParser,
   parseTypeScript,
   parseTypeScriptWithBackend,
   typeScriptBackendFeatureProfile,
