@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   availableMarkdownBackends,
   markdownBackendFeatureProfile,
@@ -28,6 +29,10 @@ describe('markdown-merge contracts', () => {
       backend: 'kreuzberg-language-pack',
       supportsDialects: false,
       supportedPolicies: []
+    });
+    expect(registeredBackends()).toContainEqual({
+      id: 'kreuzberg-language-pack',
+      family: 'tree-sitter'
     });
   });
 

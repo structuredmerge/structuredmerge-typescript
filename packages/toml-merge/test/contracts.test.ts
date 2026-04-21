@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   availableTomlBackends,
   matchTomlOwners,
@@ -101,6 +102,10 @@ describe('toml-merge', () => {
     });
     expect(availableTomlBackends()).toEqual(['kreuzberg-language-pack']);
     expect(tomlBackendFeatureProfile().backendRef).toEqual({
+      id: 'kreuzberg-language-pack',
+      family: 'tree-sitter'
+    });
+    expect(registeredBackends()).toContainEqual({
       id: 'kreuzberg-language-pack',
       family: 'tree-sitter'
     });

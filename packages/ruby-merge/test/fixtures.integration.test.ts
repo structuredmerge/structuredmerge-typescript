@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   delegatedChildApplyPlan,
   groupProjectedChildReviewCases,
@@ -615,6 +616,10 @@ describe('ruby-merge shared fixtures', () => {
     );
 
     expect(availableRubyBackends()).toEqual(['kreuzberg-language-pack']);
+    expect(registeredBackends()).toContainEqual({
+      id: 'kreuzberg-language-pack',
+      family: 'tree-sitter'
+    });
     expect(rubyBackendFeatureProfile()).toEqual({
       family: 'ruby',
       supportedDialects: ['ruby'],

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import {
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
@@ -155,6 +156,10 @@ describe('typescript-merge shared fixtures', () => {
       backend: fixture.tree_sitter.backend,
       supportsDialects: fixture.tree_sitter.supports_dialects,
       supportedPolicies: fixture.tree_sitter.supported_policies
+    });
+    expect(registeredBackends()).toContainEqual({
+      id: 'kreuzberg-language-pack',
+      family: 'tree-sitter'
     });
   });
 

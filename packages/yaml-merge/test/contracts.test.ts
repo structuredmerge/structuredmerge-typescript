@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { registeredBackends } from '@structuredmerge/tree-haver';
 import { matchYamlOwners, mergeYaml, parseYaml, yamlFeatureProfile } from '../src/index';
 
 describe('yaml-merge', () => {
@@ -94,6 +95,10 @@ describe('yaml-merge', () => {
       family: 'yaml',
       supportedDialects: ['yaml'],
       supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
+    });
+    expect(registeredBackends()).toContainEqual({
+      id: 'kreuzberg-language-pack',
+      family: 'tree-sitter'
     });
   });
 });
