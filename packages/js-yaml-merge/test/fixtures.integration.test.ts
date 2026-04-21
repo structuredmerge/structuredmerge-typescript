@@ -16,6 +16,7 @@ import {
   matchYamlOwners,
   mergeYaml,
   parseYaml,
+  yamlFeatureProfile,
   yamlBackendFeatureProfile,
   yamlPlanContext
 } from '../src/index';
@@ -43,6 +44,13 @@ function normalizeFixtureValue<T>(value: T): T {
 
 describe('js-yaml-merge shared fixtures', () => {
   it('conforms to the provider feature-profile and plan-context fixtures', () => {
+    const familyFixture = readFixture<{
+      feature_profile: Record<string, unknown>;
+    }>(
+      'diagnostics',
+      'slice-95-yaml-family-feature-profile',
+      'yaml-feature-profile.json'
+    );
     const featureFixture = readFixture<{
       providers: {
         js_yaml: {
@@ -65,6 +73,7 @@ describe('js-yaml-merge shared fixtures', () => {
     );
 
     expect(availableYamlBackends()).toEqual(['js-yaml']);
+    expect(yamlFeatureProfile()).toEqual(normalizeFixtureValue(familyFixture.feature_profile));
     expect(yamlBackendFeatureProfile()).toEqual(
       normalizeFixtureValue(featureFixture.providers.js_yaml.feature_profile)
     );

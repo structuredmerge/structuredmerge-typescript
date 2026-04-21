@@ -50,7 +50,9 @@ describe('peggy-toml-merge shared fixtures', () => {
       family: providerProfile.family,
       supportedDialects: providerProfile.supported_dialects,
       supportedPolicies: providerProfile.supported_policies,
-      backend: providerProfile.backend
+      backend: providerProfile.backend,
+      backendRef: (providerProfile.backendRef ??
+        providerProfile.backend_ref) as Record<string, unknown> | undefined
     });
   });
 
@@ -85,6 +87,20 @@ describe('peggy-toml-merge shared fixtures', () => {
     const validResult = parseToml(validFixture.source as string, validFixture.dialect as 'toml');
     expect(validResult.ok).toBe(true);
     expect(validResult.analysis?.rootKind).toBe('table');
+
+    const structureFixture = readFixture('toml', 'slice-92-structure', 'table-and-array.json');
+    const structureResult = parseToml(
+      structureFixture.source as string,
+      structureFixture.dialect as 'toml'
+    );
+    expect(structureResult.ok).toBe(true);
+    expect(
+      structureResult.analysis?.owners.map((owner) => ({
+        path: owner.path,
+        owner_kind: owner.ownerKind,
+        ...(owner.matchKey ? { match_key: owner.matchKey } : {})
+      }))
+    ).toEqual((structureFixture.expected as Record<string, unknown>).owners);
 
     const matchingFixture = readFixture('toml', 'slice-93-matching', 'path-equality.json');
     const template = parseToml(matchingFixture.template as string, 'toml');
