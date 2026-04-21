@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { withBackend } from '@structuredmerge/tree-haver';
 import {
   availableTomlBackends,
   matchTomlOwners,
@@ -10,7 +9,7 @@ import {
 } from '../src/index';
 
 describe('toml-merge', () => {
-  it('parses valid toml documents', () => {
+  it('parses valid toml documents through the tree-sitter substrate', () => {
     const result = parseToml(
       '# project metadata\nname = "structuredmerge"\nenabled = true\n\n[package]\nversion = "0.1.0"\n',
       'toml'
@@ -94,31 +93,16 @@ describe('toml-merge', () => {
     expect(result.diagnostics[0]?.category).toBe('destination_parse_error');
   });
 
-  it('exposes the TOML family profile', () => {
+  it('exposes the TOML family profile through the substrate backend', () => {
     expect(tomlFeatureProfile()).toEqual({
       family: 'toml',
       supportedDialects: ['toml'],
       supportedPolicies: [{ surface: 'array', name: 'destination_wins_array' }]
     });
-  });
-
-  it('exposes backend-specific TOML feature profiles', () => {
-    expect(availableTomlBackends()).toEqual(['native', 'peggy']);
-    expect(tomlBackendFeatureProfile('native').backendRef).toEqual({
-      id: 'native',
-      family: 'builtin'
+    expect(availableTomlBackends()).toEqual(['kreuzberg-language-pack']);
+    expect(tomlBackendFeatureProfile().backendRef).toEqual({
+      id: 'kreuzberg-language-pack',
+      family: 'tree-sitter'
     });
-    expect(tomlBackendFeatureProfile('peggy').backendRef).toEqual({
-      id: 'peggy',
-      family: 'peg'
-    });
-  });
-
-  it('uses tree-haver backend context when no explicit backend is given', () => {
-    const result = withBackend('peggy', () =>
-      mergeToml('title = "Structured Merge"\n', '[package]\nname = "structuredmerge"\n', 'toml')
-    );
-
-    expect(result.ok).toBe(true);
   });
 });

@@ -1,4 +1,3 @@
-import { parse as parseTomlDocument } from 'smol-toml';
 import type {
   ConformanceFamilyPlanContext,
   ConformanceFeatureProfileView,
@@ -9,14 +8,13 @@ import type {
   PolicyReference
 } from '@structuredmerge/ast-merge';
 import {
-  createPeggyParser,
-  currentBackendId,
-  PEGGY_BACKEND,
-  type BackendReference,
-  parseWithPeggy
+  KREUZBERG_LANGUAGE_PACK_BACKEND,
+  parseWithLanguagePack,
+  type BackendReference
 } from '@structuredmerge/tree-haver';
 
 export type TomlDialect = 'toml';
+export type TomlBackend = 'kreuzberg-language-pack';
 export type TomlRootKind = 'table';
 export type TomlOwnerKind = 'table' | 'key_value' | 'array_item';
 
@@ -78,8 +76,6 @@ export interface TomlFeatureProfile extends FamilyFeatureProfile {
   readonly supportedPolicies: readonly PolicyReference[];
 }
 
-export type TomlBackend = 'native' | 'peggy';
-
 export interface TomlBackendFeatureProfile extends TomlFeatureProfile {
   readonly backend: TomlBackend;
   readonly backendRef: BackendReference;
@@ -89,33 +85,8 @@ const destinationWinsArrayPolicy: PolicyReference = {
   surface: 'array',
   name: 'destination_wins_array'
 };
-const NATIVE_BACKEND: BackendReference = { id: 'native', family: 'builtin' };
-const TOML_PEGGY_GRAMMAR = String.raw`
-{
-  function text() { return input.substring(location().start.offset, location().end.offset); }
-}
 
-start = spacing document:document spacing EOF { return document; }
-document = (table / keyValue / blankLine / commentLine)*
-table = "[" keyPath "]" entryEnd
-keyValue = keyPath spacing "=" spacing value entryEnd
-keyPath = bareKey ("." bareKey)*
-value = array / string / boolean / number
-array = "[" spacing arrayValues? spacing "]"
-arrayValues = value (spacing "," spacing value)*
-string = "\"" chars:([^"\\] / "\\\"" / "\\\\" / "\\n" / "\\t")* "\""
-boolean = "true" / "false"
-number = "-"? [0-9]+ ("." [0-9]+)?
-bareKey = [A-Za-z0-9_-]+
-commentLine = spacing "#" [^\n\r]* newline
-blankLine = spacing newline
-entryEnd = spacing comment? (newline / EOF)
-comment = "#" [^\n\r]*
-newline = "\r\n" / "\n" / "\r"
-spacing = [ \t]*
-EOF = !.
-`;
-const tomlPeggyParser = createPeggyParser(TOML_PEGGY_GRAMMAR);
+class TomlParseError extends Error {}
 
 function parseError(message: string): Diagnostic {
   return { severity: 'error', category: 'parse_error', message };
@@ -138,7 +109,7 @@ export function tomlFeatureProfile(): TomlFeatureProfile {
 }
 
 export function availableTomlBackends(): readonly TomlBackend[] {
-  return ['native', 'peggy'];
+  return ['kreuzberg-language-pack'];
 }
 
 export function tomlBackendFeatureProfile(backend?: TomlBackend): TomlBackendFeatureProfile {
@@ -146,7 +117,7 @@ export function tomlBackendFeatureProfile(backend?: TomlBackend): TomlBackendFea
   return {
     ...tomlFeatureProfile(),
     backend: resolvedBackend,
-    backendRef: resolvedBackend === 'peggy' ? PEGGY_BACKEND : NATIVE_BACKEND
+    backendRef: KREUZBERG_LANGUAGE_PACK_BACKEND
   };
 }
 
@@ -154,7 +125,7 @@ export function tomlPlanContext(backend?: TomlBackend): ConformanceFamilyPlanCon
   const backendProfile = tomlBackendFeatureProfile(backend);
   const featureProfile: ConformanceFeatureProfileView = {
     backend: backendProfile.backend,
-    supportsDialects: backendProfile.backend !== 'peggy',
+    supportsDialects: false,
     supportedPolicies: backendProfile.supportedPolicies
   };
 
@@ -165,62 +136,229 @@ export function tomlPlanContext(backend?: TomlBackend): ConformanceFamilyPlanCon
 }
 
 function resolveBackend(backend?: TomlBackend): TomlBackend {
-  if (backend) return backend;
-  return currentBackendId() === 'peggy' ? 'peggy' : 'native';
+  return backend ?? 'kreuzberg-language-pack';
 }
 
-function isScalar(value: unknown): value is TomlScalar {
-  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+function normalizeTomlSource(source: string): string {
+  return source.replace(/\r\n?/g, '\n');
 }
 
-function validateTomlNode(
-  value: unknown,
-  path: string
-): { ok: true; value: TomlNode } | { ok: false; diagnostic: Diagnostic } {
-  if (isScalar(value)) {
-    return { ok: true, value };
-  }
+function splitOutsideQuotes(value: string, separator: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
 
-  if (Array.isArray(value)) {
-    if (value.every((item) => isScalar(item))) {
-      return { ok: true, value };
-    }
-
-    return {
-      ok: false,
-      diagnostic: unsupportedFeature(
-        `Unsupported TOML array value at ${path || '/'}. Only scalar arrays are supported.`
-      )
-    };
-  }
-
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const table: Record<string, TomlNode> = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort((left, right) =>
-      left.localeCompare(right)
-    )) {
-      const nextPath = `${path}/${key}`;
-      const validated = validateTomlNode((value as Record<string, unknown>)[key], nextPath);
-      if (!validated.ok) {
-        return validated;
+  for (const char of value) {
+    if (inString) {
+      current += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
       }
-      table[key] = validated.value;
+      continue;
     }
-    return { ok: true, value: table };
+
+    if (char === '"') {
+      inString = true;
+      current += char;
+      continue;
+    }
+
+    if (char === '[') {
+      depth += 1;
+      current += char;
+      continue;
+    }
+
+    if (char === ']') {
+      depth -= 1;
+      current += char;
+      continue;
+    }
+
+    if (char === separator && depth === 0) {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
   }
 
-  return {
-    ok: false,
-    diagnostic: unsupportedFeature(
-      `Unsupported TOML value at ${path || '/'}. Only tables, scalar values, and scalar arrays are supported.`
-    )
-  };
+  if (inString || depth !== 0) {
+    throw new TomlParseError('Unterminated TOML string or array.');
+  }
+
+  parts.push(current.trim());
+  return parts;
+}
+
+function stripTomlComment(line: string): string {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+
+  for (const char of line) {
+    if (inString) {
+      result += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      result += char;
+      continue;
+    }
+
+    if (char === '#') {
+      break;
+    }
+
+    result += char;
+  }
+
+  if (inString) {
+    throw new TomlParseError('Unterminated TOML string.');
+  }
+
+  return result.trim();
+}
+
+function parseTomlKeyPath(value: string): string[] {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    throw new TomlParseError('Missing TOML key path.');
+  }
+
+  const parts = trimmed.split('.').map((part) => part.trim());
+  if (parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))) {
+    throw new TomlParseError(`Unsupported TOML key path ${trimmed}.`);
+  }
+
+  return parts;
+}
+
+function parseTomlString(value: string): string {
+  try {
+    return JSON.parse(value) as string;
+  } catch {
+    throw new TomlParseError(`Invalid TOML string ${value}.`);
+  }
+}
+
+function parseTomlScalarValue(value: string): TomlScalar {
+  if (value.startsWith('"') && value.endsWith('"')) {
+    return parseTomlString(value);
+  }
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^-?\d+(?:\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+
+  throw new TomlParseError(`Unsupported TOML value ${value}.`);
+}
+
+function parseTomlValue(value: string): TomlNode {
+  if (value.startsWith('[')) {
+    if (!value.endsWith(']')) {
+      throw new TomlParseError(`Invalid TOML array ${value}.`);
+    }
+    const inner = value.slice(1, -1).trim();
+    if (inner.length === 0) {
+      return [];
+    }
+
+    return splitOutsideQuotes(inner, ',').map((entry) => parseTomlScalarValue(entry));
+  }
+
+  return parseTomlScalarValue(value);
+}
+
+function ensureTomlTable(root: TomlTable, path: readonly string[]): TomlTable {
+  let current = root;
+  for (const segment of path) {
+    const existing = current[segment];
+    if (existing === undefined) {
+      current[segment] = {};
+      current = current[segment] as TomlTable;
+      continue;
+    }
+
+    if (typeof existing === 'object' && !Array.isArray(existing)) {
+      current = existing as TomlTable;
+      continue;
+    }
+
+    throw new TomlParseError(`TOML table path /${path.join('/')} conflicts with a value.`);
+  }
+
+  return current;
+}
+
+function assignTomlValue(root: TomlTable, path: readonly string[], value: TomlNode): void {
+  if (path.length === 0) {
+    throw new TomlParseError('Missing TOML assignment path.');
+  }
+
+  const table = ensureTomlTable(root, path.slice(0, -1));
+  const key = path[path.length - 1];
+  const existing = table[key];
+  if (existing !== undefined && typeof existing === 'object' && !Array.isArray(existing)) {
+    throw new TomlParseError(`TOML key /${path.join('/')} conflicts with a table.`);
+  }
+  table[key] = value;
+}
+
+function parseTomlDocument(source: string): TomlTable {
+  const lines = normalizeTomlSource(source).split('\n');
+  const root: TomlTable = {};
+  let currentTablePath: string[] = [];
+
+  for (const rawLine of lines) {
+    const line = stripTomlComment(rawLine);
+    if (line.length === 0) {
+      continue;
+    }
+
+    if (line.startsWith('[')) {
+      if (!line.endsWith(']')) {
+        throw new TomlParseError(`Invalid TOML table header ${line}.`);
+      }
+      currentTablePath = parseTomlKeyPath(line.slice(1, -1));
+      ensureTomlTable(root, currentTablePath);
+      continue;
+    }
+
+    const parts = splitOutsideQuotes(line, '=');
+    if (parts.length !== 2) {
+      throw new TomlParseError(`Invalid TOML assignment ${line}.`);
+    }
+
+    const keyPath = parseTomlKeyPath(parts[0]);
+    const value = parseTomlValue(parts[1]);
+    assignTomlValue(root, [...currentTablePath, ...keyPath], value);
+  }
+
+  return root;
 }
 
 function renderTomlScalar(value: TomlScalar): string {
   if (typeof value === 'string') return JSON.stringify(value);
   if (typeof value === 'boolean') return value ? 'true' : 'false';
-  return Number.isFinite(value) ? String(value) : JSON.stringify(value);
+  return String(value);
 }
 
 function renderTomlValue(value: TomlNode): string {
@@ -326,50 +464,80 @@ function mergeTomlTables(template: TomlTable, destination: TomlTable): TomlTable
   return merged;
 }
 
-function analyzeTomlDocument(source: string): ParseResult<TomlAnalysis> {
+export function analyzeTomlSource(source: string, dialect: TomlDialect): ParseResult<TomlAnalysis> {
+  if (dialect !== 'toml') {
+    return { ok: false, diagnostics: [unsupportedFeature(`Unsupported TOML dialect ${dialect}.`)] };
+  }
+
   try {
-    const parsed = parseTomlDocument(source) as unknown;
-    const validated = validateTomlNode(parsed, '');
-    if (!validated.ok) {
-      return { ok: false, diagnostics: [validated.diagnostic] };
-    }
-
-    if (Array.isArray(validated.value) || isScalar(validated.value)) {
-      return {
-        ok: false,
-        diagnostics: [parseError('TOML documents must parse to a table root.')]
-      };
-    }
-
+    const table = parseTomlDocument(source);
     return {
       ok: true,
       diagnostics: [],
       analysis: {
         kind: 'toml',
         dialect: 'toml',
-        normalizedSource: canonicalToml(validated.value as TomlTable),
+        normalizedSource: canonicalToml(table),
         rootKind: 'table',
-        owners: collectTomlOwners(validated.value as TomlTable)
+        owners: collectTomlOwners(table)
       },
       policies: []
     };
   } catch (error) {
     return {
       ok: false,
-      diagnostics: [parseError(error instanceof Error ? error.message : 'TOML parse failed.')]
+      diagnostics: [
+        parseError(error instanceof Error ? error.message : 'TOML subset analysis failed.')
+      ]
     };
   }
 }
 
-function validateTomlSyntax(source: string, backend: TomlBackend): ParseResult<undefined> {
-  if (backend === 'peggy') {
-    const result = parseWithPeggy(source, tomlPeggyParser);
-    return result.ok
-      ? { ok: true, diagnostics: [] }
-      : { ok: false, diagnostics: result.diagnostics };
+export function mergeTomlWithParser(
+  templateSource: string,
+  destinationSource: string,
+  dialect: TomlDialect,
+  parser: (source: string, dialect: TomlDialect) => ParseResult<TomlAnalysis>
+): MergeResult<string> {
+  const template = parser(templateSource, dialect);
+  if (!template.ok || !template.analysis) {
+    return { ok: false, diagnostics: template.diagnostics, policies: [] };
   }
 
-  return { ok: true, diagnostics: [] };
+  const destination = parser(destinationSource, dialect);
+  if (!destination.ok || !destination.analysis) {
+    return {
+      ok: false,
+      diagnostics: destination.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        category:
+          diagnostic.category === 'parse_error' ? 'destination_parse_error' : diagnostic.category
+      })),
+      policies: []
+    };
+  }
+
+  try {
+    const merged = mergeTomlTables(
+      parseTomlDocument(template.analysis.normalizedSource),
+      parseTomlDocument(destination.analysis.normalizedSource)
+    );
+
+    return {
+      ok: true,
+      diagnostics: [],
+      output: canonicalToml(merged),
+      policies: [destinationWinsArrayPolicy]
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostics: [
+        destinationParseError(error instanceof Error ? error.message : 'TOML merge failed.')
+      ],
+      policies: []
+    };
+  }
 }
 
 export function parseToml(
@@ -377,17 +545,20 @@ export function parseToml(
   dialect: TomlDialect,
   backend?: TomlBackend
 ): ParseResult<TomlAnalysis> {
-  if (dialect !== 'toml') {
-    return { ok: false, diagnostics: [unsupportedFeature(`Unsupported TOML dialect ${dialect}.`)] };
+  const resolvedBackend = resolveBackend(backend);
+  if (resolvedBackend !== 'kreuzberg-language-pack') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported TOML backend ${resolvedBackend}.`)]
+    };
   }
 
-  const resolvedBackend = resolveBackend(backend);
-  const syntax = validateTomlSyntax(source, resolvedBackend);
+  const syntax = parseWithLanguagePack({ source, language: 'toml', dialect });
   if (!syntax.ok) {
     return { ok: false, diagnostics: syntax.diagnostics };
   }
 
-  return analyzeTomlDocument(source);
+  return analyzeTomlSource(source, dialect);
 }
 
 export function matchTomlOwners(
@@ -417,43 +588,14 @@ export function mergeToml(
   backend?: TomlBackend
 ): MergeResult<string> {
   const resolvedBackend = resolveBackend(backend);
-  const template = parseToml(templateSource, dialect, resolvedBackend);
-  if (!template.ok || !template.analysis) {
-    return { ok: false, diagnostics: template.diagnostics, policies: [] };
-  }
-
-  const destination = parseToml(destinationSource, dialect, resolvedBackend);
-  if (!destination.ok || !destination.analysis) {
+  if (resolvedBackend !== 'kreuzberg-language-pack') {
     return {
       ok: false,
-      diagnostics: destination.diagnostics.map((diagnostic) => ({
-        ...diagnostic,
-        category:
-          diagnostic.category === 'parse_error' ? 'destination_parse_error' : diagnostic.category
-      })),
-      policies: []
+      diagnostics: [unsupportedFeature(`Unsupported TOML backend ${resolvedBackend}.`)]
     };
   }
 
-  try {
-    const merged = mergeTomlTables(
-      parseTomlDocument(template.analysis.normalizedSource) as TomlTable,
-      parseTomlDocument(destination.analysis.normalizedSource) as TomlTable
-    );
-
-    return {
-      ok: true,
-      diagnostics: [],
-      output: canonicalToml(merged),
-      policies: [destinationWinsArrayPolicy]
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      diagnostics: [
-        destinationParseError(error instanceof Error ? error.message : 'TOML merge failed.')
-      ],
-      policies: []
-    };
-  }
+  return mergeTomlWithParser(templateSource, destinationSource, dialect, (source, parseDialect) =>
+    parseToml(source, parseDialect, resolvedBackend)
+  );
 }

@@ -1,9 +1,11 @@
 export const packageName = '@structuredmerge/toml-merge';
 
 export {
+  analyzeTomlSource,
   availableTomlBackends,
   matchTomlOwners,
   mergeToml,
+  mergeTomlWithParser,
   parseToml,
   tomlBackendFeatureProfile,
   tomlFeatureProfile,

@@ -7,7 +7,9 @@
       "@structuredmerge/ast-merge": ["./packages/ast-merge/src/index.ts"],
       "@structuredmerge/tree-haver": ["./packages/tree-haver/src/index.ts"],
       "@structuredmerge/text-merge": ["./packages/text-merge/src/index.ts"],
-      "@structuredmerge/json-merge": ["./packages/json-merge/src/index.ts"]
+      "@structuredmerge/json-merge": ["./packages/json-merge/src/index.ts"],
+      "@structuredmerge/toml-merge": ["./packages/toml-merge/src/index.ts"],
+      "@structuredmerge/peggy-toml-merge": ["./packages/peggy-toml-merge/src/index.ts"]
     },
     "types": ["node", "vitest/globals"]
   },

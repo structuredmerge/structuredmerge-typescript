@@ -1,11 +1,12 @@
 {
-  "name": "@structuredmerge/toml-merge",
+  "name": "@structuredmerge/peggy-toml-merge",
   "version": "0.0.0",
   "private": false,
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
     "@structuredmerge/ast-merge": "workspace:*",
+    "@structuredmerge/toml-merge": "workspace:*",
     "@structuredmerge/tree-haver": "workspace:*"
   }
 }
