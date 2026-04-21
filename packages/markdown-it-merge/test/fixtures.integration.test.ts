@@ -52,7 +52,9 @@ describe('markdown-it-merge shared fixtures', () => {
       family: providerProfile.family,
       supportedDialects: providerProfile.supported_dialects,
       supportedPolicies: providerProfile.supported_policies,
-      backend: providerProfile.backend
+      backend: providerProfile.backend,
+      backendRef: (providerProfile.backendRef ??
+        providerProfile.backend_ref) as Record<string, unknown> | undefined
     });
   });
 

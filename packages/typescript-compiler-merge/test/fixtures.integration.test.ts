@@ -49,6 +49,13 @@ function normalizeFixtureValue<T>(value: T): T {
 
 describe('typescript-compiler-merge shared fixtures', () => {
   it('conforms to the provider feature-profile and plan-context fixtures', () => {
+    const familyFixture = readFixture<{
+      feature_profile: Record<string, unknown>;
+    }>(
+      'diagnostics',
+      'slice-101-typescript-family-feature-profile',
+      'typescript-feature-profile.json'
+    );
     const featureFixture = readFixture<{
       providers: {
         typescript_compiler: {
@@ -71,6 +78,7 @@ describe('typescript-compiler-merge shared fixtures', () => {
     );
 
     expect(availableTypeScriptBackends()).toEqual(['typescript-compiler']);
+    expect(typeScriptFeatureProfile()).toEqual(normalizeFixtureValue(familyFixture.feature_profile));
     expect(typeScriptBackendFeatureProfile()).toEqual(
       normalizeFixtureValue(featureFixture.providers.typescript_compiler.feature_profile)
     );
