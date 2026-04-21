@@ -115,6 +115,60 @@ describe('yaml-merge shared fixtures', () => {
     });
   });
 
+  it('conforms to the slice-183 YAML polyglot backend feature profile fixtures', () => {
+    const fixture = readFixture<{
+      tree_sitter: {
+        backend: 'kreuzberg-language-pack';
+        family: null;
+        supported_dialects: null;
+        supported_policies: Array<{ surface: 'array'; name: string }>;
+      };
+    }>(
+      'diagnostics',
+      'slice-183-yaml-family-polyglot-backend-feature-profiles',
+      'typescript-yaml-polyglot-backend-feature-profiles.json'
+    );
+
+    expect(yamlBackendFeatureProfile('kreuzberg-language-pack')).toMatchObject({
+      backend: fixture.tree_sitter.backend,
+      supportedPolicies: fixture.tree_sitter.supported_policies
+    });
+  });
+
+  it('conforms to the slice-184 YAML polyglot backend plan-context fixtures', () => {
+    const fixture = readFixture<{
+      tree_sitter: {
+        family_profile: {
+          family: 'yaml';
+          supported_dialects: ['yaml'];
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+        feature_profile: {
+          backend: 'kreuzberg-language-pack';
+          supports_dialects: false;
+          supported_policies: Array<{ surface: 'array'; name: string }>;
+        };
+      };
+    }>(
+      'diagnostics',
+      'slice-184-yaml-family-polyglot-backend-plan-contexts',
+      'typescript-yaml-polyglot-plan-contexts.json'
+    );
+
+    expect(yamlPlanContext('kreuzberg-language-pack')).toEqual({
+      familyProfile: {
+        family: fixture.tree_sitter.family_profile.family,
+        supportedDialects: fixture.tree_sitter.family_profile.supported_dialects,
+        supportedPolicies: fixture.tree_sitter.family_profile.supported_policies
+      },
+      featureProfile: {
+        backend: fixture.tree_sitter.feature_profile.backend,
+        supportsDialects: fixture.tree_sitter.feature_profile.supports_dialects,
+        supportedPolicies: fixture.tree_sitter.feature_profile.supported_policies
+      }
+    });
+  });
+
   it('conforms to the slice-143 YAML family manifest fixture', () => {
     const manifest = readFixture<ConformanceManifest>(
       'conformance',
