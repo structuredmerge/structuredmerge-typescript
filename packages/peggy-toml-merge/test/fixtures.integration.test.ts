@@ -109,6 +109,12 @@ describe('peggy-toml-merge shared fixtures', () => {
     expect(matching.matched.map((match) => [match.templatePath, match.destinationPath])).toEqual(
       (matchingFixture.expected as Record<string, unknown>).matched as string[][]
     );
+    expect(matching.unmatchedTemplate).toEqual(
+      (matchingFixture.expected as Record<string, unknown>).unmatched_template as string[]
+    );
+    expect(matching.unmatchedDestination).toEqual(
+      (matchingFixture.expected as Record<string, unknown>).unmatched_destination as string[]
+    );
 
     const mergeFixture = readFixture('toml', 'slice-94-merge', 'table-merge.json');
     const merged = mergeToml(
