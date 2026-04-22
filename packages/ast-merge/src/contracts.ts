@@ -216,6 +216,27 @@ export interface TemplateTreeRunResult {
   readonly applyResult: TemplateApplyResult;
 }
 
+export type TemplateTreeRunStatus = 'created' | 'updated' | 'kept' | 'blocked' | 'omitted';
+
+export interface TemplateTreeRunReportEntry {
+  readonly templateSourcePath: string;
+  readonly logicalDestinationPath: string;
+  readonly destinationPath?: string;
+  readonly executionAction: TemplateExecutionAction;
+  readonly status: TemplateTreeRunStatus;
+}
+
+export interface TemplateTreeRunReport {
+  readonly entries: readonly TemplateTreeRunReportEntry[];
+  readonly summary: Readonly<{
+    created: number;
+    updated: number;
+    kept: number;
+    blocked: number;
+    omitted: number;
+  }>;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -1176,6 +1197,46 @@ export function runTemplateTreeExecution(
   return {
     executionPlan,
     applyResult: applyTemplateExecution(executionPlan, mergePreparedContent)
+  };
+}
+
+export function reportTemplateTreeRun(result: TemplateTreeRunResult): TemplateTreeRunReport {
+  const created = new Set(result.applyResult.createdPaths);
+  const updated = new Set(result.applyResult.updatedPaths);
+  const kept = new Set(result.applyResult.keptPaths);
+  const blocked = new Set(result.applyResult.blockedPaths);
+  const omitted = new Set(result.applyResult.omittedPaths);
+
+  const entries = result.executionPlan.map((entry) => {
+    const status: TemplateTreeRunStatus =
+      entry.executionAction === 'omit' || omitted.has(entry.logicalDestinationPath)
+        ? 'omitted'
+        : entry.destinationPath && blocked.has(entry.destinationPath)
+          ? 'blocked'
+          : entry.destinationPath && kept.has(entry.destinationPath)
+            ? 'kept'
+            : entry.destinationPath && updated.has(entry.destinationPath)
+              ? 'updated'
+              : 'created';
+
+    return {
+      templateSourcePath: entry.templateSourcePath,
+      logicalDestinationPath: entry.logicalDestinationPath,
+      destinationPath: entry.destinationPath,
+      executionAction: entry.executionAction,
+      status
+    };
+  });
+
+  return {
+    entries,
+    summary: {
+      created: entries.filter((entry) => entry.status === 'created').length,
+      updated: entries.filter((entry) => entry.status === 'updated').length,
+      kept: entries.filter((entry) => entry.status === 'kept').length,
+      blocked: entries.filter((entry) => entry.status === 'blocked').length,
+      omitted: entries.filter((entry) => entry.status === 'omitted').length
+    }
   };
 }
 

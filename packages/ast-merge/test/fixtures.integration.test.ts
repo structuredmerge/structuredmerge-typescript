@@ -53,6 +53,7 @@ import type {
   TemplateTokenConfig,
   SurfaceOwnerRef,
   SurfaceSpan,
+  TemplateTreeRunReport,
   TemplateTreeRunResult
 } from '../src/index';
 import {
@@ -85,6 +86,7 @@ import {
   planTemplateExecution,
   planTemplateTreeExecution,
   previewTemplateExecution,
+  reportTemplateTreeRun,
   runTemplateTreeExecution,
   selectTemplateStrategy,
   planTemplateEntries,
@@ -138,6 +140,7 @@ import {
 // diagnosticsFixturePath('mini_template_tree_apply')
 // diagnosticsFixturePath('mini_template_tree_convergence')
 // diagnosticsFixturePath('mini_template_tree_run')
+// diagnosticsFixturePath('mini_template_tree_run_report')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
 
@@ -376,6 +379,25 @@ interface MiniTemplateTreeRunFixture {
   expected: {
     execution_plan: MiniTemplateTreePlanFixture['expected_entries'];
     apply_result: MiniTemplateTreeApplyFixture['expected_result'];
+  };
+}
+
+interface MiniTemplateTreeRunReportFixture {
+  expected: {
+    entries: Array<{
+      template_source_path: string;
+      logical_destination_path: string;
+      destination_path: string | null;
+      execution_action: TemplateExecutionPlanFixture['expected_entries'][number]['execution_action'];
+      status: 'created' | 'updated' | 'kept' | 'blocked' | 'omitted';
+    }>;
+    summary: {
+      created: number;
+      updated: number;
+      kept: number;
+      blocked: number;
+      omitted: number;
+    };
   };
 }
 
@@ -2561,6 +2583,61 @@ describe('ast-merge shared fixtures', () => {
         )
       }
     });
+  });
+
+  it('conforms to the mini template tree run report fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const planFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_plan') ??
+      []) as string[];
+    const runFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_run') ??
+      []) as string[];
+    const reportFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_run_report'
+    ) ?? []) as string[];
+    const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
+    const runFixture = readFixture<MiniTemplateTreeRunFixture>(...runFixturePath);
+    const reportFixture = readFixture<MiniTemplateTreeRunReportFixture>(...reportFixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...planFixturePath.slice(0, -1));
+    const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
+    const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
+    const templateSourcePaths = Object.keys(templateContents).sort();
+
+    const runResult: TemplateTreeRunResult = runTemplateTreeExecution(
+      templateSourcePaths,
+      templateContents,
+      destinationContents,
+      { projectName: planFixture.context.project_name },
+      planFixture.default_strategy,
+      planFixture.overrides,
+      planFixture.replacements,
+      (entry) => {
+        const fixtureResult = runFixture.merge_results[entry.destinationPath ?? ''];
+        return {
+          ok: fixtureResult.ok,
+          diagnostics: fixtureResult.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          output: fixtureResult.output ?? undefined,
+          policies: fixtureResult.policies
+        };
+      }
+    );
+
+    const actual: TemplateTreeRunReport = reportTemplateTreeRun(runResult);
+    expect({
+      entries: actual.entries.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        execution_action: entry.executionAction,
+        status: entry.status
+      })),
+      summary: actual.summary
+    }).toEqual(reportFixture.expected);
   });
 
   it('conforms to the template entry plan state fixture', () => {
