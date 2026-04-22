@@ -326,6 +326,40 @@ describe('markdown-it-merge shared fixtures', () => {
     expect(stateResult.output).toBe((fixture.expected as Record<string, unknown>).output);
   });
 
+  it('conforms to the slice-311 reviewed nested review artifact rejection fixture', () => {
+    const fixture = readFixture(
+      'markdown',
+      'slice-311-reviewed-nested-review-artifact-rejection',
+      'fenced-code-reviewed-nested-review-artifact-rejection.json'
+    );
+
+    expect(
+      mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
+        fixture.template as string,
+        fixture.destination as string,
+        'markdown',
+        fixture.replay_bundle as never
+      )
+    ).toEqual({
+      ok: (fixture.expected as Record<string, unknown>).ok,
+      diagnostics: (fixture.expected as Record<string, unknown>).diagnostics,
+      policies: []
+    });
+
+    expect(
+      mergeMarkdownWithReviewedNestedOutputsFromReviewState(
+        fixture.template as string,
+        fixture.destination as string,
+        'markdown',
+        fixture.review_state as never
+      )
+    ).toEqual({
+      ok: (fixture.expected_review_state as Record<string, unknown>).ok,
+      diagnostics: (fixture.expected_review_state as Record<string, unknown>).diagnostics,
+      policies: []
+    });
+  });
+
   it('conforms to the provider named-suite plan fixture', () => {
     const fixture = readFixture(
       'diagnostics',

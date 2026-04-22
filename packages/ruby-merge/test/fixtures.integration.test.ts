@@ -982,6 +982,43 @@ describe('ruby-merge shared fixtures', () => {
     expect(reviewStateResult.output).toBe(fixture.expected.output);
   });
 
+  it('conforms to the slice-312 reviewed nested review artifact rejection fixture', () => {
+    const fixture = readFixture<{
+      template: string;
+      destination: string;
+      replay_bundle: unknown;
+      review_state: unknown;
+      expected: { ok: boolean; diagnostics: Diagnostic[] };
+      expected_review_state: { ok: boolean; diagnostics: Diagnostic[] };
+    }>(
+      'ruby',
+      'slice-312-reviewed-nested-review-artifact-rejection',
+      'yard-example-reviewed-nested-review-artifact-rejection.json'
+    );
+
+    expect(
+      mergeRubyWithReviewedNestedOutputsFromReplayBundle(
+        fixture.template,
+        fixture.destination,
+        'ruby',
+        fixture.replay_bundle as never
+      )
+    ).toEqual({ ok: fixture.expected.ok, diagnostics: fixture.expected.diagnostics, policies: [] });
+
+    expect(
+      mergeRubyWithReviewedNestedOutputsFromReviewState(
+        fixture.template,
+        fixture.destination,
+        'ruby',
+        fixture.review_state as never
+      )
+    ).toEqual({
+      ok: fixture.expected_review_state.ok,
+      diagnostics: fixture.expected_review_state.diagnostics,
+      policies: []
+    });
+  });
+
   it('conforms to the Ruby family backend and plan-context fixtures', () => {
     const backendFixture = readFixture<{
       tree_sitter: {

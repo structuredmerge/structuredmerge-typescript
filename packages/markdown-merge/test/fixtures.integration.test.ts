@@ -1175,4 +1175,41 @@ describe('markdown-merge shared fixtures', () => {
     expect(reviewStateResult.ok).toBe(fixture.expected.ok);
     expect(reviewStateResult.output).toBe(fixture.expected.output);
   });
+
+  it('conforms to the slice-311 reviewed nested review artifact rejection fixture', () => {
+    const fixture = readFixture<{
+      template: string;
+      destination: string;
+      replay_bundle: unknown;
+      review_state: unknown;
+      expected: { ok: boolean; diagnostics: Diagnostic[] };
+      expected_review_state: { ok: boolean; diagnostics: Diagnostic[] };
+    }>(
+      'markdown',
+      'slice-311-reviewed-nested-review-artifact-rejection',
+      'fenced-code-reviewed-nested-review-artifact-rejection.json'
+    );
+
+    expect(
+      mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
+        fixture.template,
+        fixture.destination,
+        'markdown',
+        fixture.replay_bundle as never
+      )
+    ).toEqual({ ok: fixture.expected.ok, diagnostics: fixture.expected.diagnostics, policies: [] });
+
+    expect(
+      mergeMarkdownWithReviewedNestedOutputsFromReviewState(
+        fixture.template,
+        fixture.destination,
+        'markdown',
+        fixture.review_state as never
+      )
+    ).toEqual({
+      ok: fixture.expected_review_state.ok,
+      diagnostics: fixture.expected_review_state.diagnostics,
+      policies: []
+    });
+  });
 });
