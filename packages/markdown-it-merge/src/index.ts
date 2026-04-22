@@ -130,12 +130,7 @@ export function mergeMarkdown(
     };
   }
 
-  return mergeMarkdownWithSubstrate(
-    templateSource,
-    destinationSource,
-    dialect,
-    'kreuzberg-language-pack'
-  );
+  return mergeMarkdownWithSubstrate(templateSource, destinationSource, dialect);
 }
 
 export function mergeMarkdownWithReviewedNestedOutputs(
@@ -159,8 +154,7 @@ export function mergeMarkdownWithReviewedNestedOutputs(
     destinationSource,
     dialect,
     reviewState,
-    appliedChildren,
-    'kreuzberg-language-pack'
+    appliedChildren
   );
 }
 
@@ -184,8 +178,7 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
     templateSource,
     destinationSource,
     dialect,
-    replayBundle,
-    'kreuzberg-language-pack'
+    replayBundle
   );
 }
 
@@ -209,8 +202,7 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope(
     templateSource,
     destinationSource,
     dialect,
-    replayBundleEnvelope,
-    'kreuzberg-language-pack'
+    replayBundleEnvelope
   );
 }
 
@@ -234,8 +226,7 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
     templateSource,
     destinationSource,
     dialect,
-    reviewState,
-    'kreuzberg-language-pack'
+    reviewState
   );
 }
 
@@ -259,8 +250,7 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope(
     templateSource,
     destinationSource,
     dialect,
-    reviewStateEnvelope,
-    'kreuzberg-language-pack'
+    reviewStateEnvelope
   );
 }
 export { markdownFeatureProfile };

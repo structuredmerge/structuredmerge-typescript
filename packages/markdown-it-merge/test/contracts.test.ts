@@ -5,6 +5,8 @@ import {
   markdownBackendFeatureProfile,
   markdownFeatureProfile,
   markdownPlanContext,
+  mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope,
+  mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope,
   parseMarkdown
 } from '../src/index';
 
@@ -42,6 +44,38 @@ describe('markdown-it-merge contracts', () => {
     const result = parseMarkdown('# Title\n', 'markdown', 'kreuzberg-language-pack');
     expect(result.ok).toBe(false);
     expect(result.diagnostics).toEqual([
+      {
+        severity: 'error',
+        category: 'unsupported_feature',
+        message: 'Unsupported Markdown backend kreuzberg-language-pack.'
+      }
+    ]);
+
+    const replayEnvelopeResult = mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope(
+      '# Title\n',
+      '# Title\n',
+      'markdown',
+      {} as any,
+      'kreuzberg-language-pack'
+    );
+    expect(replayEnvelopeResult.ok).toBe(false);
+    expect(replayEnvelopeResult.diagnostics).toEqual([
+      {
+        severity: 'error',
+        category: 'unsupported_feature',
+        message: 'Unsupported Markdown backend kreuzberg-language-pack.'
+      }
+    ]);
+
+    const stateEnvelopeResult = mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope(
+      '# Title\n',
+      '# Title\n',
+      'markdown',
+      {} as any,
+      'kreuzberg-language-pack'
+    );
+    expect(stateEnvelopeResult.ok).toBe(false);
+    expect(stateEnvelopeResult.diagnostics).toEqual([
       {
         severity: 'error',
         category: 'unsupported_feature',
