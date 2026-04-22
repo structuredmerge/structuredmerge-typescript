@@ -211,6 +211,11 @@ export interface TemplateConvergenceResult {
   readonly pendingPaths: readonly string[];
 }
 
+export interface TemplateTreeRunResult {
+  readonly executionPlan: readonly TemplateExecutionPlanEntry[];
+  readonly applyResult: TemplateApplyResult;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -1142,6 +1147,35 @@ export function evaluateTemplateTreeConvergence(
   return {
     converged: pendingPaths.length === 0,
     pendingPaths
+  };
+}
+
+export function runTemplateTreeExecution(
+  templateSourcePaths: readonly string[],
+  templateContents: Readonly<Record<string, string>>,
+  destinationContents: Readonly<Record<string, string>>,
+  context: TemplateDestinationContext = {},
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = [],
+  replacements: Readonly<Record<string, string>> = {},
+  mergePreparedContent: (entry: TemplateExecutionPlanEntry) => MergeResult<string>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): TemplateTreeRunResult {
+  const executionPlan = planTemplateTreeExecution(
+    templateSourcePaths,
+    templateContents,
+    Object.keys(destinationContents).sort(),
+    destinationContents,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    config
+  );
+
+  return {
+    executionPlan,
+    applyResult: applyTemplateExecution(executionPlan, mergePreparedContent)
   };
 }
 
