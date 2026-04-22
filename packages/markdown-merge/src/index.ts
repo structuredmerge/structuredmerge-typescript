@@ -8,6 +8,7 @@ export type {
   MarkdownDialect,
   MarkdownEmbeddedFamilyCandidate,
   MarkdownFeatureProfile,
+  NestedChildOutput,
   MarkdownOwner,
   MarkdownOwnerKind,
   MarkdownOwnerMatch,
@@ -27,6 +28,7 @@ export {
   markdownManifestRolePaths,
   markdownPlanContext,
   mergeMarkdown,
+  mergeMarkdownWithNestedOutputs,
   matchMarkdownOwners,
   normalizeMarkdownSource,
   parseMarkdown

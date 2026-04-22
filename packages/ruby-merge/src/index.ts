@@ -3,6 +3,7 @@ export {
   availableRubyBackends,
   matchRubyOwners,
   mergeRuby,
+  mergeRubyWithNestedOutputs,
   parseRuby,
   rubyBackendFeatureProfile,
   rubyDelegatedChildOperations,
@@ -13,6 +14,7 @@ export {
 
 export type {
   AppliedChildOutput,
+  NestedChildOutput,
   RubyAnalysis,
   RubyBackend,
   RubyDialect,

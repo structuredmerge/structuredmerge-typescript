@@ -64,6 +64,11 @@ export interface AppliedChildOutput {
   readonly output: string;
 }
 
+export interface NestedChildOutput {
+  readonly surfaceAddress: string;
+  readonly output: string;
+}
+
 export interface MarkdownFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'markdown';
   readonly supportedDialects: readonly MarkdownDialect[];
@@ -398,6 +403,76 @@ export function applyMarkdownDelegatedChildOutputs(
     output: `${lines.join('\n').replace(/\n+$/, '')}\n`,
     policies: []
   };
+}
+
+export function mergeMarkdownWithNestedOutputs(
+  templateSource: string,
+  destinationSource: string,
+  dialect: MarkdownDialect,
+  nestedOutputs: readonly NestedChildOutput[],
+  backend?: MarkdownBackend
+): MergeResult<string> {
+  const merged = mergeMarkdown(templateSource, destinationSource, dialect, backend);
+  if (!merged.ok || !merged.output) {
+    return merged;
+  }
+
+  const analysis = parseMarkdown(merged.output, dialect, backend);
+  if (!analysis.ok || !analysis.analysis) {
+    return { ok: false, diagnostics: analysis.diagnostics, policies: [] };
+  }
+
+  const operations = markdownDelegatedChildOperations(analysis.analysis);
+  const operationsBySurfaceAddress = new Map(
+    operations.map((operation) => [operation.surface.address, operation] as const)
+  );
+
+  for (const nestedOutput of nestedOutputs) {
+    if (!operationsBySurfaceAddress.has(nestedOutput.surfaceAddress)) {
+      return {
+        ok: false,
+        diagnostics: [
+          configurationError(`missing delegated child surface ${nestedOutput.surfaceAddress}.`)
+        ],
+        policies: []
+      };
+    }
+  }
+
+  return applyMarkdownDelegatedChildOutputs(
+    merged.output,
+    operations,
+    {
+      entries: nestedOutputs.map((nestedOutput, index) => {
+        const operation = operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!;
+        const family =
+          typeof operation.surface.metadata?.family === 'string'
+            ? operation.surface.metadata.family
+            : 'markdown';
+        const requestId = `nested_markdown_child:${index}`;
+        return {
+          requestId,
+          family,
+          delegatedGroup: {
+            delegatedApplyGroup: requestId,
+            parentOperationId: operation.parentOperationId,
+            childOperationId: operation.operationId,
+            delegatedRuntimeSurfacePath: nestedOutput.surfaceAddress,
+            caseIds: [],
+            delegatedCaseIds: []
+          },
+          decision: {
+            requestId,
+            action: 'apply_delegated_child_group'
+          }
+        };
+      })
+    },
+    nestedOutputs.map((nestedOutput) => ({
+      operationId: operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!.operationId,
+      output: nestedOutput.output
+    }))
+  );
 }
 
 export function mergeMarkdown(

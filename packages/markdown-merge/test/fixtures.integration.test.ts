@@ -25,6 +25,7 @@ import {
   markdownPlanContext,
   matchMarkdownOwners,
   mergeMarkdown,
+  mergeMarkdownWithNestedOutputs,
   parseMarkdown
 } from '../src/index';
 
@@ -132,6 +133,19 @@ interface MarkdownDelegatedChildApplyOutputFixture {
   };
   readonly applied_children: Array<{
     readonly operation_id: string;
+    readonly output: string;
+  }>;
+  readonly expected: {
+    readonly ok: boolean;
+    readonly output: string;
+  };
+}
+
+interface MarkdownNestedMergeFixture {
+  readonly template: string;
+  readonly destination: string;
+  readonly nested_outputs: Array<{
+    readonly surface_address: string;
     readonly output: string;
   }>;
   readonly expected: {
@@ -805,6 +819,27 @@ describe('markdown-merge shared fixtures', () => {
       },
       fixture.applied_children.map((entry) => ({
         operationId: entry.operation_id,
+        output: entry.output
+      }))
+    );
+
+    expect(result.ok).toBe(fixture.expected.ok);
+    expect(result.output).toBe(fixture.expected.output);
+  });
+
+  it('conforms to the slice-290 nested merge fixture', () => {
+    const fixture = readFixture<MarkdownNestedMergeFixture>(
+      'markdown',
+      'slice-290-nested-merge',
+      'fenced-code-nested-merge.json'
+    );
+
+    const result = mergeMarkdownWithNestedOutputs(
+      fixture.template,
+      fixture.destination,
+      'markdown',
+      fixture.nested_outputs.map((entry) => ({
+        surfaceAddress: entry.surface_address,
         output: entry.output
       }))
     );

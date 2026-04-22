@@ -20,6 +20,7 @@ import {
   availableRubyBackends,
   matchRubyOwners,
   mergeRuby,
+  mergeRubyWithNestedOutputs,
   parseRuby,
   rubyBackendFeatureProfile,
   rubyDelegatedChildOperations,
@@ -114,6 +115,19 @@ interface RubyDelegatedChildApplyOutputFixture {
   };
   readonly applied_children: Array<{
     readonly operation_id: string;
+    readonly output: string;
+  }>;
+  readonly expected: {
+    readonly ok: boolean;
+    readonly output: string;
+  };
+}
+
+interface RubyNestedMergeFixture {
+  readonly template: string;
+  readonly destination: string;
+  readonly nested_outputs: Array<{
+    readonly surface_address: string;
     readonly output: string;
   }>;
   readonly expected: {
@@ -710,6 +724,27 @@ describe('ruby-merge shared fixtures', () => {
 
     expect(applyOutputResult.ok).toBe(applyOutputFixture.expected.ok);
     expect(applyOutputResult.output).toBe(applyOutputFixture.expected.output);
+  });
+
+  it('conforms to the slice-291 nested merge fixture', () => {
+    const fixture = readFixture<RubyNestedMergeFixture>(
+      'ruby',
+      'slice-291-nested-merge',
+      'yard-example-nested-merge.json'
+    );
+
+    const result = mergeRubyWithNestedOutputs(
+      fixture.template,
+      fixture.destination,
+      'ruby',
+      fixture.nested_outputs.map((entry) => ({
+        surfaceAddress: entry.surface_address,
+        output: entry.output
+      }))
+    );
+
+    expect(result.ok).toBe(fixture.expected.ok);
+    expect(result.output).toBe(fixture.expected.output);
   });
 
   it('conforms to the Ruby family backend and plan-context fixtures', () => {

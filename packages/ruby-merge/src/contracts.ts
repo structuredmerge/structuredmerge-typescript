@@ -55,6 +55,11 @@ export interface AppliedChildOutput {
   readonly output: string;
 }
 
+export interface NestedChildOutput {
+  readonly surfaceAddress: string;
+  readonly output: string;
+}
+
 export type RubyBackend = 'kreuzberg-language-pack';
 
 const destinationWinsArrayPolicy: PolicyReference = {
@@ -268,6 +273,71 @@ export function applyRubyDelegatedChildOutputs(
     output: `${lines.join('\n').replace(/\n+$/, '')}\n`,
     policies: [destinationWinsArrayPolicy]
   };
+}
+
+export function mergeRubyWithNestedOutputs(
+  templateSource: string,
+  destinationSource: string,
+  dialect: RubyDialect,
+  nestedOutputs: readonly NestedChildOutput[]
+): MergeResult<string> {
+  const merged = mergeRuby(templateSource, destinationSource, dialect);
+  if (!merged.ok || !merged.output) {
+    return merged;
+  }
+
+  const analysis = parseRuby(merged.output, dialect);
+  if (!analysis.ok || !analysis.analysis) {
+    return { ok: false, diagnostics: analysis.diagnostics, policies: [] };
+  }
+
+  const operations = rubyDelegatedChildOperations(analysis.analysis);
+  const operationsBySurfaceAddress = new Map(
+    operations.map((operation) => [operation.surface.address, operation] as const)
+  );
+
+  for (const nestedOutput of nestedOutputs) {
+    if (!operationsBySurfaceAddress.has(nestedOutput.surfaceAddress)) {
+      return {
+        ok: false,
+        diagnostics: [
+          configurationError(`missing delegated child surface ${nestedOutput.surfaceAddress}.`)
+        ],
+        policies: []
+      };
+    }
+  }
+
+  return applyRubyDelegatedChildOutputs(
+    merged.output,
+    operations,
+    {
+      entries: nestedOutputs.map((nestedOutput, index) => {
+        const operation = operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!;
+        const requestId = `nested_ruby_child:${index}`;
+        return {
+          requestId,
+          family: 'ruby',
+          delegatedGroup: {
+            delegatedApplyGroup: requestId,
+            parentOperationId: operation.parentOperationId,
+            childOperationId: operation.operationId,
+            delegatedRuntimeSurfacePath: nestedOutput.surfaceAddress,
+            caseIds: [],
+            delegatedCaseIds: []
+          },
+          decision: {
+            requestId,
+            action: 'apply_delegated_child_group'
+          }
+        };
+      })
+    },
+    nestedOutputs.map((nestedOutput) => ({
+      operationId: operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!.operationId,
+      output: nestedOutput.output
+    }))
+  );
 }
 
 function analyzeRubyDocument(source: string): RubyAnalysis {
