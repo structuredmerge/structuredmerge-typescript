@@ -79,6 +79,8 @@ import {
   classifyTemplateTargetPath,
   resolveTemplateDestinationPath,
   templateTokenKeys,
+  prepareTemplateEntries,
+  planTemplateExecution,
   selectTemplateStrategy,
   planTemplateEntries,
   enrichTemplatePlanEntries,
@@ -256,6 +258,37 @@ interface TemplateEntryTokenStateFixture {
       token_resolution_required: boolean;
       blocked: boolean;
       block_reason: 'unresolved_tokens' | null;
+    }
+  >;
+}
+
+interface TemplateEntryPreparedContentFixture {
+  planned_entries: TemplateEntryTokenStateFixture['expected_entries'];
+  template_contents: Record<string, string>;
+  replacements: Record<string, string>;
+  expected_entries: Array<
+    TemplateEntryTokenStateFixture['expected_entries'][number] & {
+      template_content: string;
+      prepared_template_content: string | null;
+      preparation_action: 'blocked' | 'resolve_tokens' | 'pass_through';
+    }
+  >;
+}
+
+interface TemplateExecutionPlanFixture {
+  prepared_entries: TemplateEntryPreparedContentFixture['expected_entries'];
+  destination_contents: Record<string, string>;
+  expected_entries: Array<
+    TemplateEntryPreparedContentFixture['expected_entries'][number] & {
+      execution_action:
+        | 'blocked'
+        | 'omit'
+        | 'keep'
+        | 'raw_copy'
+        | 'write_prepared_content'
+        | 'merge_prepared_content';
+      ready: boolean;
+      destination_content: string | null;
     }
   >;
 }
@@ -1978,6 +2011,137 @@ describe('ast-merge shared fixtures', () => {
         token_resolution_required: entry.tokenResolutionRequired,
         blocked: entry.blocked,
         block_reason: entry.blockReason ?? null
+      }))
+    ).toEqual(fixture.expected_entries);
+  });
+
+  it('conforms to the template entry prepared content fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateEntryPreparedContentFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_entry_prepared_content') ??
+        []) as string[])
+    );
+
+    const actual = prepareTemplateEntries(
+      fixture.planned_entries.map((entry) => ({
+        templateSourcePath: entry.template_source_path,
+        logicalDestinationPath: entry.logical_destination_path,
+        destinationPath: entry.destination_path ?? undefined,
+        classification: {
+          destinationPath: entry.classification.destination_path,
+          fileType: entry.classification.file_type,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destinationExists: entry.destination_exists,
+        writeAction: entry.write_action,
+        tokenKeys: entry.token_keys,
+        unresolvedTokenKeys: entry.unresolved_token_keys,
+        tokenResolutionRequired: entry.token_resolution_required,
+        blocked: entry.blocked,
+        blockReason: entry.block_reason ?? undefined
+      })),
+      fixture.template_contents,
+      fixture.replacements
+    );
+
+    expect(
+      actual.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        classification: {
+          destination_path: entry.classification.destinationPath,
+          file_type: entry.classification.fileType,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destination_exists: entry.destinationExists,
+        write_action: entry.writeAction,
+        token_keys: entry.tokenKeys,
+        unresolved_token_keys: entry.unresolvedTokenKeys,
+        token_resolution_required: entry.tokenResolutionRequired,
+        blocked: entry.blocked,
+        block_reason: entry.blockReason ?? null,
+        template_content: entry.templateContent,
+        prepared_template_content: entry.preparedTemplateContent ?? null,
+        preparation_action: entry.preparationAction
+      }))
+    ).toEqual(fixture.expected_entries);
+  });
+
+  it('conforms to the template execution plan fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateExecutionPlanFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_execution_plan') ??
+        []) as string[])
+    );
+
+    const actual = planTemplateExecution(
+      fixture.prepared_entries.map((entry) => ({
+        templateSourcePath: entry.template_source_path,
+        logicalDestinationPath: entry.logical_destination_path,
+        destinationPath: entry.destination_path ?? undefined,
+        classification: {
+          destinationPath: entry.classification.destination_path,
+          fileType: entry.classification.file_type,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destinationExists: entry.destination_exists,
+        writeAction: entry.write_action,
+        tokenKeys: entry.token_keys,
+        unresolvedTokenKeys: entry.unresolved_token_keys,
+        tokenResolutionRequired: entry.token_resolution_required,
+        blocked: entry.blocked,
+        blockReason: entry.block_reason ?? undefined,
+        templateContent: entry.template_content,
+        preparedTemplateContent: entry.prepared_template_content ?? undefined,
+        preparationAction: entry.preparation_action
+      })),
+      fixture.destination_contents
+    );
+
+    expect(
+      actual.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        classification: {
+          destination_path: entry.classification.destinationPath,
+          file_type: entry.classification.fileType,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destination_exists: entry.destinationExists,
+        write_action: entry.writeAction,
+        token_keys: entry.tokenKeys,
+        unresolved_token_keys: entry.unresolvedTokenKeys,
+        token_resolution_required: entry.tokenResolutionRequired,
+        blocked: entry.blocked,
+        block_reason: entry.blockReason ?? null,
+        template_content: entry.templateContent,
+        prepared_template_content: entry.preparedTemplateContent ?? null,
+        preparation_action: entry.preparationAction,
+        execution_action: entry.executionAction,
+        ready: entry.ready,
+        destination_content: entry.destinationContent ?? null
       }))
     ).toEqual(fixture.expected_entries);
   });

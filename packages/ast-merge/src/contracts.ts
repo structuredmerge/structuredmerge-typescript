@@ -171,6 +171,28 @@ export interface TemplatePlanTokenStateEntry extends TemplatePlanStateEntry {
   readonly blockReason?: TemplatePlanBlockReason;
 }
 
+export type TemplatePreparationAction = 'blocked' | 'resolve_tokens' | 'pass_through';
+
+export interface TemplatePreparedEntry extends TemplatePlanTokenStateEntry {
+  readonly templateContent: string;
+  readonly preparedTemplateContent?: string;
+  readonly preparationAction: TemplatePreparationAction;
+}
+
+export type TemplateExecutionAction =
+  | 'blocked'
+  | 'omit'
+  | 'keep'
+  | 'raw_copy'
+  | 'write_prepared_content'
+  | 'merge_prepared_content';
+
+export interface TemplateExecutionPlanEntry extends TemplatePreparedEntry {
+  readonly executionAction: TemplateExecutionAction;
+  readonly ready: boolean;
+  readonly destinationContent?: string;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -724,6 +746,24 @@ export function unresolvedTemplateTokenKeys(
   return templateTokenKeys(content, config).filter((key) => !(key in replacements));
 }
 
+export function resolveTemplateTokens(
+  content: string,
+  replacements: Readonly<Record<string, string>>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): string {
+  let resolved = content;
+  for (const key of templateTokenKeys(content, config)) {
+    const replacement = replacements[key];
+    if (replacement === undefined) {
+      continue;
+    }
+
+    resolved = resolved.split(`${config.pre}${key}${config.post}`).join(replacement);
+  }
+
+  return resolved;
+}
+
 export function selectTemplateStrategy(
   path: string,
   defaultStrategy: TemplateStrategy = 'merge',
@@ -803,6 +843,71 @@ export function enrichTemplatePlanEntriesWithTokenState(
       tokenResolutionRequired,
       blocked,
       blockReason: blocked ? 'unresolved_tokens' : undefined
+    };
+  });
+}
+
+export function prepareTemplateEntries(
+  entries: readonly TemplatePlanTokenStateEntry[],
+  templateContents: Readonly<Record<string, string>>,
+  replacements: Readonly<Record<string, string>>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): readonly TemplatePreparedEntry[] {
+  return entries.map((entry) => {
+    const templateContent = templateContents[entry.templateSourcePath] ?? '';
+    if (entry.blocked) {
+      return {
+        ...entry,
+        templateContent,
+        preparedTemplateContent: undefined,
+        preparationAction: 'blocked'
+      };
+    }
+
+    if (entry.tokenResolutionRequired) {
+      return {
+        ...entry,
+        templateContent,
+        preparedTemplateContent: resolveTemplateTokens(templateContent, replacements, config),
+        preparationAction: 'resolve_tokens'
+      };
+    }
+
+    return {
+      ...entry,
+      templateContent,
+      preparedTemplateContent: templateContent,
+      preparationAction: 'pass_through'
+    };
+  });
+}
+
+export function planTemplateExecution(
+  entries: readonly TemplatePreparedEntry[],
+  destinationContents: Readonly<Record<string, string>>
+): readonly TemplateExecutionPlanEntry[] {
+  return entries.map((entry) => {
+    const destinationContent =
+      entry.destinationPath === undefined ? undefined : destinationContents[entry.destinationPath];
+    const executionAction: TemplateExecutionAction = entry.blocked
+      ? 'blocked'
+      : entry.destinationPath === undefined
+        ? 'omit'
+        : entry.writeAction === 'keep'
+          ? 'keep'
+          : entry.strategy === 'raw_copy'
+            ? 'raw_copy'
+            : entry.strategy === 'accept_template'
+              ? 'write_prepared_content'
+              : 'merge_prepared_content';
+    const ready =
+      executionAction !== 'blocked' && executionAction !== 'omit' && executionAction !== 'keep';
+
+    return {
+      ...entry,
+      executionAction,
+      ready,
+      destinationContent
     };
   });
 }
