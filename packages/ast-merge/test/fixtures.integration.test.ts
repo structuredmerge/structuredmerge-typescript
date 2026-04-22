@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
+import { mergeToml } from '../../toml-merge/src/index';
+import { mergeRuby } from '../../ruby-merge/src/index';
 import type {
   ConformanceCaseRef,
   ConformanceCaseRun,
@@ -143,6 +145,7 @@ import {
 // diagnosticsFixturePath('mini_template_tree_run')
 // diagnosticsFixturePath('mini_template_tree_run_report')
 // diagnosticsFixturePath('mini_template_tree_family_merge_callback')
+// diagnosticsFixturePath('mini_template_tree_multi_family_merge_callback')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
 
@@ -418,6 +421,9 @@ interface MiniTemplateTreeFamilyMergeCallbackFixture {
     apply_result: MiniTemplateTreeApplyFixture['expected_result'];
   };
 }
+
+interface MiniTemplateTreeMultiFamilyMergeCallbackFixture
+  extends MiniTemplateTreeFamilyMergeCallbackFixture {}
 
 function readRelativeFileTree(rootPath: string): Record<string, string> {
   const files: Record<string, string> = {};
@@ -2703,6 +2709,102 @@ describe('ast-merge shared fixtures', () => {
           ],
           policies: []
         };
+      }
+    );
+
+    expect({
+      execution_plan: actual.executionPlan.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        classification: {
+          destination_path: entry.classification.destinationPath,
+          file_type: entry.classification.fileType,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destination_exists: entry.destinationExists,
+        write_action: entry.writeAction,
+        token_keys: entry.tokenKeys,
+        unresolved_token_keys: entry.unresolvedTokenKeys,
+        token_resolution_required: entry.tokenResolutionRequired,
+        blocked: entry.blocked,
+        block_reason: entry.blockReason ?? null,
+        template_content: entry.templateContent,
+        prepared_template_content: entry.preparedTemplateContent ?? null,
+        preparation_action: entry.preparationAction,
+        execution_action: entry.executionAction,
+        ready: entry.ready,
+        destination_content: entry.destinationContent ?? null
+      })),
+      apply_result: {
+        result_files: actual.applyResult.resultFiles,
+        created_paths: actual.applyResult.createdPaths,
+        updated_paths: actual.applyResult.updatedPaths,
+        kept_paths: actual.applyResult.keptPaths,
+        blocked_paths: actual.applyResult.blockedPaths,
+        omitted_paths: actual.applyResult.omittedPaths,
+        diagnostics: actual.applyResult.diagnostics
+      }
+    }).toEqual({
+      execution_plan: fixture.expected.execution_plan,
+      apply_result: {
+        ...fixture.expected.apply_result,
+        diagnostics: fixture.expected.apply_result.diagnostics.map((diagnostic) =>
+          normalizeDiagnostic(diagnostic)
+        )
+      }
+    });
+  });
+
+  it('conforms to the mini template tree multi-family merge callback fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_multi_family_merge_callback'
+    ) ?? []) as string[];
+    const fixture = readFixture<MiniTemplateTreeMultiFamilyMergeCallbackFixture>(...fixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...fixturePath.slice(0, -1));
+    const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
+    const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
+    const templateSourcePaths = Object.keys(templateContents).sort();
+
+    const actual = runTemplateTreeExecution(
+      templateSourcePaths,
+      templateContents,
+      destinationContents,
+      { projectName: fixture.context.project_name },
+      fixture.default_strategy,
+      fixture.overrides,
+      fixture.replacements,
+      (entry) => {
+        switch (entry.classification.family) {
+          case 'markdown':
+            return mergeMarkdown(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'markdown');
+          case 'toml':
+            return mergeToml(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'toml');
+          case 'ruby':
+            return mergeRuby(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'ruby');
+          default:
+            return {
+              ok: false,
+              diagnostics: [
+                normalizeDiagnostic({
+                  severity: 'error',
+                  category: 'configuration_error',
+                  message: `missing family merge adapter for ${entry.classification.family}`
+                })
+              ],
+              policies: []
+            };
+        }
       }
     );
 
