@@ -325,6 +325,7 @@ export interface NestedMergeExecutionCallbacks<TOutput> {
 export interface ReviewReplayBundle {
   readonly replayContext: ReviewReplayContext;
   readonly decisions: readonly ReviewDecision[];
+  readonly reviewedNestedExecutions?: readonly ReviewedNestedExecution[];
 }
 
 export const REVIEW_TRANSPORT_VERSION = 1;
@@ -385,6 +386,7 @@ export interface ConformanceManifestReviewState {
   readonly appliedDecisions: readonly ReviewDecision[];
   readonly hostHints: ReviewHostHints;
   readonly replayContext: ReviewReplayContext;
+  readonly reviewedNestedExecutions?: readonly ReviewedNestedExecution[];
 }
 
 export interface ConformanceSuiteSummary {
@@ -872,17 +874,20 @@ export function reviewReplayContextCompatible(
 export function reviewReplayBundleInputs(options: ConformanceManifestReviewOptions): {
   replayContext?: ReviewReplayContext;
   decisions: readonly ReviewDecision[];
+  reviewedNestedExecutions: readonly ReviewedNestedExecution[];
 } {
   if (options.reviewReplayBundle) {
     return {
       replayContext: options.reviewReplayBundle.replayContext,
-      decisions: options.reviewReplayBundle.decisions
+      decisions: options.reviewReplayBundle.decisions,
+      reviewedNestedExecutions: options.reviewReplayBundle.reviewedNestedExecutions ?? []
     };
   }
 
   return {
     replayContext: options.reviewReplayContext,
-    decisions: options.reviewDecisions ?? []
+    decisions: options.reviewDecisions ?? [],
+    reviewedNestedExecutions: []
   };
 }
 
@@ -1737,6 +1742,7 @@ export function reviewConformanceManifest(
   const diagnostics: Diagnostic[] = [];
   let effectiveOptions: ConformanceManifestReviewOptions = options;
   const replayInputs = reviewReplayBundleInputs(options);
+  let reviewedNestedExecutions = [...replayInputs.reviewedNestedExecutions];
 
   if (replayInputs.decisions.length > 0) {
     if (!replayInputs.replayContext) {
@@ -1751,6 +1757,7 @@ export function reviewConformanceManifest(
         reviewReplayContext: undefined,
         reviewDecisions: []
       };
+      reviewedNestedExecutions = [];
     } else if (!reviewReplayContextCompatible(replayContext, replayInputs.replayContext)) {
       diagnostics.push({
         severity: 'error',
@@ -1763,6 +1770,7 @@ export function reviewConformanceManifest(
         reviewReplayContext: undefined,
         reviewDecisions: []
       };
+      reviewedNestedExecutions = [];
     } else {
       const allowedRequestIds = new Set(conformanceManifestReviewRequestIds(manifest, options));
       const acceptedDecisions: ReviewDecision[] = [];
@@ -1846,7 +1854,10 @@ export function reviewConformanceManifest(
     requests,
     appliedDecisions,
     hostHints: conformanceReviewHostHints(options),
-    replayContext
+    replayContext,
+    ...(reviewedNestedExecutions.length > 0
+      ? { reviewedNestedExecutions }
+      : {})
   };
 }
 

@@ -767,6 +767,7 @@ interface ReviewReplayBundleFixture {
         };
       };
     }>;
+    reviewed_nested_executions?: ReviewedNestedExecutionFixture['execution'][];
   };
 }
 
@@ -1128,6 +1129,7 @@ function normalizeManifestReviewOptions(raw: {
         };
       };
     }>;
+    reviewed_nested_executions?: ReviewedNestedExecutionFixture['execution'][];
   };
 }): ConformanceManifestReviewOptions {
   return {
@@ -1146,6 +1148,9 @@ function normalizeManifestReviewOptions(raw: {
           replayContext: normalizeReviewReplayContext(raw.review_replay_bundle.replay_context),
           decisions: raw.review_replay_bundle.decisions.map((decision) =>
             normalizeReviewDecision(decision)
+          ),
+          reviewedNestedExecutions: raw.review_replay_bundle.reviewed_nested_executions?.map(
+            (execution) => normalizeReviewedNestedExecution(execution)
           )
         }
       : undefined
@@ -1281,6 +1286,7 @@ function normalizeManifestReviewState(raw: {
     families: string[];
     require_explicit_contexts: boolean;
   };
+  reviewed_nested_executions?: ReviewedNestedExecutionFixture['execution'][];
 }): ConformanceManifestReviewState {
   return {
     report: normalizeSuiteReportEnvelope(raw.report),
@@ -1288,7 +1294,14 @@ function normalizeManifestReviewState(raw: {
     requests: raw.requests.map((request) => normalizeReviewRequest(request)),
     appliedDecisions: raw.applied_decisions.map((decision) => normalizeReviewDecision(decision)),
     hostHints: normalizeReviewHostHints(raw.host_hints),
-    replayContext: normalizeReviewReplayContext(raw.replay_context)
+    replayContext: normalizeReviewReplayContext(raw.replay_context),
+    ...(raw.reviewed_nested_executions
+      ? {
+          reviewedNestedExecutions: raw.reviewed_nested_executions.map((execution) =>
+            normalizeReviewedNestedExecution(execution)
+          )
+        }
+      : {})
   };
 }
 
@@ -3568,6 +3581,29 @@ describe('ast-merge shared fixtures', () => {
       replayContext: normalizeReviewReplayContext(fixture.replay_bundle.replay_context),
       decisions: fixture.replay_bundle.decisions.map((decision) =>
         normalizeReviewDecision(decision)
+      ),
+      reviewedNestedExecutions: []
+    });
+  });
+
+  it('conforms to the slice-305 review replay bundle reviewed nested executions fixture', () => {
+    const fixture = readFixture<ReviewReplayBundleFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_reviewed_nested_executions')
+    );
+
+    expect(
+      reviewReplayBundleInputs(
+        normalizeManifestReviewOptions({
+          review_replay_bundle: fixture.replay_bundle
+        })
+      )
+    ).toEqual({
+      replayContext: normalizeReviewReplayContext(fixture.replay_bundle.replay_context),
+      decisions: fixture.replay_bundle.decisions.map((decision) =>
+        normalizeReviewDecision(decision)
+      ),
+      reviewedNestedExecutions: (fixture.replay_bundle.reviewed_nested_executions ?? []).map(
+        (execution) => normalizeReviewedNestedExecution(execution)
       )
     });
   });
@@ -3964,6 +4000,23 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-79 explicit review replay bundle application fixture', () => {
     const fixture = readFixture<ConformanceManifestReviewStateFixture>(
       ...diagnosticsFixturePath('explicit_review_replay_bundle_application')
+    );
+
+    expect(
+      reviewConformanceManifest(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-306 review state reviewed nested executions fixture', () => {
+    const fixture = readFixture<ConformanceManifestReviewStateFixture>(
+      ...diagnosticsFixturePath('review_state_reviewed_nested_executions')
     );
 
     expect(
