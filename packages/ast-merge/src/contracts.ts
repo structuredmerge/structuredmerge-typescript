@@ -365,6 +365,11 @@ export interface ReviewedNestedExecutionApplication<TOutput> {
   readonly results: readonly ReviewedNestedExecutionResult<TOutput>[];
 }
 
+export interface ConformanceManifestReviewedNestedApplication<TOutput> {
+  readonly state: ConformanceManifestReviewState;
+  readonly results: readonly ReviewedNestedExecutionResult<TOutput>[];
+}
+
 export interface ReviewedNestedExecutionEnvelope {
   readonly kind: 'reviewed_nested_execution';
   readonly version: typeof REVIEW_TRANSPORT_VERSION;
@@ -2004,6 +2009,29 @@ export function reviewConformanceManifestWithReplayBundleEnvelope(
         message: imported.error!.message
       }
     ]
+  };
+}
+
+export function reviewAndExecuteConformanceManifestWithReplayBundleEnvelope<TOutput>(
+  manifest: ConformanceManifest,
+  options: ConformanceManifestReviewOptions,
+  replayBundleEnvelope: unknown,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution,
+  callbacksForExecution: (
+    execution: ReviewedNestedExecution,
+    index: number
+  ) => NestedMergeExecutionCallbacks<TOutput>
+): ConformanceManifestReviewedNestedApplication<TOutput> {
+  const state = reviewConformanceManifestWithReplayBundleEnvelope(
+    manifest,
+    options,
+    replayBundleEnvelope,
+    execute
+  );
+
+  return {
+    state,
+    results: executeReviewStateReviewedNestedExecutions(state, callbacksForExecution)
   };
 }
 

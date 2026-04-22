@@ -13,6 +13,7 @@ import type {
   ConformanceManifestPlanningOptions,
   ConformanceManifestReport,
   ConformanceManifestReviewOptions,
+  ConformanceManifestReviewedNestedApplication,
   ConformanceManifestReviewState,
   ConformanceManifestReviewStateEnvelope,
   NamedConformanceSuiteReport,
@@ -91,6 +92,7 @@ import {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  reviewAndExecuteConformanceManifestWithReplayBundleEnvelope,
   reviewConformanceManifestWithReplayBundleEnvelope,
   importConformanceManifestReviewStateEnvelope,
   importReviewedNestedExecutionEnvelope,
@@ -889,6 +891,25 @@ interface ReviewedNestedExecutionEnvelopeApplicationFixture {
   };
   expected_application: {
     diagnostics: DiagnosticFixtureEntry[];
+    results: ReviewedNestedExecutionApplicationFixture['expected_results'];
+  };
+}
+
+interface ReviewedNestedManifestApplicationFixture {
+  manifest: ConformanceManifest;
+  options: ConformanceManifestReviewOptions;
+  executions: Record<string, ConformanceCaseExecution>;
+  review_replay_bundle_envelope?: unknown;
+  cases?: Array<{
+    name: string;
+    review_replay_bundle_envelope: unknown;
+    expected_state: ConformanceManifestReviewStateFixture['expected_state'];
+    expected_application: {
+      results: ReviewedNestedExecutionApplicationFixture['expected_results'];
+    };
+  }>;
+  expected_state?: ConformanceManifestReviewStateFixture['expected_state'];
+  expected_application?: {
     results: ReviewedNestedExecutionApplicationFixture['expected_results'];
   };
 }
@@ -4398,6 +4419,91 @@ describe('ast-merge shared fixtures', () => {
       ).toEqual({
         diagnostics: fixtureCase.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
         results: []
+      });
+    }
+  });
+
+  it('conforms to the slice-324 review replay bundle envelope reviewed nested manifest application fixture', () => {
+    const fixture = readFixture<ReviewedNestedManifestApplicationFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
+    );
+
+    const application = reviewAndExecuteConformanceManifestWithReplayBundleEnvelope(
+      fixture.manifest,
+      normalizeManifestReviewOptions(fixture.options as never),
+      normalizeReviewReplayBundleEnvelope(fixture.review_replay_bundle_envelope as never),
+      (run) => {
+        const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+        return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+      },
+      (execution, index) =>
+        reviewedNestedExecutionCallbacks(
+          execution,
+          fixture.expected_application!.results[index]!.result.output!
+        )
+    );
+
+    expect({
+      state: application.state,
+      results: application.results.map((run) => ({
+        execution_family: run.execution.family,
+        result: run.result
+      }))
+    }).toEqual({
+      state: normalizeManifestReviewState(fixture.expected_state as never),
+      results: fixture.expected_application!.results.map((entry) => ({
+        execution_family: entry.execution_family,
+        result: {
+          ok: entry.result.ok,
+          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          output: entry.result.output,
+          policies: entry.result.policies
+        }
+      }))
+    } satisfies ConformanceManifestReviewedNestedApplication<string> & {
+      results: Array<{ execution_family: string; result: MergeResult<string> }>;
+    });
+  });
+
+  it('conforms to the slice-325 review replay bundle envelope reviewed nested manifest rejection fixture', () => {
+    const fixture = readFixture<ReviewedNestedManifestApplicationFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_rejection')
+    );
+
+    for (const fixtureCase of fixture.cases!) {
+      expect(
+        reviewAndExecuteConformanceManifestWithReplayBundleEnvelope(
+          fixture.manifest,
+          normalizeManifestReviewOptions(fixture.options as never),
+          normalizeReviewReplayBundleEnvelope(fixtureCase.review_replay_bundle_envelope as never),
+          (run) => {
+            const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+            return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+          },
+          () => {
+            throw new Error('callbacks should not run for rejected replay bundle envelopes');
+          }
+        )
+      ).toEqual({
+        state: normalizeManifestReviewState(fixtureCase.expected_state as never),
+        results: fixtureCase.expected_application.results.map((entry) => ({
+          execution: {
+            family: entry.execution_family,
+            reviewState: {
+              requests: [],
+              acceptedGroups: [],
+              appliedDecisions: [],
+              diagnostics: []
+            },
+            appliedChildren: []
+          },
+          result: {
+            ok: entry.result.ok,
+            diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+            output: entry.result.output,
+            policies: entry.result.policies
+          }
+        }))
       });
     }
   });
