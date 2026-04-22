@@ -283,6 +283,28 @@ export interface DelegatedChildApplyPlan {
   readonly entries: readonly DelegatedChildApplyPlanEntry[];
 }
 
+export interface DelegatedChildSurfaceOutput {
+  readonly surfaceAddress: string;
+  readonly output: string;
+}
+
+export interface AppliedDelegatedChildOutput {
+  readonly operationId: string;
+  readonly output: string;
+}
+
+export interface DelegatedChildOutputResolutionOptions {
+  readonly defaultFamily: string;
+  readonly requestIdPrefix: string;
+}
+
+export interface DelegatedChildOutputResolution {
+  readonly ok: boolean;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly applyPlan?: DelegatedChildApplyPlan;
+  readonly appliedChildren?: readonly AppliedDelegatedChildOutput[];
+}
+
 export interface ReviewReplayBundle {
   readonly replayContext: ReviewReplayContext;
   readonly decisions: readonly ReviewDecision[];
@@ -621,15 +643,82 @@ export function delegatedChildApplyPlan(
   };
 }
 
+export function resolveDelegatedChildOutputs(
+  operations: readonly DelegatedChildOperation[],
+  nestedOutputs: readonly DelegatedChildSurfaceOutput[],
+  options: DelegatedChildOutputResolutionOptions
+): DelegatedChildOutputResolution {
+  const operationsBySurfaceAddress = new Map(
+    operations.map((operation) => [operation.surface.address, operation] as const)
+  );
+
+  for (const nestedOutput of nestedOutputs) {
+    if (!operationsBySurfaceAddress.has(nestedOutput.surfaceAddress)) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            severity: 'error',
+            category: 'configuration_error',
+            message: `missing delegated child surface ${nestedOutput.surfaceAddress}.`
+          }
+        ]
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    diagnostics: [],
+    applyPlan: {
+      entries: nestedOutputs.map((nestedOutput, index) => {
+        const operation = operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!;
+        const requestId = `${options.requestIdPrefix}:${index}`;
+        const family =
+          typeof operation.surface.metadata?.family === 'string'
+            ? operation.surface.metadata.family
+            : options.defaultFamily;
+        return {
+          requestId,
+          family,
+          delegatedGroup: {
+            delegatedApplyGroup: requestId,
+            parentOperationId: operation.parentOperationId,
+            childOperationId: operation.operationId,
+            delegatedRuntimeSurfacePath: nestedOutput.surfaceAddress,
+            caseIds: [],
+            delegatedCaseIds: []
+          },
+          decision: {
+            requestId,
+            action: 'apply_delegated_child_group'
+          }
+        };
+      })
+    },
+    appliedChildren: nestedOutputs.map((nestedOutput) => ({
+      operationId: operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!.operationId,
+      output: nestedOutput.output
+    }))
+  };
+}
+
 export function conformanceManifestReplayContext(
   manifest: ConformanceManifest,
   options: ConformanceManifestReviewOptions
 ): ReviewReplayContext {
-  const families = Array.from(
-    new Set(
-      conformanceSuiteSelectors(manifest).map((suiteSelector) => suiteSelector.subject.grammar)
-    )
-  ).sort((left, right) => left.localeCompare(right));
+  const families: string[] = [];
+  const seen = new Set<string>();
+  for (const suiteSelector of conformanceSuiteSelectors(manifest)) {
+    const definition = conformanceSuiteDefinition(manifest, suiteSelector);
+    const family = definition?.subject.grammar;
+    if (!family || seen.has(family)) {
+      continue;
+    }
+
+    seen.add(family);
+    families.push(family);
+  }
 
   return {
     surface: 'conformance_manifest',

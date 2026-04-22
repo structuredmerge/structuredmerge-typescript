@@ -1,14 +1,17 @@
 import type {
   ConformanceFamilyPlanContext,
   DelegatedChildApplyPlan,
+  AppliedDelegatedChildOutput,
   ConformanceManifest,
   DelegatedChildOperation,
+  DelegatedChildSurfaceOutput,
   DiscoveredSurface,
   Diagnostic,
   FamilyFeatureProfile,
   MergeResult,
   ParseResult
 } from '@structuredmerge/ast-merge';
+import { resolveDelegatedChildOutputs } from '@structuredmerge/ast-merge';
 import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
@@ -423,55 +426,23 @@ export function mergeMarkdownWithNestedOutputs(
   }
 
   const operations = markdownDelegatedChildOperations(analysis.analysis);
-  const operationsBySurfaceAddress = new Map(
-    operations.map((operation) => [operation.surface.address, operation] as const)
-  );
-
-  for (const nestedOutput of nestedOutputs) {
-    if (!operationsBySurfaceAddress.has(nestedOutput.surfaceAddress)) {
-      return {
-        ok: false,
-        diagnostics: [
-          configurationError(`missing delegated child surface ${nestedOutput.surfaceAddress}.`)
-        ],
-        policies: []
-      };
+  const resolved = resolveDelegatedChildOutputs(
+    operations,
+    nestedOutputs as readonly DelegatedChildSurfaceOutput[],
+    {
+      defaultFamily: 'markdown',
+      requestIdPrefix: 'nested_markdown_child'
     }
+  );
+  if (!resolved.ok || !resolved.applyPlan || !resolved.appliedChildren) {
+    return { ok: false, diagnostics: resolved.diagnostics, policies: [] };
   }
 
   return applyMarkdownDelegatedChildOutputs(
     merged.output,
     operations,
-    {
-      entries: nestedOutputs.map((nestedOutput, index) => {
-        const operation = operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!;
-        const family =
-          typeof operation.surface.metadata?.family === 'string'
-            ? operation.surface.metadata.family
-            : 'markdown';
-        const requestId = `nested_markdown_child:${index}`;
-        return {
-          requestId,
-          family,
-          delegatedGroup: {
-            delegatedApplyGroup: requestId,
-            parentOperationId: operation.parentOperationId,
-            childOperationId: operation.operationId,
-            delegatedRuntimeSurfacePath: nestedOutput.surfaceAddress,
-            caseIds: [],
-            delegatedCaseIds: []
-          },
-          decision: {
-            requestId,
-            action: 'apply_delegated_child_group'
-          }
-        };
-      })
-    },
-    nestedOutputs.map((nestedOutput) => ({
-      operationId: operationsBySurfaceAddress.get(nestedOutput.surfaceAddress)!.operationId,
-      output: nestedOutput.output
-    }))
+    resolved.applyPlan as DelegatedChildApplyPlan,
+    resolved.appliedChildren as readonly AppliedDelegatedChildOutput[]
   );
 }
 

@@ -26,6 +26,8 @@ import type {
   ConformanceSuiteReport,
   ConformanceSuiteSummary,
   DelegatedChildOperation,
+  DelegatedChildOutputResolution,
+  DelegatedChildSurfaceOutput,
   DiagnosticCategory,
   DiagnosticSeverity,
   DiscoveredSurface,
@@ -54,6 +56,7 @@ import {
   conformanceManifestReviewRequestIds,
   conformanceReviewHostHints,
   delegatedChildApplyPlan,
+  resolveDelegatedChildOutputs,
   groupProjectedChildReviewCases,
   projectedChildGroupReviewRequest,
   reviewProjectedChildGroups,
@@ -135,6 +138,25 @@ interface DelegatedChildApplyPlanFixture {
       family: string;
       delegated_group: ProjectedChildReviewGroupsFixture['expected_groups'][number];
       decision: ReviewDecisionFixture;
+    }>;
+  };
+}
+
+interface DelegatedChildNestedOutputResolutionFixture {
+  default_family: string;
+  request_id_prefix: string;
+  operations: DelegatedChildOperationFixture['operation'][];
+  nested_outputs: Array<{
+    surface_address: string;
+    output: string;
+  }>;
+  expected: {
+    ok: boolean;
+    diagnostics: DiagnosticFixtureEntry[];
+    apply_plan?: DelegatedChildApplyPlanFixture['expected_plan'];
+    applied_children?: Array<{
+      operation_id: string;
+      output: string;
     }>;
   };
 }
@@ -3658,6 +3680,68 @@ describe('ast-merge shared fixtures', () => {
         decision: normalizeReviewDecision(entry.decision)
       }))
     });
+  });
+
+  it('conforms to the slice-292 delegated child nested-output resolution fixture', () => {
+    const fixture = readFixture<DelegatedChildNestedOutputResolutionFixture>(
+      ...diagnosticsFixturePath('delegated_child_nested_output_resolution')
+    );
+
+    const result = resolveDelegatedChildOutputs(
+      fixture.operations.map((entry) => normalizeDelegatedChildOperation(entry)),
+      fixture.nested_outputs.map(
+        (entry): DelegatedChildSurfaceOutput => ({
+          surfaceAddress: entry.surface_address,
+          output: entry.output
+        })
+      ),
+      {
+        defaultFamily: fixture.default_family,
+        requestIdPrefix: fixture.request_id_prefix
+      }
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      diagnostics: [],
+      applyPlan: {
+        entries: fixture.expected.apply_plan!.entries.map((entry) => ({
+          requestId: entry.request_id,
+          family: entry.family,
+          delegatedGroup: normalizeProjectedChildReviewGroup(entry.delegated_group),
+          decision: normalizeReviewDecision(entry.decision)
+        }))
+      },
+      appliedChildren: fixture.expected.applied_children!.map((entry) => ({
+        operationId: entry.operation_id,
+        output: entry.output
+      }))
+    } satisfies DelegatedChildOutputResolution);
+  });
+
+  it('conforms to the slice-293 delegated child nested-output rejection fixture', () => {
+    const fixture = readFixture<DelegatedChildNestedOutputResolutionFixture>(
+      ...diagnosticsFixturePath('delegated_child_nested_output_rejection')
+    );
+
+    const result = resolveDelegatedChildOutputs(
+      fixture.operations.map((entry) => normalizeDelegatedChildOperation(entry)),
+      fixture.nested_outputs.map(
+        (entry): DelegatedChildSurfaceOutput => ({
+          surfaceAddress: entry.surface_address,
+          output: entry.output
+        })
+      ),
+      {
+        defaultFamily: fixture.default_family,
+        requestIdPrefix: fixture.request_id_prefix
+      }
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      diagnostics: fixture.expected.diagnostics.map((entry) => normalizeDiagnostic(entry))
+    } satisfies DelegatedChildOutputResolution);
   });
 
   it('conforms to the slice-71 review state JSON roundtrip fixture', () => {
