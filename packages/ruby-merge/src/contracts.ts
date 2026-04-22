@@ -2,6 +2,7 @@ import type {
   AppliedDelegatedChildOutput,
   ConformanceFamilyPlanContext,
   ConformanceManifestReviewState,
+  ConformanceManifestReviewStateEnvelope,
   DelegatedChildGroupReviewState,
   DelegatedChildOperation,
   DelegatedChildSurfaceOutput,
@@ -10,12 +11,15 @@ import type {
   MergeResult,
   ParseResult,
   PolicyReference,
+  ReviewReplayBundleEnvelope,
   ReviewReplayBundle,
   ReviewedNestedExecution
 } from '@structuredmerge/ast-merge';
 import {
   delegatedChildApplyPlan as astDelegatedChildApplyPlan,
   executeNestedMerge,
+  importConformanceManifestReviewStateEnvelope,
+  importReviewReplayBundleEnvelope,
   executeReviewReplayBundleReviewedNestedExecutions,
   executeReviewStateReviewedNestedExecutions,
   executeReviewedNestedMerge
@@ -476,6 +480,64 @@ export function mergeRubyWithReviewedNestedOutputsFromReviewState(
     ],
     policies: []
   };
+}
+
+export function mergeRubyWithReviewedNestedOutputsFromReplayBundleEnvelope(
+  templateSource: string,
+  destinationSource: string,
+  dialect: RubyDialect,
+  envelope: ReviewReplayBundleEnvelope
+): MergeResult<string> {
+  const imported = importReviewReplayBundleEnvelope(envelope);
+  if (imported.error || !imported.replayBundle) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: imported.error?.category ?? 'configuration_error',
+          message: imported.error?.message ?? 'review replay bundle envelope could not be imported.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return mergeRubyWithReviewedNestedOutputsFromReplayBundle(
+    templateSource,
+    destinationSource,
+    dialect,
+    imported.replayBundle
+  );
+}
+
+export function mergeRubyWithReviewedNestedOutputsFromReviewStateEnvelope(
+  templateSource: string,
+  destinationSource: string,
+  dialect: RubyDialect,
+  envelope: ConformanceManifestReviewStateEnvelope
+): MergeResult<string> {
+  const imported = importConformanceManifestReviewStateEnvelope(envelope);
+  if (imported.error || !imported.state) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: imported.error?.category ?? 'configuration_error',
+          message: imported.error?.message ?? 'review state envelope could not be imported.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return mergeRubyWithReviewedNestedOutputsFromReviewState(
+    templateSource,
+    destinationSource,
+    dialect,
+    imported.state
+  );
 }
 
 function analyzeRubyDocument(source: string): RubyAnalysis {

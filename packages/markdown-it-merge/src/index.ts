@@ -3,10 +3,12 @@ import { registerBackend, type BackendReference } from '@structuredmerge/tree-ha
 import type {
   ConformanceFamilyPlanContext,
   ConformanceManifestReviewState,
+  ConformanceManifestReviewStateEnvelope,
   DelegatedChildGroupReviewState,
   Diagnostic,
   MergeResult,
   ParseResult,
+  ReviewReplayBundleEnvelope,
   ReviewReplayBundle
 } from '@structuredmerge/ast-merge';
 import {
@@ -16,7 +18,9 @@ import {
   markdownEmbeddedFamilies as markdownEmbeddedFamiliesWithSubstrate,
   type MarkdownFeatureProfile,
   mergeMarkdown as mergeMarkdownWithSubstrate,
+  mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope as mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelopeWithSubstrate,
   mergeMarkdownWithReviewedNestedOutputsFromReplayBundle as mergeMarkdownWithReviewedNestedOutputsFromReplayBundleWithSubstrate,
+  mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope as mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelopeWithSubstrate,
   mergeMarkdownWithReviewedNestedOutputsFromReviewState as mergeMarkdownWithReviewedNestedOutputsFromReviewStateWithSubstrate,
   mergeMarkdownWithReviewedNestedOutputs as mergeMarkdownWithReviewedNestedOutputsWithSubstrate,
   matchMarkdownOwners as matchMarkdownOwnersWithSubstrate,
@@ -185,6 +189,31 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
   );
 }
 
+export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope(
+  templateSource: string,
+  destinationSource: string,
+  dialect: 'markdown',
+  replayBundleEnvelope: ReviewReplayBundleEnvelope,
+  backend?: string
+): MergeResult<string> {
+  const requested = backend ?? 'markdown-it';
+  if (requested !== 'markdown-it') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported Markdown backend ${requested}.`)],
+      policies: []
+    };
+  }
+
+  return mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelopeWithSubstrate(
+    templateSource,
+    destinationSource,
+    dialect,
+    replayBundleEnvelope,
+    'kreuzberg-language-pack'
+  );
+}
+
 export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
   templateSource: string,
   destinationSource: string,
@@ -206,6 +235,31 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
     destinationSource,
     dialect,
     reviewState,
+    'kreuzberg-language-pack'
+  );
+}
+
+export function mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope(
+  templateSource: string,
+  destinationSource: string,
+  dialect: 'markdown',
+  reviewStateEnvelope: ConformanceManifestReviewStateEnvelope,
+  backend?: string
+): MergeResult<string> {
+  const requested = backend ?? 'markdown-it';
+  if (requested !== 'markdown-it') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported Markdown backend ${requested}.`)],
+      policies: []
+    };
+  }
+
+  return mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelopeWithSubstrate(
+    templateSource,
+    destinationSource,
+    dialect,
+    reviewStateEnvelope,
     'kreuzberg-language-pack'
   );
 }

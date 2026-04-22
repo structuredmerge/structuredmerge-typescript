@@ -2,6 +2,7 @@ import type {
   AppliedDelegatedChildOutput,
   ConformanceFamilyPlanContext,
   ConformanceManifestReviewState,
+  ConformanceManifestReviewStateEnvelope,
   ConformanceManifest,
   DelegatedChildGroupReviewState,
   DelegatedChildOperation,
@@ -11,12 +12,15 @@ import type {
   FamilyFeatureProfile,
   MergeResult,
   ParseResult,
+  ReviewReplayBundleEnvelope,
   ReviewReplayBundle,
   ReviewedNestedExecution
 } from '@structuredmerge/ast-merge';
 import {
   delegatedChildApplyPlan as astDelegatedChildApplyPlan,
   executeNestedMerge,
+  importConformanceManifestReviewStateEnvelope,
+  importReviewReplayBundleEnvelope,
   executeReviewReplayBundleReviewedNestedExecutions,
   executeReviewStateReviewedNestedExecutions,
   executeReviewedNestedMerge
@@ -610,6 +614,68 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
     ],
     policies: []
   };
+}
+
+export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope(
+  templateSource: string,
+  destinationSource: string,
+  dialect: MarkdownDialect,
+  envelope: ReviewReplayBundleEnvelope,
+  backend?: MarkdownBackend
+): MergeResult<string> {
+  const imported = importReviewReplayBundleEnvelope(envelope);
+  if (imported.error || !imported.replayBundle) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: imported.error?.category ?? 'configuration_error',
+          message: imported.error?.message ?? 'review replay bundle envelope could not be imported.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
+    templateSource,
+    destinationSource,
+    dialect,
+    imported.replayBundle,
+    backend
+  );
+}
+
+export function mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope(
+  templateSource: string,
+  destinationSource: string,
+  dialect: MarkdownDialect,
+  envelope: ConformanceManifestReviewStateEnvelope,
+  backend?: MarkdownBackend
+): MergeResult<string> {
+  const imported = importConformanceManifestReviewStateEnvelope(envelope);
+  if (imported.error || !imported.state) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: imported.error?.category ?? 'configuration_error',
+          message: imported.error?.message ?? 'review state envelope could not be imported.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return mergeMarkdownWithReviewedNestedOutputsFromReviewState(
+    templateSource,
+    destinationSource,
+    dialect,
+    imported.state,
+    backend
+  );
 }
 
 export function mergeMarkdown(
