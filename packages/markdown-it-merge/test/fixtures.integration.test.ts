@@ -375,11 +375,19 @@ describe('markdown-it-merge shared fixtures', () => {
     });
   });
 
-  it('conforms to the slice-313 reviewed nested review artifact envelope application fixture', () => {
-    const fixture = readFixture(
-      'markdown',
-      'slice-313-reviewed-nested-review-artifact-envelope-application',
-      'fenced-code-reviewed-nested-review-artifact-envelope-application.json'
+  it('conforms to the slice-328 markdown provider reviewed nested review artifact envelope application fixture', () => {
+    const providerFixture = readFixture(
+      'diagnostics',
+      'slice-328-markdown-provider-reviewed-nested-review-artifact-envelope-application',
+      'typescript-markdown-provider-reviewed-nested-review-artifact-envelope-application.json'
+    );
+    const sharedFixturePath = providerFixture.shared_fixture_path as string[];
+    const fixture = readFixture(...sharedFixturePath);
+    const expected = (
+      ((providerFixture.providers as Record<string, Record<string, unknown>>)['markdown-it'] as Record<
+        string,
+        unknown
+      >).expected as Record<string, unknown>
     );
 
     const replayResult = mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope(
@@ -444,8 +452,8 @@ describe('markdown-it-merge shared fixtures', () => {
         }
       }
     );
-    expect(replayResult.ok).toBe((fixture.expected as Record<string, unknown>).ok as boolean);
-    expect(replayResult.output).toBe((fixture.expected as Record<string, unknown>).output);
+    expect(replayResult.ok).toBe(expected.ok as boolean);
+    expect(replayResult.output).toBe(expected.output);
 
     const stateResult = mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope(
       fixture.template as string,
@@ -494,8 +502,8 @@ describe('markdown-it-merge shared fixtures', () => {
         }
       }
     );
-    expect(stateResult.ok).toBe((fixture.expected as Record<string, unknown>).ok as boolean);
-    expect(stateResult.output).toBe((fixture.expected as Record<string, unknown>).output);
+    expect(stateResult.ok).toBe(expected.ok as boolean);
+    expect(stateResult.output).toBe(expected.output);
   });
 
   it('conforms to the slice-315 reviewed nested review artifact envelope rejection fixture', () => {
