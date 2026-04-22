@@ -79,6 +79,7 @@ import {
   resolveTemplateDestinationPath,
   selectTemplateStrategy,
   planTemplateEntries,
+  enrichTemplatePlanEntries,
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
@@ -206,6 +207,17 @@ interface TemplateEntryPlanFixture {
     strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
     action: 'omit' | 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
   }>;
+}
+
+interface TemplateEntryPlanStateFixture {
+  planned_entries: TemplateEntryPlanFixture['expected_entries'];
+  existing_destination_paths: string[];
+  expected_entries: Array<
+    TemplateEntryPlanFixture['expected_entries'][number] & {
+      destination_exists: boolean;
+      write_action: 'omit' | 'keep' | 'create' | 'update';
+    }
+  >;
 }
 
 interface DelegatedChildApplyPlanFixture {
@@ -1834,6 +1846,53 @@ describe('ast-merge shared fixtures', () => {
         },
         strategy: entry.strategy,
         action: entry.action
+      }))
+    ).toEqual(fixture.expected_entries);
+  });
+
+  it('conforms to the template entry plan state fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateEntryPlanStateFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_entry_plan_state') ??
+        []) as string[])
+    );
+
+    const actual = enrichTemplatePlanEntries(
+      fixture.planned_entries.map((entry) => ({
+        templateSourcePath: entry.template_source_path,
+        logicalDestinationPath: entry.logical_destination_path,
+        destinationPath: entry.destination_path ?? undefined,
+        classification: {
+          destinationPath: entry.classification.destination_path,
+          fileType: entry.classification.file_type,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action
+      })),
+      fixture.existing_destination_paths
+    );
+
+    expect(
+      actual.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        classification: {
+          destination_path: entry.classification.destinationPath,
+          file_type: entry.classification.fileType,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destination_exists: entry.destinationExists,
+        write_action: entry.writeAction
       }))
     ).toEqual(fixture.expected_entries);
   });

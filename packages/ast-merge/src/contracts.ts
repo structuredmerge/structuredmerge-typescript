@@ -147,6 +147,11 @@ export interface TemplatePlanEntry {
   readonly action: 'omit' | TemplateStrategy;
 }
 
+export interface TemplatePlanStateEntry extends TemplatePlanEntry {
+  readonly destinationExists: boolean;
+  readonly writeAction: 'omit' | 'keep' | 'create' | 'update';
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -624,6 +629,29 @@ export function planTemplateEntries(
       classification,
       strategy,
       action: destinationPath === undefined ? 'omit' : strategy
+    };
+  });
+}
+
+export function enrichTemplatePlanEntries(
+  entries: readonly TemplatePlanEntry[],
+  existingDestinationPaths: readonly string[]
+): readonly TemplatePlanStateEntry[] {
+  const existing = new Set(existingDestinationPaths);
+  return entries.map((entry) => {
+    const destinationExists = entry.destinationPath ? existing.has(entry.destinationPath) : false;
+    const writeAction = !entry.destinationPath
+      ? 'omit'
+      : entry.strategy === 'keep_destination'
+        ? 'keep'
+        : destinationExists
+          ? 'update'
+          : 'create';
+
+    return {
+      ...entry,
+      destinationExists,
+      writeAction
     };
   });
 }
