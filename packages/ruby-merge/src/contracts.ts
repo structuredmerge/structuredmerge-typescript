@@ -1,8 +1,7 @@
 import type {
-  ConformanceFamilyPlanContext,
-  DelegatedChildApplyPlan,
-  DelegatedChildOperation,
   AppliedDelegatedChildOutput,
+  ConformanceFamilyPlanContext,
+  DelegatedChildOperation,
   DelegatedChildSurfaceOutput,
   DiscoveredSurface,
   FamilyFeatureProfile,
@@ -10,7 +9,7 @@ import type {
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
-import { resolveDelegatedChildOutputs } from '@structuredmerge/ast-merge';
+import { executeNestedMerge } from '@structuredmerge/ast-merge';
 import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
@@ -284,34 +283,34 @@ export function mergeRubyWithNestedOutputs(
   dialect: RubyDialect,
   nestedOutputs: readonly NestedChildOutput[]
 ): MergeResult<string> {
-  const merged = mergeRuby(templateSource, destinationSource, dialect);
-  if (!merged.ok || !merged.output) {
-    return merged;
-  }
-
-  const analysis = parseRuby(merged.output, dialect);
-  if (!analysis.ok || !analysis.analysis) {
-    return { ok: false, diagnostics: analysis.diagnostics, policies: [] };
-  }
-
-  const operations = rubyDelegatedChildOperations(analysis.analysis);
-  const resolved = resolveDelegatedChildOutputs(
-    operations,
+  return executeNestedMerge<string>(
     nestedOutputs as readonly DelegatedChildSurfaceOutput[],
     {
       defaultFamily: 'ruby',
       requestIdPrefix: 'nested_ruby_child'
-    }
-  );
-  if (!resolved.ok || !resolved.applyPlan || !resolved.appliedChildren) {
-    return { ok: false, diagnostics: resolved.diagnostics, policies: [] };
-  }
+    },
+    {
+      mergeParent: () => mergeRuby(templateSource, destinationSource, dialect),
+      discoverOperations: (mergedOutput) => {
+        const analysis = parseRuby(mergedOutput, dialect);
+        if (!analysis.ok || !analysis.analysis) {
+          return { ok: false, diagnostics: analysis.diagnostics };
+        }
 
-  return applyRubyDelegatedChildOutputs(
-    merged.output,
-    operations,
-    resolved.applyPlan as DelegatedChildApplyPlan,
-    resolved.appliedChildren as readonly AppliedDelegatedChildOutput[]
+        return {
+          ok: true,
+          diagnostics: [],
+          operations: rubyDelegatedChildOperations(analysis.analysis)
+        };
+      },
+      applyResolvedOutputs: (mergedOutput, operations, applyPlan, appliedChildren) =>
+        applyRubyDelegatedChildOutputs(
+          mergedOutput,
+          operations,
+          applyPlan,
+          appliedChildren as readonly AppliedDelegatedChildOutput[]
+        )
+    }
   );
 }
 

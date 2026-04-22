@@ -305,6 +305,23 @@ export interface DelegatedChildOutputResolution {
   readonly appliedChildren?: readonly AppliedDelegatedChildOutput[];
 }
 
+export interface NestedMergeDiscoveryResult {
+  readonly ok: boolean;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly operations?: readonly DelegatedChildOperation[];
+}
+
+export interface NestedMergeExecutionCallbacks<TOutput> {
+  readonly mergeParent: () => MergeResult<TOutput>;
+  readonly discoverOperations: (mergedOutput: TOutput) => NestedMergeDiscoveryResult;
+  readonly applyResolvedOutputs: (
+    mergedOutput: TOutput,
+    operations: readonly DelegatedChildOperation[],
+    applyPlan: DelegatedChildApplyPlan,
+    appliedChildren: readonly AppliedDelegatedChildOutput[]
+  ) => MergeResult<TOutput>;
+}
+
 export interface ReviewReplayBundle {
   readonly replayContext: ReviewReplayContext;
   readonly decisions: readonly ReviewDecision[];
@@ -701,6 +718,42 @@ export function resolveDelegatedChildOutputs(
       output: nestedOutput.output
     }))
   };
+}
+
+export function executeNestedMerge<TOutput>(
+  nestedOutputs: readonly DelegatedChildSurfaceOutput[],
+  options: DelegatedChildOutputResolutionOptions,
+  callbacks: NestedMergeExecutionCallbacks<TOutput>
+): MergeResult<TOutput> {
+  const merged = callbacks.mergeParent();
+  if (!merged.ok || merged.output === undefined) {
+    return merged;
+  }
+
+  const discovery = callbacks.discoverOperations(merged.output);
+  if (!discovery.ok || discovery.operations === undefined) {
+    return {
+      ok: false,
+      diagnostics: discovery.diagnostics,
+      policies: []
+    };
+  }
+
+  const resolved = resolveDelegatedChildOutputs(discovery.operations, nestedOutputs, options);
+  if (!resolved.ok || resolved.applyPlan === undefined || resolved.appliedChildren === undefined) {
+    return {
+      ok: false,
+      diagnostics: resolved.diagnostics,
+      policies: []
+    };
+  }
+
+  return callbacks.applyResolvedOutputs(
+    merged.output,
+    discovery.operations,
+    resolved.applyPlan,
+    resolved.appliedChildren
+  );
 }
 
 export function conformanceManifestReplayContext(
