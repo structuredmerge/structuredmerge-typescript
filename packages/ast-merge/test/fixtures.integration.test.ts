@@ -48,6 +48,7 @@ import type {
   ReviewDiagnosticReason,
   ReviewTransportImportError,
   ReviewRequest,
+  ReviewedNestedExecutionApplication,
   SurfaceOwnerRef,
   SurfaceSpan
 } from '../src/index';
@@ -59,7 +60,9 @@ import {
   conformanceReviewHostHints,
   delegatedChildApplyPlan,
   executeReviewReplayBundleReviewedNestedExecutions,
+  executeReviewReplayBundleEnvelopeReviewedNestedExecutions,
   executeReviewStateReviewedNestedExecutions,
+  executeReviewStateEnvelopeReviewedNestedExecutions,
   resolveDelegatedChildOutputs,
   groupProjectedChildReviewCases,
   projectedChildGroupReviewRequest,
@@ -873,6 +876,23 @@ interface ReviewedNestedExecutionApplicationFixture {
   }>;
 }
 
+interface ReviewedNestedExecutionEnvelopeApplicationFixture {
+  replay_bundle_envelope?: {
+    kind: string;
+    version: number;
+    replay_bundle: NonNullable<ReviewedNestedExecutionApplicationFixture['replay_bundle']>;
+  };
+  review_state_envelope?: {
+    kind: string;
+    version: number;
+    state: NonNullable<ReviewedNestedExecutionApplicationFixture['review_state']>;
+  };
+  expected_application: {
+    diagnostics: DiagnosticFixtureEntry[];
+    results: ReviewedNestedExecutionApplicationFixture['expected_results'];
+  };
+}
+
 interface FamilyContextExplicitReviewDecisionFixture {
   family: string;
   options: {
@@ -1302,6 +1322,18 @@ function normalizeReviewReplayBundleEnvelope(raw: {
           }
         : {})
     }
+  };
+}
+
+function normalizeReviewStateEnvelope(raw: {
+  kind: ConformanceManifestReviewStateEnvelope['kind'];
+  version: number;
+  state: ConformanceManifestReviewStateFixture['expected_state'];
+}): ConformanceManifestReviewStateEnvelope {
+  return {
+    kind: raw.kind,
+    version: raw.version,
+    state: normalizeManifestReviewState(raw.state as never)
   };
 }
 
@@ -4250,6 +4282,124 @@ describe('ast-merge shared fixtures', () => {
         }
       }))
     );
+  });
+
+  it('conforms to the slice-320 review replay bundle envelope reviewed nested execution application fixture', () => {
+    const fixture = readFixture<ReviewedNestedExecutionEnvelopeApplicationFixture>(
+      ...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
+    );
+
+    const application = executeReviewReplayBundleEnvelopeReviewedNestedExecutions(
+      normalizeReviewReplayBundleEnvelope(fixture.replay_bundle_envelope as never),
+      (execution, index) =>
+        reviewedNestedExecutionCallbacks(
+          execution,
+          fixture.expected_application.results[index]!.result.output!
+        )
+    );
+
+    expect({
+      diagnostics: application.diagnostics,
+      results: application.results.map((run) => ({
+        execution_family: run.execution.family,
+        result: run.result
+      }))
+    }).toEqual({
+      diagnostics: fixture.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+      results: fixture.expected_application.results.map((entry) => ({
+        execution_family: entry.execution_family,
+        result: {
+          ok: entry.result.ok,
+          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          output: entry.result.output,
+          policies: entry.result.policies
+        }
+      }))
+    } satisfies ReviewedNestedExecutionApplication<string> & {
+      results: Array<{ execution_family: string; result: MergeResult<string> }>;
+    });
+  });
+
+  it('conforms to the slice-321 review state envelope reviewed nested execution application fixture', () => {
+    const fixture = readFixture<ReviewedNestedExecutionEnvelopeApplicationFixture>(
+      ...diagnosticsFixturePath('review_state_envelope_reviewed_nested_execution_application')
+    );
+
+    const application = executeReviewStateEnvelopeReviewedNestedExecutions(
+      normalizeReviewStateEnvelope(fixture.review_state_envelope as never),
+      (execution, index) =>
+        reviewedNestedExecutionCallbacks(
+          execution,
+          fixture.expected_application.results[index]!.result.output!
+        )
+    );
+
+    expect({
+      diagnostics: application.diagnostics,
+      results: application.results.map((run) => ({
+        execution_family: run.execution.family,
+        result: run.result
+      }))
+    }).toEqual({
+      diagnostics: fixture.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+      results: fixture.expected_application.results.map((entry) => ({
+        execution_family: entry.execution_family,
+        result: {
+          ok: entry.result.ok,
+          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          output: entry.result.output,
+          policies: entry.result.policies
+        }
+      }))
+    } satisfies ReviewedNestedExecutionApplication<string> & {
+      results: Array<{ execution_family: string; result: MergeResult<string> }>;
+    });
+  });
+
+  it('conforms to the slice-322 review replay bundle envelope reviewed nested execution rejection fixture', () => {
+    const fixture = readFixture<{
+      cases: Array<{
+        replay_bundle_envelope: unknown;
+        expected_application: ReviewedNestedExecutionEnvelopeApplicationFixture['expected_application'];
+      }>;
+    }>(...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_rejection'));
+
+    for (const fixtureCase of fixture.cases) {
+      expect(
+        executeReviewReplayBundleEnvelopeReviewedNestedExecutions(
+          normalizeReviewReplayBundleEnvelope(fixtureCase.replay_bundle_envelope as never),
+          () => {
+            throw new Error('callbacks should not run for rejected replay bundle envelopes');
+          }
+        )
+      ).toEqual({
+        diagnostics: fixtureCase.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+        results: []
+      });
+    }
+  });
+
+  it('conforms to the slice-323 review state envelope reviewed nested execution rejection fixture', () => {
+    const fixture = readFixture<{
+      cases: Array<{
+        review_state_envelope: unknown;
+        expected_application: ReviewedNestedExecutionEnvelopeApplicationFixture['expected_application'];
+      }>;
+    }>(...diagnosticsFixturePath('review_state_envelope_reviewed_nested_execution_rejection'));
+
+    for (const fixtureCase of fixture.cases) {
+      expect(
+        executeReviewStateEnvelopeReviewedNestedExecutions(
+          normalizeReviewStateEnvelope(fixtureCase.review_state_envelope as never),
+          () => {
+            throw new Error('callbacks should not run for rejected review state envelopes');
+          }
+        )
+      ).toEqual({
+        diagnostics: fixtureCase.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+        results: []
+      });
+    }
   });
 
   it('conforms to the slice-80 explicit review decision payload validation fixture', () => {

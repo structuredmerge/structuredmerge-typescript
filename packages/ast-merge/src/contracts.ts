@@ -360,6 +360,11 @@ export interface ReviewedNestedExecutionResult<TOutput> {
   readonly result: MergeResult<TOutput>;
 }
 
+export interface ReviewedNestedExecutionApplication<TOutput> {
+  readonly diagnostics: readonly Diagnostic[];
+  readonly results: readonly ReviewedNestedExecutionResult<TOutput>[];
+}
+
 export interface ReviewedNestedExecutionEnvelope {
   readonly kind: 'reviewed_nested_execution';
   readonly version: typeof REVIEW_TRANSPORT_VERSION;
@@ -865,6 +870,37 @@ export function executeReviewReplayBundleReviewedNestedExecutions<TOutput>(
   );
 }
 
+export function executeReviewReplayBundleEnvelopeReviewedNestedExecutions<TOutput>(
+  replayBundleEnvelope: unknown,
+  callbacksForExecution: (
+    execution: ReviewedNestedExecution,
+    index: number
+  ) => NestedMergeExecutionCallbacks<TOutput>
+): ReviewedNestedExecutionApplication<TOutput> {
+  const imported = importReviewReplayBundleEnvelope(replayBundleEnvelope);
+
+  if (!imported.replayBundle) {
+    return {
+      diagnostics: [
+        {
+          severity: 'error',
+          category: imported.error!.category,
+          message: imported.error!.message
+        }
+      ],
+      results: []
+    };
+  }
+
+  return {
+    diagnostics: [],
+    results: executeReviewReplayBundleReviewedNestedExecutions(
+      imported.replayBundle,
+      callbacksForExecution
+    )
+  };
+}
+
 export function executeReviewStateReviewedNestedExecutions<TOutput>(
   state: ConformanceManifestReviewState,
   callbacksForExecution: (
@@ -873,6 +909,34 @@ export function executeReviewStateReviewedNestedExecutions<TOutput>(
   ) => NestedMergeExecutionCallbacks<TOutput>
 ): readonly ReviewedNestedExecutionResult<TOutput>[] {
   return executeReviewedNestedExecutions(state.reviewedNestedExecutions ?? [], callbacksForExecution);
+}
+
+export function executeReviewStateEnvelopeReviewedNestedExecutions<TOutput>(
+  stateEnvelope: unknown,
+  callbacksForExecution: (
+    execution: ReviewedNestedExecution,
+    index: number
+  ) => NestedMergeExecutionCallbacks<TOutput>
+): ReviewedNestedExecutionApplication<TOutput> {
+  const imported = importConformanceManifestReviewStateEnvelope(stateEnvelope);
+
+  if (!imported.state) {
+    return {
+      diagnostics: [
+        {
+          severity: 'error',
+          category: imported.error!.category,
+          message: imported.error!.message
+        }
+      ],
+      results: []
+    };
+  }
+
+  return {
+    diagnostics: [],
+    results: executeReviewStateReviewedNestedExecutions(imported.state, callbacksForExecution)
+  };
 }
 
 export function conformanceManifestReplayContext(
