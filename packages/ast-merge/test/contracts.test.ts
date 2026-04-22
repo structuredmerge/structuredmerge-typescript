@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   executeDelegatedChildApplyPlan,
   executeNestedMerge,
+  executeReviewReplayBundleReviewedNestedExecutions,
+  executeReviewStateReviewedNestedExecutions,
   executeReviewedNestedExecution,
+  executeReviewedNestedExecutions,
   executeReviewedNestedMerge,
   reviewedNestedExecution,
   type DelegatedChildOperation,
@@ -283,5 +286,216 @@ describe('executeNestedMerge', () => {
     });
 
     expect(result.output).toBe('final-parent');
+  });
+
+  it('executes reviewed nested executions in order', () => {
+    const markdownAddress = 'document[0] > fenced_code_block[/code_fence/0]';
+    const rubyAddress = 'document[0] > ruby_doc_comment[Greeter] > yard_example[1]';
+    const executions = [
+      reviewedNestedExecution(
+        'markdown',
+        {
+          requests: [],
+          acceptedGroups: [
+            {
+              delegatedApplyGroup: 'nested_markdown_child:0',
+              parentOperationId: 'markdown-document-0',
+              childOperationId: 'markdown-fence-0',
+              delegatedRuntimeSurfacePath: markdownAddress,
+              caseIds: [],
+              delegatedCaseIds: []
+            }
+          ],
+          appliedDecisions: [
+            {
+              requestId: 'projected_child_group:nested_markdown_child:0',
+              action: 'apply_delegated_child_group'
+            }
+          ],
+          diagnostics: []
+        },
+        [{ operationId: 'markdown-fence-0', output: 'child-output\n' }]
+      ),
+      reviewedNestedExecution(
+        'ruby',
+        {
+          requests: [],
+          acceptedGroups: [
+            {
+              delegatedApplyGroup: 'nested_ruby_child:0',
+              parentOperationId: 'ruby-doc-comment-0',
+              childOperationId: 'yard-example-0',
+              delegatedRuntimeSurfacePath: rubyAddress,
+              caseIds: [],
+              delegatedCaseIds: []
+            }
+          ],
+          appliedDecisions: [
+            {
+              requestId: 'projected_child_group:nested_ruby_child:0',
+              action: 'apply_delegated_child_group'
+            }
+          ],
+          diagnostics: []
+        },
+        [{ operationId: 'yard-example-0', output: 'Greeter.new.wave\n' }]
+      )
+    ] as const;
+
+    const runs = executeReviewedNestedExecutions(executions, (execution) => ({
+      mergeParent: () => ({ ok: true, diagnostics: [], output: `${execution.family}-merged`, policies: [] }),
+      discoverOperations: () => ({
+        ok: true,
+        diagnostics: [],
+        operations: [
+          execution.family === 'markdown'
+            ? operation(markdownAddress)
+            : {
+                operationId: 'yard-example-0',
+                parentOperationId: 'ruby-doc-comment-0',
+                requestedStrategy: 'delegate_child_surface',
+                languageChain: ['ruby', 'ruby'],
+                surface: {
+                  surfaceKind: 'yard_example',
+                  effectiveLanguage: 'ruby',
+                  address: rubyAddress,
+                  owner: { kind: 'owned_region', address: '/yard_example/1' },
+                  reconstructionStrategy: 'portable_write',
+                  metadata: { family: 'ruby' }
+                }
+              }
+        ]
+      }),
+      applyResolvedOutputs: (_mergedOutput, _operations, _applyPlan, appliedChildren) => {
+        expect(appliedChildren).toEqual(execution.appliedChildren);
+        return {
+          ok: true,
+          diagnostics: [],
+          output: `${execution.family}-final`,
+          policies: []
+        };
+      }
+    }));
+
+    expect(runs.map((run) => run.execution.family)).toEqual(['markdown', 'ruby']);
+    expect(runs.map((run) => run.result.output)).toEqual(['markdown-final', 'ruby-final']);
+  });
+
+  it('executes reviewed nested executions from replay bundle', () => {
+    const execution = reviewedNestedExecution(
+      'markdown',
+      {
+        requests: [],
+        acceptedGroups: [
+          {
+            delegatedApplyGroup: 'nested_markdown_child:0',
+            parentOperationId: 'markdown-document-0',
+            childOperationId: 'markdown-fence-0',
+            delegatedRuntimeSurfacePath: 'document[0] > fenced_code_block[/code_fence/0]',
+            caseIds: [],
+            delegatedCaseIds: []
+          }
+        ],
+        appliedDecisions: [
+          {
+            requestId: 'projected_child_group:nested_markdown_child:0',
+            action: 'apply_delegated_child_group'
+          }
+        ],
+        diagnostics: []
+      },
+      [{ operationId: 'markdown-fence-0', output: 'child-output\n' }]
+    );
+
+    const runs = executeReviewReplayBundleReviewedNestedExecutions(
+      {
+        replayContext: {
+          surface: 'conformance_manifest',
+          families: ['text'],
+          requireExplicitContexts: true
+        },
+        decisions: [{ requestId: 'family_context:text', action: 'accept_default_context' }],
+        reviewedNestedExecutions: [execution]
+      },
+      () => ({
+        mergeParent: () => ({ ok: true, diagnostics: [], output: 'merged-parent', policies: [] }),
+        discoverOperations: () => ({
+          ok: true,
+          diagnostics: [],
+          operations: [operation('document[0] > fenced_code_block[/code_fence/0]')]
+        }),
+        applyResolvedOutputs: () => ({
+          ok: true,
+          diagnostics: [],
+          output: 'final-parent',
+          policies: []
+        })
+      })
+    );
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]?.execution.family).toBe('markdown');
+    expect(runs[0]?.result.output).toBe('final-parent');
+  });
+
+  it('executes reviewed nested executions from review state', () => {
+    const execution = reviewedNestedExecution(
+      'markdown',
+      {
+        requests: [],
+        acceptedGroups: [
+          {
+            delegatedApplyGroup: 'nested_markdown_child:0',
+            parentOperationId: 'markdown-document-0',
+            childOperationId: 'markdown-fence-0',
+            delegatedRuntimeSurfacePath: 'document[0] > fenced_code_block[/code_fence/0]',
+            caseIds: [],
+            delegatedCaseIds: []
+          }
+        ],
+        appliedDecisions: [
+          {
+            requestId: 'projected_child_group:nested_markdown_child:0',
+            action: 'apply_delegated_child_group'
+          }
+        ],
+        diagnostics: []
+      },
+      [{ operationId: 'markdown-fence-0', output: 'child-output\n' }]
+    );
+
+    const runs = executeReviewStateReviewedNestedExecutions(
+      {
+        report: { entries: [], summary: { total: 0, passed: 0, failed: 0, skipped: 0 } },
+        diagnostics: [],
+        requests: [],
+        appliedDecisions: [],
+        hostHints: { interactive: false, requireExplicitContexts: false },
+        replayContext: {
+          surface: 'conformance_manifest',
+          families: [],
+          requireExplicitContexts: false
+        },
+        reviewedNestedExecutions: [execution]
+      },
+      () => ({
+        mergeParent: () => ({ ok: true, diagnostics: [], output: 'merged-parent', policies: [] }),
+        discoverOperations: () => ({
+          ok: true,
+          diagnostics: [],
+          operations: [operation('document[0] > fenced_code_block[/code_fence/0]')]
+        }),
+        applyResolvedOutputs: () => ({
+          ok: true,
+          diagnostics: [],
+          output: 'final-parent',
+          policies: []
+        })
+      })
+    );
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]?.execution.family).toBe('markdown');
+    expect(runs[0]?.result.output).toBe('final-parent');
   });
 });

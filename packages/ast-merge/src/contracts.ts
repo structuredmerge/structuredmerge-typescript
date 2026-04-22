@@ -355,6 +355,11 @@ export interface ReviewedNestedExecution {
   readonly appliedChildren: readonly AppliedDelegatedChildOutput[];
 }
 
+export interface ReviewedNestedExecutionResult<TOutput> {
+  readonly execution: ReviewedNestedExecution;
+  readonly result: MergeResult<TOutput>;
+}
+
 export interface ReviewedNestedExecutionEnvelope {
   readonly kind: 'reviewed_nested_execution';
   readonly version: typeof REVIEW_TRANSPORT_VERSION;
@@ -832,6 +837,42 @@ export function executeReviewedNestedExecution<TOutput>(
     execution.appliedChildren,
     callbacks
   );
+}
+
+export function executeReviewedNestedExecutions<TOutput>(
+  executions: readonly ReviewedNestedExecution[],
+  callbacksForExecution: (
+    execution: ReviewedNestedExecution,
+    index: number
+  ) => NestedMergeExecutionCallbacks<TOutput>
+): readonly ReviewedNestedExecutionResult<TOutput>[] {
+  return executions.map((execution, index) => ({
+    execution,
+    result: executeReviewedNestedExecution(execution, callbacksForExecution(execution, index))
+  }));
+}
+
+export function executeReviewReplayBundleReviewedNestedExecutions<TOutput>(
+  replayBundle: ReviewReplayBundle,
+  callbacksForExecution: (
+    execution: ReviewedNestedExecution,
+    index: number
+  ) => NestedMergeExecutionCallbacks<TOutput>
+): readonly ReviewedNestedExecutionResult<TOutput>[] {
+  return executeReviewedNestedExecutions(
+    replayBundle.reviewedNestedExecutions ?? [],
+    callbacksForExecution
+  );
+}
+
+export function executeReviewStateReviewedNestedExecutions<TOutput>(
+  state: ConformanceManifestReviewState,
+  callbacksForExecution: (
+    execution: ReviewedNestedExecution,
+    index: number
+  ) => NestedMergeExecutionCallbacks<TOutput>
+): readonly ReviewedNestedExecutionResult<TOutput>[] {
+  return executeReviewedNestedExecutions(state.reviewedNestedExecutions ?? [], callbacksForExecution);
 }
 
 export function conformanceManifestReplayContext(
