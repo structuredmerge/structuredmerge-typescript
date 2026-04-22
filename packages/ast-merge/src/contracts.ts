@@ -120,6 +120,13 @@ export interface FamilyFeatureProfile {
   readonly supportedPolicies: readonly PolicyReference[];
 }
 
+export interface TemplateTargetClassification {
+  readonly destinationPath: string;
+  readonly fileType: string;
+  readonly family: string;
+  readonly dialect: string;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -462,6 +469,93 @@ export function conformanceFamilyFeatureProfilePath(
   family: string
 ): readonly string[] | undefined {
   return manifest.family_feature_profiles.find((entry) => entry.family === family)?.path;
+}
+
+export function normalizeTemplateSourcePath(path: string): string {
+  if (path.endsWith('.no-osc.example')) {
+    return path.slice(0, -'.no-osc.example'.length);
+  }
+
+  if (path.endsWith('.example')) {
+    return path.slice(0, -'.example'.length);
+  }
+
+  return path;
+}
+
+export function classifyTemplateTargetPath(path: string): TemplateTargetClassification {
+  const normalizedPath = path.replace(/^\.\//, '');
+  const lowerPath = normalizedPath.toLowerCase();
+  const base = normalizedPath.split('/').at(-1) ?? normalizedPath;
+  const lowerBase = base.toLowerCase();
+  const classify = (fileType: string, family: string, dialect: string): TemplateTargetClassification => ({
+    destinationPath: path,
+    fileType,
+    family,
+    dialect
+  });
+
+  if (normalizedPath === '.git-hooks/commit-msg') {
+    return classify('ruby', 'ruby', 'ruby');
+  }
+  if (normalizedPath === '.git-hooks/prepare-commit-msg') {
+    return classify('bash', 'bash', 'bash');
+  }
+
+  if (base === 'Gemfile' || base === 'Appraisal.root.gemfile') {
+    return classify('gemfile', 'ruby', 'ruby');
+  }
+  if (base === 'Appraisals') {
+    return classify('appraisals', 'ruby', 'ruby');
+  }
+  if (base === 'Rakefile' || base === '.simplecov') {
+    return classify('ruby', 'ruby', 'ruby');
+  }
+  if (base === '.envrc') {
+    return classify('bash', 'bash', 'bash');
+  }
+  if (base === '.tool-versions') {
+    return classify('tool_versions', 'text', 'tool_versions');
+  }
+  if (base === 'CITATION.cff') {
+    return classify('yaml', 'yaml', 'yaml');
+  }
+
+  if (lowerBase.endsWith('.gemspec')) {
+    return classify('gemspec', 'ruby', 'ruby');
+  }
+  if (lowerBase.endsWith('.gemfile')) {
+    return classify('gemfile', 'ruby', 'ruby');
+  }
+  if (lowerBase.endsWith('.rb') || lowerBase.endsWith('.rake')) {
+    return classify('ruby', 'ruby', 'ruby');
+  }
+  if (lowerPath.endsWith('.yml') || lowerPath.endsWith('.yaml')) {
+    return classify('yaml', 'yaml', 'yaml');
+  }
+  if (lowerPath.endsWith('.md') || lowerPath.endsWith('.markdown')) {
+    return classify('markdown', 'markdown', 'markdown');
+  }
+  if (lowerPath.endsWith('.sh') || lowerPath.endsWith('.bash')) {
+    return classify('bash', 'bash', 'bash');
+  }
+  if (lowerBase === '.env' || lowerBase.startsWith('.env.')) {
+    return classify('dotenv', 'dotenv', 'dotenv');
+  }
+  if (lowerPath.endsWith('.jsonc')) {
+    return classify('json', 'json', 'jsonc');
+  }
+  if (lowerPath.endsWith('.json')) {
+    return classify('json', 'json', 'json');
+  }
+  if (lowerPath.endsWith('.toml')) {
+    return classify('toml', 'toml', 'toml');
+  }
+  if (lowerPath.endsWith('.rbs')) {
+    return classify('rbs', 'rbs', 'rbs');
+  }
+
+  return classify('text', 'text', 'text');
 }
 
 export function conformanceSuiteDefinition(

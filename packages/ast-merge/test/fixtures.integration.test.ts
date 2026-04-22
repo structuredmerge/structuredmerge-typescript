@@ -74,6 +74,8 @@ import {
   summarizeProjectedChildReviewGroupProgress,
   conformanceFamilyFeatureProfilePath,
   conformanceFixturePath,
+  normalizeTemplateSourcePath,
+  classifyTemplateTargetPath,
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
@@ -135,6 +137,25 @@ interface FamilyFeatureProfileFixture {
     supported_dialects: string[];
     supported_policies: PolicyReference[];
   };
+}
+
+interface TemplateSourcePathMappingFixture {
+  cases: Array<{
+    template_source_path: string;
+    expected_destination_path: string;
+  }>;
+}
+
+interface TemplateTargetClassificationFixture {
+  cases: Array<{
+    destination_path: string;
+    expected: {
+      destination_path: string;
+      file_type: string;
+      family: string;
+      dialect: string;
+    };
+  }>;
 }
 
 interface DelegatedChildApplyPlanFixture {
@@ -1652,6 +1673,46 @@ describe('ast-merge shared fixtures', () => {
       supported_dialects: featureProfile.supportedDialects,
       supported_policies: featureProfile.supportedPolicies
     }).toEqual(fixture.feature_profile);
+  });
+
+  it('conforms to the template source path mapping fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateSourcePathMappingFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_source_path_mapping') ??
+        []) as string[])
+    );
+
+    for (const testCase of fixture.cases) {
+      expect(normalizeTemplateSourcePath(testCase.template_source_path)).toBe(
+        testCase.expected_destination_path
+      );
+    }
+  });
+
+  it('conforms to the template target classification fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateTargetClassificationFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_target_classification') ??
+        []) as string[])
+    );
+
+    for (const testCase of fixture.cases) {
+      const actual = classifyTemplateTargetPath(testCase.destination_path);
+      expect({
+        destination_path: actual.destinationPath,
+        file_type: actual.fileType,
+        family: actual.family,
+        dialect: actual.dialect
+      }).toEqual(testCase.expected);
+    }
   });
 
   it('conforms to the slice-28 conformance runner shape fixture', () => {
