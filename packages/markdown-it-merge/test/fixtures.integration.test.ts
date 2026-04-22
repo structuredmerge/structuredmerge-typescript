@@ -16,6 +16,7 @@ import {
   markdownPlanContext,
   matchMarkdownOwners,
   mergeMarkdown,
+  mergeMarkdownWithReviewedNestedOutputs,
   parseMarkdown
 } from '../src/index';
 
@@ -142,6 +143,75 @@ describe('markdown-it-merge shared fixtures', () => {
     const analysis = parseMarkdown(fixture.source as string, 'markdown');
     expect(analysis.ok).toBe(true);
     expect(markdownEmbeddedFamilies(analysis.analysis!)).toEqual(fixture.expected);
+  });
+
+  it('conforms to the slice-298 reviewed nested merge fixture', () => {
+    const fixture = readFixture(
+      'markdown',
+      'slice-298-reviewed-nested-merge',
+      'fenced-code-reviewed-nested-merge.json'
+    );
+
+    const reviewState = {
+      requests: ((fixture.review_state as Record<string, unknown>).requests as Array<Record<string, unknown>>).map(
+        (request) => ({
+          id: request.id as string,
+          kind: request.kind as 'delegated_child_group',
+          family: request.family as string,
+          message: request.message as string,
+          blocking: request.blocking as boolean,
+          delegatedGroup: {
+            delegatedApplyGroup: (request.delegated_group as Record<string, unknown>)
+              .delegated_apply_group as string,
+            parentOperationId: (request.delegated_group as Record<string, unknown>)
+              .parent_operation_id as string,
+            childOperationId: (request.delegated_group as Record<string, unknown>)
+              .child_operation_id as string,
+            delegatedRuntimeSurfacePath: (request.delegated_group as Record<string, unknown>)
+              .delegated_runtime_surface_path as string,
+            caseIds: (request.delegated_group as Record<string, unknown>).case_ids as string[],
+            delegatedCaseIds: (request.delegated_group as Record<string, unknown>)
+              .delegated_case_ids as string[]
+          },
+          actionOffers: (request.action_offers as Array<Record<string, unknown>>).map((offer) => ({
+            action: offer.action as 'apply_delegated_child_group',
+            requiresContext: offer.requires_context as boolean
+          })),
+          defaultAction: request.default_action as 'apply_delegated_child_group'
+        })
+      ),
+      acceptedGroups: ((fixture.review_state as Record<string, unknown>).accepted_groups as Array<Record<string, unknown>>).map(
+        (group) => ({
+          delegatedApplyGroup: group.delegated_apply_group as string,
+          parentOperationId: group.parent_operation_id as string,
+          childOperationId: group.child_operation_id as string,
+          delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path as string,
+          caseIds: group.case_ids as string[],
+          delegatedCaseIds: group.delegated_case_ids as string[]
+        })
+      ),
+      appliedDecisions: ((fixture.review_state as Record<string, unknown>).applied_decisions as Array<Record<string, unknown>>).map(
+        (decision) => ({
+          requestId: decision.request_id as string,
+          action: decision.action as 'apply_delegated_child_group'
+        })
+      ),
+      diagnostics: ((fixture.review_state as Record<string, unknown>).diagnostics ?? []) as []
+    };
+
+    const result = mergeMarkdownWithReviewedNestedOutputs(
+      fixture.template as string,
+      fixture.destination as string,
+      'markdown',
+      reviewState,
+      (fixture.applied_children as Array<Record<string, unknown>>).map((entry) => ({
+        operationId: entry.operation_id as string,
+        output: entry.output as string
+      }))
+    );
+
+    expect(result.ok).toBe((fixture.expected as Record<string, unknown>).ok as boolean);
+    expect(result.output).toBe((fixture.expected as Record<string, unknown>).output);
   });
 
   it('conforms to the provider named-suite plan fixture', () => {

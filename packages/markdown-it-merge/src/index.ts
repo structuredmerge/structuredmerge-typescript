@@ -2,16 +2,19 @@ import MarkdownIt from 'markdown-it';
 import { registerBackend, type BackendReference } from '@structuredmerge/tree-haver';
 import type {
   ConformanceFamilyPlanContext,
+  DelegatedChildGroupReviewState,
   Diagnostic,
   MergeResult,
   ParseResult
 } from '@structuredmerge/ast-merge';
 import {
   collectMarkdownOwners,
+  type AppliedChildOutput,
   type MarkdownAnalysis,
   markdownEmbeddedFamilies as markdownEmbeddedFamiliesWithSubstrate,
   type MarkdownFeatureProfile,
   mergeMarkdown as mergeMarkdownWithSubstrate,
+  mergeMarkdownWithReviewedNestedOutputs as mergeMarkdownWithReviewedNestedOutputsWithSubstrate,
   matchMarkdownOwners as matchMarkdownOwnersWithSubstrate,
   markdownFeatureProfile,
   normalizeMarkdownSource
@@ -123,6 +126,32 @@ export function mergeMarkdown(
     templateSource,
     destinationSource,
     dialect,
+    'kreuzberg-language-pack'
+  );
+}
+
+export function mergeMarkdownWithReviewedNestedOutputs(
+  templateSource: string,
+  destinationSource: string,
+  dialect: 'markdown',
+  reviewState: DelegatedChildGroupReviewState,
+  appliedChildren: readonly AppliedChildOutput[],
+  backend?: string
+): MergeResult<string> {
+  const requested = backend ?? 'markdown-it';
+  if (requested !== 'markdown-it') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported Markdown backend ${requested}.`)]
+    };
+  }
+
+  return mergeMarkdownWithReviewedNestedOutputsWithSubstrate(
+    templateSource,
+    destinationSource,
+    dialect,
+    reviewState,
+    appliedChildren,
     'kreuzberg-language-pack'
   );
 }
