@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  executeDelegatedChildApplyPlan,
   executeNestedMerge,
+  executeReviewedNestedMerge,
   type DelegatedChildOperation,
+  type DelegatedChildGroupReviewState,
   type DelegatedChildSurfaceOutput,
   type Diagnostic,
   type MergeResult
@@ -152,5 +155,87 @@ describe('executeNestedMerge', () => {
       policies: []
     });
     expect(applied).toBe(false);
+  });
+
+  it('executes delegated child apply plan through merge, discovery, and apply', () => {
+    const address = 'document[0] > fenced_code_block[/code_fence/0]';
+    const result = executeDelegatedChildApplyPlan<string>(
+      {
+        entries: [
+          {
+            requestId: 'projected_child_group:markdown:fence:typescript',
+            family: 'markdown',
+            delegatedGroup: {
+              delegatedApplyGroup: 'markdown:fence:typescript',
+              parentOperationId: 'parent:merge',
+              childOperationId: `operation:${address}`,
+              delegatedRuntimeSurfacePath: address,
+              caseIds: [],
+              delegatedCaseIds: []
+            },
+            decision: {
+              requestId: 'projected_child_group:markdown:fence:typescript',
+              action: 'apply_delegated_child_group'
+            }
+          }
+        ]
+      },
+      [{ operationId: `operation:${address}`, output: 'child-output\n' }],
+      {
+        mergeParent: () => ({ ok: true, diagnostics: [], output: 'merged-parent', policies: [] }),
+        discoverOperations: () => ({ ok: true, diagnostics: [], operations: [operation(address)] }),
+        applyResolvedOutputs: (_mergedOutput, _operations, applyPlan, appliedChildren) => {
+          expect(applyPlan.entries).toHaveLength(1);
+          expect(appliedChildren).toEqual([
+            { operationId: `operation:${address}`, output: 'child-output\n' }
+          ]);
+          return { ok: true, diagnostics: [], output: 'final-parent', policies: [] };
+        }
+      }
+    );
+
+    expect(result.output).toBe('final-parent');
+  });
+
+  it('executes reviewed nested merge from accepted review state', () => {
+    const address = 'document[0] > fenced_code_block[/code_fence/0]';
+    const reviewState: DelegatedChildGroupReviewState = {
+      requests: [],
+      acceptedGroups: [
+        {
+          delegatedApplyGroup: 'markdown:fence:typescript',
+          parentOperationId: 'parent:merge',
+          childOperationId: `operation:${address}`,
+          delegatedRuntimeSurfacePath: address,
+          caseIds: [],
+          delegatedCaseIds: []
+        }
+      ],
+      appliedDecisions: [
+        {
+          requestId: 'projected_child_group:markdown:fence:typescript',
+          action: 'apply_delegated_child_group'
+        }
+      ],
+      diagnostics: []
+    };
+
+    const result = executeReviewedNestedMerge<string>(
+      reviewState,
+      'markdown',
+      [{ operationId: `operation:${address}`, output: 'child-output\n' }],
+      {
+        mergeParent: () => ({ ok: true, diagnostics: [], output: 'merged-parent', policies: [] }),
+        discoverOperations: () => ({ ok: true, diagnostics: [], operations: [operation(address)] }),
+        applyResolvedOutputs: (_mergedOutput, _operations, applyPlan) => {
+          expect(applyPlan.entries[0]?.requestId).toBe(
+            'projected_child_group:markdown:fence:typescript'
+          );
+          return { ok: true, diagnostics: [], output: 'final-parent', policies: [] };
+        }
+      }
+    );
+
+    expect(result.output).toBe('final-parent');
   });
 });

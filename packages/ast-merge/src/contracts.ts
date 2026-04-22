@@ -756,6 +756,46 @@ export function executeNestedMerge<TOutput>(
   );
 }
 
+export function executeDelegatedChildApplyPlan<TOutput>(
+  applyPlan: DelegatedChildApplyPlan,
+  appliedChildren: readonly AppliedDelegatedChildOutput[],
+  callbacks: NestedMergeExecutionCallbacks<TOutput>
+): MergeResult<TOutput> {
+  const merged = callbacks.mergeParent();
+  if (!merged.ok || merged.output === undefined) {
+    return merged;
+  }
+
+  const discovery = callbacks.discoverOperations(merged.output);
+  if (!discovery.ok || discovery.operations === undefined) {
+    return {
+      ok: false,
+      diagnostics: discovery.diagnostics,
+      policies: []
+    };
+  }
+
+  return callbacks.applyResolvedOutputs(
+    merged.output,
+    discovery.operations,
+    applyPlan,
+    appliedChildren
+  );
+}
+
+export function executeReviewedNestedMerge<TOutput>(
+  reviewState: DelegatedChildGroupReviewState,
+  family: string,
+  appliedChildren: readonly AppliedDelegatedChildOutput[],
+  callbacks: NestedMergeExecutionCallbacks<TOutput>
+): MergeResult<TOutput> {
+  return executeDelegatedChildApplyPlan(
+    delegatedChildApplyPlan(reviewState, family),
+    appliedChildren,
+    callbacks
+  );
+}
+
 export function conformanceManifestReplayContext(
   manifest: ConformanceManifest,
   options: ConformanceManifestReviewOptions

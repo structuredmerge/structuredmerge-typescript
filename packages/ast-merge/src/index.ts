@@ -79,6 +79,8 @@ export {
   delegatedChildApplyPlan,
   resolveDelegatedChildOutputs,
   executeNestedMerge,
+  executeDelegatedChildApplyPlan,
+  executeReviewedNestedMerge,
   reviewRequestIdForProjectedChildGroup,
   selectProjectedChildReviewGroupsAcceptedForApply,
   summarizeProjectedChildReviewGroupProgress,
