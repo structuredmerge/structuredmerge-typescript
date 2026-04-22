@@ -78,6 +78,7 @@ import {
   classifyTemplateTargetPath,
   resolveTemplateDestinationPath,
   selectTemplateStrategy,
+  planTemplateEntries,
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
@@ -179,6 +180,31 @@ interface TemplateStrategySelectionFixture {
       strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
     }>;
     expected_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  }>;
+}
+
+interface TemplateEntryPlanFixture {
+  template_source_paths: string[];
+  context: {
+    project_name?: string;
+  };
+  default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  overrides: Array<{
+    path: string;
+    strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  }>;
+  expected_entries: Array<{
+    template_source_path: string;
+    logical_destination_path: string;
+    destination_path: string | null;
+    classification: {
+      destination_path: string;
+      file_type: string;
+      family: string;
+      dialect: string;
+    };
+    strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+    action: 'omit' | 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
   }>;
 }
 
@@ -1775,6 +1801,41 @@ describe('ast-merge shared fixtures', () => {
         selectTemplateStrategy(testCase.destination_path, testCase.default_strategy, testCase.overrides)
       ).toBe(testCase.expected_strategy);
     }
+  });
+
+  it('conforms to the template entry plan fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateEntryPlanFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_entry_plan') ??
+        []) as string[])
+    );
+
+    const actual = planTemplateEntries(
+      fixture.template_source_paths,
+      { projectName: fixture.context.project_name },
+      fixture.default_strategy,
+      fixture.overrides
+    );
+
+    expect(
+      actual.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        classification: {
+          destination_path: entry.classification.destinationPath,
+          file_type: entry.classification.fileType,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action
+      }))
+    ).toEqual(fixture.expected_entries);
   });
 
   it('conforms to the slice-28 conformance runner shape fixture', () => {

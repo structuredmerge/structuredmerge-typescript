@@ -138,6 +138,15 @@ export interface TemplateStrategyOverride {
   readonly strategy: TemplateStrategy;
 }
 
+export interface TemplatePlanEntry {
+  readonly templateSourcePath: string;
+  readonly logicalDestinationPath: string;
+  readonly destinationPath?: string;
+  readonly classification: TemplateTargetClassification;
+  readonly strategy: TemplateStrategy;
+  readonly action: 'omit' | TemplateStrategy;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -594,6 +603,29 @@ export function selectTemplateStrategy(
   const normalizedPath = path.replace(/^\.\//, '');
   const override = overrides.find((entry) => entry.path.replace(/^\.\//, '') === normalizedPath);
   return override?.strategy ?? defaultStrategy;
+}
+
+export function planTemplateEntries(
+  templateSourcePaths: readonly string[],
+  context: TemplateDestinationContext = {},
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = []
+): readonly TemplatePlanEntry[] {
+  return templateSourcePaths.map((templateSourcePath) => {
+    const logicalDestinationPath = normalizeTemplateSourcePath(templateSourcePath);
+    const destinationPath = resolveTemplateDestinationPath(logicalDestinationPath, context);
+    const classification = classifyTemplateTargetPath(logicalDestinationPath);
+    const strategy = selectTemplateStrategy(logicalDestinationPath, defaultStrategy, overrides);
+
+    return {
+      templateSourcePath,
+      logicalDestinationPath,
+      destinationPath,
+      classification,
+      strategy,
+      action: destinationPath === undefined ? 'omit' : strategy
+    };
+  });
 }
 
 export function conformanceSuiteDefinition(
