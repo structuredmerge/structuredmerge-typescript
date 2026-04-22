@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
@@ -81,6 +81,8 @@ import {
   templateTokenKeys,
   prepareTemplateEntries,
   planTemplateExecution,
+  planTemplateTreeExecution,
+  previewTemplateExecution,
   selectTemplateStrategy,
   planTemplateEntries,
   enrichTemplatePlanEntries,
@@ -125,6 +127,12 @@ import {
   summarizeNamedConformanceSuiteReports,
   summarizeConformanceResults
 } from '../src/index';
+
+// parity anchors:
+// diagnosticsFixturePath('mini_template_tree_plan')
+// diagnosticsFixturePath('mini_template_tree_preview')
+// diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
+// diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
 
 interface DiagnosticFixture {
   severities: DiagnosticSeverity[];
@@ -291,6 +299,48 @@ interface TemplateExecutionPlanFixture {
       destination_content: string | null;
     }
   >;
+}
+
+interface MiniTemplateTreePlanFixture {
+  context: {
+    project_name?: string;
+  };
+  default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  overrides: Array<{
+    path: string;
+    strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  }>;
+  replacements: Record<string, string>;
+  expected_entries: TemplateExecutionPlanFixture['expected_entries'];
+}
+
+interface MiniTemplateTreePreviewFixture {
+  expected_preview: {
+    result_files: Record<string, string>;
+    created_paths: string[];
+    updated_paths: string[];
+    kept_paths: string[];
+    blocked_paths: string[];
+    omitted_paths: string[];
+  };
+}
+
+function readRelativeFileTree(rootPath: string): Record<string, string> {
+  const files: Record<string, string> = {};
+  const walk = (currentPath: string, prefix = ''): void => {
+    for (const entry of readdirSync(currentPath, { withFileTypes: true })) {
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolutePath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        walk(absolutePath, relativePath);
+      } else {
+        files[relativePath] = readFileSync(absolutePath, 'utf8');
+      }
+    }
+  };
+
+  walk(rootPath);
+  return files;
 }
 
 interface DelegatedChildApplyPlanFixture {
@@ -2144,6 +2194,116 @@ describe('ast-merge shared fixtures', () => {
         destination_content: entry.destinationContent ?? null
       }))
     ).toEqual(fixture.expected_entries);
+  });
+
+  it('conforms to the mini template tree plan fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_plan'
+    ) ?? []) as string[];
+    const fixture = readFixture<MiniTemplateTreePlanFixture>(...fixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...fixturePath.slice(0, -1));
+    const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
+    const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
+    const templateSourcePaths = Object.keys(templateContents).sort();
+    const existingDestinationPaths = Object.keys(destinationContents).sort();
+
+    const actual = planTemplateTreeExecution(
+      templateSourcePaths,
+      templateContents,
+      existingDestinationPaths,
+      destinationContents,
+      { projectName: fixture.context.project_name },
+      fixture.default_strategy,
+      fixture.overrides,
+      fixture.replacements
+    );
+
+    expect(
+      actual.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        classification: {
+          destination_path: entry.classification.destinationPath,
+          file_type: entry.classification.fileType,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destination_exists: entry.destinationExists,
+        write_action: entry.writeAction,
+        token_keys: entry.tokenKeys,
+        unresolved_token_keys: entry.unresolvedTokenKeys,
+        token_resolution_required: entry.tokenResolutionRequired,
+        blocked: entry.blocked,
+        block_reason: entry.blockReason ?? null,
+        template_content: entry.templateContent,
+        prepared_template_content: entry.preparedTemplateContent ?? null,
+        preparation_action: entry.preparationAction,
+        execution_action: entry.executionAction,
+        ready: entry.ready,
+        destination_content: entry.destinationContent ?? null
+      }))
+    ).toEqual(fixture.expected_entries);
+  });
+
+  it('conforms to the mini template tree preview fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const planFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_plan'
+    ) ?? []) as string[];
+    const previewFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_preview'
+    ) ?? []) as string[];
+    const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
+    const previewFixture = readFixture<MiniTemplateTreePreviewFixture>(...previewFixturePath);
+    const fixtureDir = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      ...planFixturePath.slice(0, -1)
+    );
+    const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
+    const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
+    const templateSourcePaths = Object.keys(templateContents).sort();
+    const existingDestinationPaths = Object.keys(destinationContents).sort();
+
+    const executionPlan = planTemplateTreeExecution(
+      templateSourcePaths,
+      templateContents,
+      existingDestinationPaths,
+      destinationContents,
+      { projectName: planFixture.context.project_name },
+      planFixture.default_strategy,
+      planFixture.overrides,
+      planFixture.replacements
+    );
+    const preview = previewTemplateExecution(executionPlan);
+
+    expect({
+      result_files: preview.resultFiles,
+      created_paths: preview.createdPaths,
+      updated_paths: preview.updatedPaths,
+      kept_paths: preview.keptPaths,
+      blocked_paths: preview.blockedPaths,
+      omitted_paths: preview.omittedPaths
+    }).toEqual(previewFixture.expected_preview);
   });
 
   it('conforms to the template entry plan state fixture', () => {

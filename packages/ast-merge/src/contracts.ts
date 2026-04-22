@@ -193,6 +193,15 @@ export interface TemplateExecutionPlanEntry extends TemplatePreparedEntry {
   readonly destinationContent?: string;
 }
 
+export interface TemplatePreviewResult {
+  readonly resultFiles: Readonly<Record<string, string>>;
+  readonly createdPaths: readonly string[];
+  readonly updatedPaths: readonly string[];
+  readonly keptPaths: readonly string[];
+  readonly blockedPaths: readonly string[];
+  readonly omittedPaths: readonly string[];
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -910,6 +919,105 @@ export function planTemplateExecution(
       destinationContent
     };
   });
+}
+
+export function planTemplateTreeExecution(
+  templateSourcePaths: readonly string[],
+  templateContents: Readonly<Record<string, string>>,
+  existingDestinationPaths: readonly string[],
+  destinationContents: Readonly<Record<string, string>>,
+  context: TemplateDestinationContext = {},
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = [],
+  replacements: Readonly<Record<string, string>> = {},
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): readonly TemplateExecutionPlanEntry[] {
+  const plannedEntries = planTemplateEntries(
+    templateSourcePaths,
+    context,
+    defaultStrategy,
+    overrides
+  );
+  const statefulEntries = enrichTemplatePlanEntries(plannedEntries, existingDestinationPaths);
+  const tokenStateEntries = enrichTemplatePlanEntriesWithTokenState(
+    statefulEntries,
+    templateContents,
+    replacements,
+    config
+  );
+  const preparedEntries = prepareTemplateEntries(
+    tokenStateEntries,
+    templateContents,
+    replacements,
+    config
+  );
+
+  return planTemplateExecution(preparedEntries, destinationContents);
+}
+
+export function previewTemplateExecution(
+  entries: readonly TemplateExecutionPlanEntry[]
+): TemplatePreviewResult {
+  const resultFiles: Record<string, string> = {};
+  const createdPaths: string[] = [];
+  const updatedPaths: string[] = [];
+  const keptPaths: string[] = [];
+  const blockedPaths: string[] = [];
+  const omittedPaths: string[] = [];
+
+  for (const entry of entries) {
+    const destinationPath = entry.destinationPath;
+    switch (entry.executionAction) {
+      case 'blocked':
+        if (destinationPath !== undefined) {
+          blockedPaths.push(destinationPath);
+        }
+        break;
+      case 'omit':
+        omittedPaths.push(entry.logicalDestinationPath);
+        break;
+      case 'keep':
+        if (destinationPath !== undefined && entry.destinationContent !== undefined) {
+          resultFiles[destinationPath] = entry.destinationContent;
+          keptPaths.push(destinationPath);
+        }
+        break;
+      case 'raw_copy':
+      case 'write_prepared_content':
+        if (destinationPath !== undefined && entry.preparedTemplateContent !== undefined) {
+          resultFiles[destinationPath] = entry.preparedTemplateContent;
+          if (entry.destinationExists) {
+            updatedPaths.push(destinationPath);
+          } else {
+            createdPaths.push(destinationPath);
+          }
+        }
+        break;
+      case 'merge_prepared_content':
+        if (
+          destinationPath !== undefined &&
+          entry.preparedTemplateContent !== undefined &&
+          entry.destinationContent === undefined
+        ) {
+          resultFiles[destinationPath] = entry.preparedTemplateContent;
+          if (entry.destinationExists) {
+            updatedPaths.push(destinationPath);
+          } else {
+            createdPaths.push(destinationPath);
+          }
+        }
+        break;
+    }
+  }
+
+  return {
+    resultFiles,
+    createdPaths,
+    updatedPaths,
+    keptPaths,
+    blockedPaths,
+    omittedPaths
+  };
 }
 
 export function conformanceSuiteDefinition(
