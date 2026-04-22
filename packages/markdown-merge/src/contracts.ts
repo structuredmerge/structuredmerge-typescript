@@ -1,6 +1,7 @@
 import type {
   AppliedDelegatedChildOutput,
   ConformanceFamilyPlanContext,
+  ConformanceManifestReviewState,
   ConformanceManifest,
   DelegatedChildGroupReviewState,
   DelegatedChildOperation,
@@ -9,11 +10,15 @@ import type {
   Diagnostic,
   FamilyFeatureProfile,
   MergeResult,
-  ParseResult
+  ParseResult,
+  ReviewReplayBundle,
+  ReviewedNestedExecution
 } from '@structuredmerge/ast-merge';
 import {
   delegatedChildApplyPlan as astDelegatedChildApplyPlan,
   executeNestedMerge,
+  executeReviewReplayBundleReviewedNestedExecutions,
+  executeReviewStateReviewedNestedExecutions,
   executeReviewedNestedMerge
 } from '@structuredmerge/ast-merge';
 import {
@@ -487,6 +492,124 @@ export function mergeMarkdownWithReviewedNestedOutputs(
         )
     }
   );
+}
+
+function reviewedNestedExecutionForMarkdown(
+  executions: readonly ReviewedNestedExecution[]
+): ReviewedNestedExecution | undefined {
+  return executions.find((execution) => execution.family === 'markdown');
+}
+
+export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
+  templateSource: string,
+  destinationSource: string,
+  dialect: MarkdownDialect,
+  replayBundle: ReviewReplayBundle,
+  backend?: MarkdownBackend
+): MergeResult<string> {
+  const execution = reviewedNestedExecutionForMarkdown(replayBundle.reviewedNestedExecutions ?? []);
+  if (!execution) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review replay bundle does not include a reviewed nested execution for markdown.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return executeReviewReplayBundleReviewedNestedExecutions<string>(replayBundle, () => ({
+    mergeParent: () => mergeMarkdown(templateSource, destinationSource, dialect, backend),
+    discoverOperations: (mergedOutput) => {
+      const analysis = parseMarkdown(mergedOutput, dialect, backend);
+      if (!analysis.ok || !analysis.analysis) {
+        return { ok: false, diagnostics: analysis.diagnostics };
+      }
+
+      return {
+        ok: true,
+        diagnostics: [],
+        operations: markdownDelegatedChildOperations(analysis.analysis)
+      };
+    },
+    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+      applyMarkdownDelegatedChildOutputs(
+        mergedOutput,
+        operations,
+        applyPlan,
+        resolvedChildren as readonly AppliedDelegatedChildOutput[]
+      )
+  })).find((run) => run.execution.family === execution.family)?.result ?? {
+    ok: false,
+    diagnostics: [
+      {
+        severity: 'error',
+        category: 'configuration_error',
+        message: 'review replay bundle markdown execution could not be applied.'
+      }
+    ],
+    policies: []
+  };
+}
+
+export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
+  templateSource: string,
+  destinationSource: string,
+  dialect: MarkdownDialect,
+  reviewState: ConformanceManifestReviewState,
+  backend?: MarkdownBackend
+): MergeResult<string> {
+  const execution = reviewedNestedExecutionForMarkdown(reviewState.reviewedNestedExecutions ?? []);
+  if (!execution) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review state does not include a reviewed nested execution for markdown.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return executeReviewStateReviewedNestedExecutions<string>(reviewState, () => ({
+    mergeParent: () => mergeMarkdown(templateSource, destinationSource, dialect, backend),
+    discoverOperations: (mergedOutput) => {
+      const analysis = parseMarkdown(mergedOutput, dialect, backend);
+      if (!analysis.ok || !analysis.analysis) {
+        return { ok: false, diagnostics: analysis.diagnostics };
+      }
+
+      return {
+        ok: true,
+        diagnostics: [],
+        operations: markdownDelegatedChildOperations(analysis.analysis)
+      };
+    },
+    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+      applyMarkdownDelegatedChildOutputs(
+        mergedOutput,
+        operations,
+        applyPlan,
+        resolvedChildren as readonly AppliedDelegatedChildOutput[]
+      )
+  })).find((run) => run.execution.family === execution.family)?.result ?? {
+    ok: false,
+    diagnostics: [
+      {
+        severity: 'error',
+        category: 'configuration_error',
+        message: 'review state markdown execution could not be applied.'
+      }
+    ],
+    policies: []
+  };
 }
 
 export function mergeMarkdown(

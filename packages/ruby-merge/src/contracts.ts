@@ -1,6 +1,7 @@
 import type {
   AppliedDelegatedChildOutput,
   ConformanceFamilyPlanContext,
+  ConformanceManifestReviewState,
   DelegatedChildGroupReviewState,
   DelegatedChildOperation,
   DelegatedChildSurfaceOutput,
@@ -8,11 +9,15 @@ import type {
   FamilyFeatureProfile,
   MergeResult,
   ParseResult,
-  PolicyReference
+  PolicyReference,
+  ReviewReplayBundle,
+  ReviewedNestedExecution
 } from '@structuredmerge/ast-merge';
 import {
   delegatedChildApplyPlan as astDelegatedChildApplyPlan,
   executeNestedMerge,
+  executeReviewReplayBundleReviewedNestedExecutions,
+  executeReviewStateReviewedNestedExecutions,
   executeReviewedNestedMerge
 } from '@structuredmerge/ast-merge';
 import {
@@ -355,6 +360,122 @@ export function mergeRubyWithReviewedNestedOutputs(
         )
     }
   );
+}
+
+function reviewedNestedExecutionForRuby(
+  executions: readonly ReviewedNestedExecution[]
+): ReviewedNestedExecution | undefined {
+  return executions.find((execution) => execution.family === 'ruby');
+}
+
+export function mergeRubyWithReviewedNestedOutputsFromReplayBundle(
+  templateSource: string,
+  destinationSource: string,
+  dialect: RubyDialect,
+  replayBundle: ReviewReplayBundle
+): MergeResult<string> {
+  const execution = reviewedNestedExecutionForRuby(replayBundle.reviewedNestedExecutions ?? []);
+  if (!execution) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review replay bundle does not include a reviewed nested execution for ruby.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return executeReviewReplayBundleReviewedNestedExecutions<string>(replayBundle, () => ({
+    mergeParent: () => mergeRuby(templateSource, destinationSource, dialect),
+    discoverOperations: (mergedOutput) => {
+      const analysis = parseRuby(mergedOutput, dialect);
+      if (!analysis.ok || !analysis.analysis) {
+        return { ok: false, diagnostics: analysis.diagnostics };
+      }
+
+      return {
+        ok: true,
+        diagnostics: [],
+        operations: rubyDelegatedChildOperations(analysis.analysis)
+      };
+    },
+    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+      applyRubyDelegatedChildOutputs(
+        mergedOutput,
+        operations,
+        applyPlan,
+        resolvedChildren as readonly AppliedDelegatedChildOutput[]
+      )
+  })).find((run) => run.execution.family === execution.family)?.result ?? {
+    ok: false,
+    diagnostics: [
+      {
+        severity: 'error',
+        category: 'configuration_error',
+        message: 'review replay bundle ruby execution could not be applied.'
+      }
+    ],
+    policies: []
+  };
+}
+
+export function mergeRubyWithReviewedNestedOutputsFromReviewState(
+  templateSource: string,
+  destinationSource: string,
+  dialect: RubyDialect,
+  reviewState: ConformanceManifestReviewState
+): MergeResult<string> {
+  const execution = reviewedNestedExecutionForRuby(reviewState.reviewedNestedExecutions ?? []);
+  if (!execution) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review state does not include a reviewed nested execution for ruby.'
+        }
+      ],
+      policies: []
+    };
+  }
+
+  return executeReviewStateReviewedNestedExecutions<string>(reviewState, () => ({
+    mergeParent: () => mergeRuby(templateSource, destinationSource, dialect),
+    discoverOperations: (mergedOutput) => {
+      const analysis = parseRuby(mergedOutput, dialect);
+      if (!analysis.ok || !analysis.analysis) {
+        return { ok: false, diagnostics: analysis.diagnostics };
+      }
+
+      return {
+        ok: true,
+        diagnostics: [],
+        operations: rubyDelegatedChildOperations(analysis.analysis)
+      };
+    },
+    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+      applyRubyDelegatedChildOutputs(
+        mergedOutput,
+        operations,
+        applyPlan,
+        resolvedChildren as readonly AppliedDelegatedChildOutput[]
+      )
+  })).find((run) => run.execution.family === execution.family)?.result ?? {
+    ok: false,
+    diagnostics: [
+      {
+        severity: 'error',
+        category: 'configuration_error',
+        message: 'review state ruby execution could not be applied.'
+      }
+    ],
+    policies: []
+  };
 }
 
 function analyzeRubyDocument(source: string): RubyAnalysis {

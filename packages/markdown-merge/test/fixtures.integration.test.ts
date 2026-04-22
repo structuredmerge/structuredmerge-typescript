@@ -26,6 +26,8 @@ import {
   matchMarkdownOwners,
   mergeMarkdown,
   mergeMarkdownWithReviewedNestedOutputs,
+  mergeMarkdownWithReviewedNestedOutputsFromReplayBundle,
+  mergeMarkdownWithReviewedNestedOutputsFromReviewState,
   mergeMarkdownWithNestedOutputs,
   parseMarkdown
 } from '../src/index';
@@ -955,5 +957,222 @@ describe('markdown-merge shared fixtures', () => {
 
     expect(result.ok).toBe(fixture.expected.ok);
     expect(result.output).toBe(fixture.expected.output);
+  });
+
+  it('conforms to the slice-309 reviewed nested review artifact application fixture', () => {
+    const fixture = readFixture<{
+      template: string;
+      destination: string;
+      replay_bundle: {
+        replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+        decisions: Array<{ request_id: string; action: 'accept_default_context' | 'apply_delegated_child_group' }>;
+        reviewed_nested_executions: Array<{
+          family: string;
+          review_state: {
+            requests: Array<{
+              id: string;
+              kind: 'delegated_child_group';
+              family: string;
+              message: string;
+              blocking: boolean;
+              delegated_group: {
+                delegated_apply_group: string;
+                parent_operation_id: string;
+                child_operation_id: string;
+                delegated_runtime_surface_path: string;
+                case_ids: string[];
+                delegated_case_ids: string[];
+              };
+              action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+              default_action: 'apply_delegated_child_group';
+            }>;
+            accepted_groups: Array<{
+              delegated_apply_group: string;
+              parent_operation_id: string;
+              child_operation_id: string;
+              delegated_runtime_surface_path: string;
+              case_ids: string[];
+              delegated_case_ids: string[];
+            }>;
+            applied_decisions: Array<{ request_id: string; action: 'apply_delegated_child_group' }>;
+            diagnostics: [];
+          };
+          applied_children: Array<{ operation_id: string; output: string }>;
+        }>;
+      };
+      review_state: {
+        report: { entries: []; summary: { total: 0; passed: 0; failed: 0; skipped: 0 } };
+        diagnostics: [];
+        requests: [];
+        applied_decisions: [];
+        host_hints: { interactive: boolean; require_explicit_contexts: boolean };
+        replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+        reviewed_nested_executions: Array<{
+          family: string;
+          review_state: {
+            requests: Array<{
+              id: string;
+              kind: 'delegated_child_group';
+              family: string;
+              message: string;
+              blocking: boolean;
+              delegated_group: {
+                delegated_apply_group: string;
+                parent_operation_id: string;
+                child_operation_id: string;
+                delegated_runtime_surface_path: string;
+                case_ids: string[];
+                delegated_case_ids: string[];
+              };
+              action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+              default_action: 'apply_delegated_child_group';
+            }>;
+            accepted_groups: Array<{
+              delegated_apply_group: string;
+              parent_operation_id: string;
+              child_operation_id: string;
+              delegated_runtime_surface_path: string;
+              case_ids: string[];
+              delegated_case_ids: string[];
+            }>;
+            applied_decisions: Array<{ request_id: string; action: 'apply_delegated_child_group' }>;
+            diagnostics: [];
+          };
+          applied_children: Array<{ operation_id: string; output: string }>;
+        }>;
+      };
+      expected: { ok: boolean; output: string };
+    }>(
+      'markdown',
+      'slice-309-reviewed-nested-review-artifact-application',
+      'fenced-code-reviewed-nested-review-artifact-application.json'
+    );
+
+    const replayResult = mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
+      fixture.template,
+      fixture.destination,
+      'markdown',
+      {
+        replayContext: {
+          surface: fixture.replay_bundle.replay_context.surface,
+          families: fixture.replay_bundle.replay_context.families,
+          requireExplicitContexts: fixture.replay_bundle.replay_context.require_explicit_contexts
+        },
+        decisions: fixture.replay_bundle.decisions.map((decision) => ({
+          requestId: decision.request_id,
+          action: decision.action
+        })),
+        reviewedNestedExecutions: fixture.replay_bundle.reviewed_nested_executions.map((execution) => ({
+          family: execution.family,
+          reviewState: {
+            requests: execution.review_state.requests.map((request) => ({
+              id: request.id,
+              kind: request.kind,
+              family: request.family,
+              message: request.message,
+              blocking: request.blocking,
+              delegatedGroup: {
+                delegatedApplyGroup: request.delegated_group.delegated_apply_group,
+                parentOperationId: request.delegated_group.parent_operation_id,
+                childOperationId: request.delegated_group.child_operation_id,
+                delegatedRuntimeSurfacePath: request.delegated_group.delegated_runtime_surface_path,
+                caseIds: request.delegated_group.case_ids,
+                delegatedCaseIds: request.delegated_group.delegated_case_ids
+              },
+              actionOffers: request.action_offers.map((offer) => ({
+                action: offer.action,
+                requiresContext: offer.requires_context
+              })),
+              defaultAction: request.default_action
+            })),
+            acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+              delegatedApplyGroup: group.delegated_apply_group,
+              parentOperationId: group.parent_operation_id,
+              childOperationId: group.child_operation_id,
+              delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+              caseIds: group.case_ids,
+              delegatedCaseIds: group.delegated_case_ids
+            })),
+            appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+              requestId: decision.request_id,
+              action: decision.action
+            })),
+            diagnostics: execution.review_state.diagnostics
+          },
+          appliedChildren: execution.applied_children.map((entry) => ({
+            operationId: entry.operation_id,
+            output: entry.output
+          }))
+        }))
+      }
+    );
+
+    const reviewStateResult = mergeMarkdownWithReviewedNestedOutputsFromReviewState(
+      fixture.template,
+      fixture.destination,
+      'markdown',
+      {
+        report: fixture.review_state.report,
+        diagnostics: fixture.review_state.diagnostics,
+        requests: fixture.review_state.requests,
+        appliedDecisions: fixture.review_state.applied_decisions,
+        hostHints: {
+          interactive: fixture.review_state.host_hints.interactive,
+          requireExplicitContexts: fixture.review_state.host_hints.require_explicit_contexts
+        },
+        replayContext: {
+          surface: fixture.review_state.replay_context.surface,
+          families: fixture.review_state.replay_context.families,
+          requireExplicitContexts: fixture.review_state.replay_context.require_explicit_contexts
+        },
+        reviewedNestedExecutions: fixture.review_state.reviewed_nested_executions.map((execution) => ({
+          family: execution.family,
+          reviewState: {
+            requests: execution.review_state.requests.map((request) => ({
+              id: request.id,
+              kind: request.kind,
+              family: request.family,
+              message: request.message,
+              blocking: request.blocking,
+              delegatedGroup: {
+                delegatedApplyGroup: request.delegated_group.delegated_apply_group,
+                parentOperationId: request.delegated_group.parent_operation_id,
+                childOperationId: request.delegated_group.child_operation_id,
+                delegatedRuntimeSurfacePath: request.delegated_group.delegated_runtime_surface_path,
+                caseIds: request.delegated_group.case_ids,
+                delegatedCaseIds: request.delegated_group.delegated_case_ids
+              },
+              actionOffers: request.action_offers.map((offer) => ({
+                action: offer.action,
+                requiresContext: offer.requires_context
+              })),
+              defaultAction: request.default_action
+            })),
+            acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+              delegatedApplyGroup: group.delegated_apply_group,
+              parentOperationId: group.parent_operation_id,
+              childOperationId: group.child_operation_id,
+              delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+              caseIds: group.case_ids,
+              delegatedCaseIds: group.delegated_case_ids
+            })),
+            appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+              requestId: decision.request_id,
+              action: decision.action
+            })),
+            diagnostics: execution.review_state.diagnostics
+          },
+          appliedChildren: execution.applied_children.map((entry) => ({
+            operationId: entry.operation_id,
+            output: entry.output
+          }))
+        }))
+      }
+    );
+
+    expect(replayResult.ok).toBe(fixture.expected.ok);
+    expect(replayResult.output).toBe(fixture.expected.output);
+    expect(reviewStateResult.ok).toBe(fixture.expected.ok);
+    expect(reviewStateResult.output).toBe(fixture.expected.output);
   });
 });

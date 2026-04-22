@@ -29,6 +29,8 @@ export {
   markdownPlanContext,
   mergeMarkdown,
   mergeMarkdownWithReviewedNestedOutputs,
+  mergeMarkdownWithReviewedNestedOutputsFromReplayBundle,
+  mergeMarkdownWithReviewedNestedOutputsFromReviewState,
   mergeMarkdownWithNestedOutputs,
   matchMarkdownOwners,
   normalizeMarkdownSource,

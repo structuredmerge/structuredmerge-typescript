@@ -4,6 +4,8 @@ export {
   matchRubyOwners,
   mergeRuby,
   mergeRubyWithReviewedNestedOutputs,
+  mergeRubyWithReviewedNestedOutputsFromReplayBundle,
+  mergeRubyWithReviewedNestedOutputsFromReviewState,
   mergeRubyWithNestedOutputs,
   parseRuby,
   rubyBackendFeatureProfile,
