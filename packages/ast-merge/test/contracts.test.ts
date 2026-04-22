@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   executeDelegatedChildApplyPlan,
   executeNestedMerge,
+  executeReviewedNestedExecution,
   executeReviewedNestedMerge,
+  reviewedNestedExecution,
   type DelegatedChildOperation,
   type DelegatedChildGroupReviewState,
   type DelegatedChildSurfaceOutput,
@@ -235,6 +237,50 @@ describe('executeNestedMerge', () => {
         }
       }
     );
+
+    expect(result.output).toBe('final-parent');
+  });
+
+  it('executes reviewed nested execution payload directly', () => {
+    const address = 'document[0] > fenced_code_block[/code_fence/0]';
+    const execution = reviewedNestedExecution(
+      'markdown',
+      {
+        requests: [],
+        acceptedGroups: [
+          {
+            delegatedApplyGroup: 'markdown:fence:typescript',
+            parentOperationId: 'parent:merge',
+            childOperationId: `operation:${address}`,
+            delegatedRuntimeSurfacePath: address,
+            caseIds: [],
+            delegatedCaseIds: []
+          }
+        ],
+        appliedDecisions: [
+          {
+            requestId: 'projected_child_group:markdown:fence:typescript',
+            action: 'apply_delegated_child_group'
+          }
+        ],
+        diagnostics: []
+      },
+      [{ operationId: `operation:${address}`, output: 'child-output\n' }]
+    );
+
+    const result = executeReviewedNestedExecution<string>(execution, {
+      mergeParent: () => ({ ok: true, diagnostics: [], output: 'merged-parent', policies: [] }),
+      discoverOperations: () => ({ ok: true, diagnostics: [], operations: [operation(address)] }),
+      applyResolvedOutputs: (_mergedOutput, _operations, applyPlan, appliedChildren) => {
+        expect(applyPlan.entries[0]?.requestId).toBe(
+          'projected_child_group:markdown:fence:typescript'
+        );
+        expect(appliedChildren).toEqual([
+          { operationId: `operation:${address}`, output: 'child-output\n' }
+        ]);
+        return { ok: true, diagnostics: [], output: 'final-parent', policies: [] };
+      }
+    });
 
     expect(result.output).toBe('final-parent');
   });

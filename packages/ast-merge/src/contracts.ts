@@ -808,6 +808,30 @@ export function executeReviewedNestedMerge<TOutput>(
   );
 }
 
+export function reviewedNestedExecution(
+  family: string,
+  reviewState: DelegatedChildGroupReviewState,
+  appliedChildren: readonly AppliedDelegatedChildOutput[]
+): ReviewedNestedExecution {
+  return {
+    family,
+    reviewState,
+    appliedChildren
+  };
+}
+
+export function executeReviewedNestedExecution<TOutput>(
+  execution: ReviewedNestedExecution,
+  callbacks: NestedMergeExecutionCallbacks<TOutput>
+): MergeResult<TOutput> {
+  return executeReviewedNestedMerge(
+    execution.reviewState,
+    execution.family,
+    execution.appliedChildren,
+    callbacks
+  );
+}
+
 export function conformanceManifestReplayContext(
   manifest: ConformanceManifest,
   options: ConformanceManifestReviewOptions

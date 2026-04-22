@@ -91,6 +91,7 @@ import {
   importReviewReplayBundleEnvelope,
   reviewReplayBundleInputs,
   reviewReplayBundleEnvelope,
+  reviewedNestedExecution,
   reviewedNestedExecutionEnvelope,
   reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
@@ -841,6 +842,13 @@ interface ReviewedNestedExecutionEnvelopeFixture extends ReviewedNestedExecution
     version: 1;
     execution: ReviewedNestedExecutionFixture['execution'];
   };
+}
+
+interface ReviewedNestedExecutionPayloadFixture {
+  family: string;
+  review_state: ReviewedNestedExecutionFixture['execution']['review_state'];
+  applied_children: ReviewedNestedExecutionFixture['execution']['applied_children'];
+  expected_execution: ReviewedNestedExecutionFixture['execution'];
 }
 
 interface FamilyContextExplicitReviewDecisionFixture {
@@ -3936,6 +3944,21 @@ describe('ast-merge shared fixtures', () => {
         error: rejectionCase.expected_error
       });
     }
+  });
+
+  it('conforms to the slice-303 reviewed nested execution payload fixture', () => {
+    const fixture = readFixture<ReviewedNestedExecutionPayloadFixture>(
+      ...diagnosticsFixturePath('reviewed_nested_execution_payload')
+    );
+    const source = normalizeReviewedNestedExecution({
+      family: fixture.family,
+      review_state: fixture.review_state,
+      applied_children: fixture.applied_children
+    });
+
+    expect(
+      reviewedNestedExecution(source.family, source.reviewState, source.appliedChildren)
+    ).toEqual(normalizeReviewedNestedExecution(fixture.expected_execution));
   });
 
   it('conforms to the slice-79 explicit review replay bundle application fixture', () => {
