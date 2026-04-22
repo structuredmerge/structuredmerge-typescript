@@ -15,6 +15,7 @@ import {
   markdownFeatureProfile,
   markdownPlanContext,
   matchMarkdownOwners,
+  mergeMarkdown,
   parseMarkdown
 } from '../src/index';
 
@@ -121,6 +122,15 @@ describe('markdown-it-merge shared fixtures', () => {
     expect(result.unmatchedDestination).toEqual(
       (matchingFixture.expected as Record<string, unknown>).unmatched_destination as string[]
     );
+
+    const mergeFixture = readFixture('markdown', 'slice-286-merge', 'section-merge.json');
+    const mergeResult = mergeMarkdown(
+      mergeFixture.template as string,
+      mergeFixture.destination as string,
+      'markdown'
+    );
+    expect(mergeResult.ok).toBe((mergeFixture.expected as Record<string, unknown>).ok as boolean);
+    expect(mergeResult.output).toBe((mergeFixture.expected as Record<string, unknown>).output);
   });
 
   it('conforms to the slice-208 embedded-family fixture', () => {

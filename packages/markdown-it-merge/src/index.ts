@@ -3,6 +3,7 @@ import { registerBackend, type BackendReference } from '@structuredmerge/tree-ha
 import type {
   ConformanceFamilyPlanContext,
   Diagnostic,
+  MergeResult,
   ParseResult
 } from '@structuredmerge/ast-merge';
 import {
@@ -10,6 +11,7 @@ import {
   type MarkdownAnalysis,
   markdownEmbeddedFamilies as markdownEmbeddedFamiliesWithSubstrate,
   type MarkdownFeatureProfile,
+  mergeMarkdown as mergeMarkdownWithSubstrate,
   matchMarkdownOwners as matchMarkdownOwnersWithSubstrate,
   markdownFeatureProfile,
   normalizeMarkdownSource
@@ -103,4 +105,25 @@ export function parseMarkdown(
 
 export const matchMarkdownOwners = matchMarkdownOwnersWithSubstrate;
 export const markdownEmbeddedFamilies = markdownEmbeddedFamiliesWithSubstrate;
+export function mergeMarkdown(
+  templateSource: string,
+  destinationSource: string,
+  dialect: 'markdown',
+  backend?: string
+): MergeResult<string> {
+  const requested = backend ?? 'markdown-it';
+  if (requested !== 'markdown-it') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported Markdown backend ${requested}.`)]
+    };
+  }
+
+  return mergeMarkdownWithSubstrate(
+    templateSource,
+    destinationSource,
+    dialect,
+    'kreuzberg-language-pack'
+  );
+}
 export { markdownFeatureProfile };
