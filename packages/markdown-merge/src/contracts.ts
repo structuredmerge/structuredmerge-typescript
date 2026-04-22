@@ -2,6 +2,7 @@ import type {
   AppliedDelegatedChildOutput,
   ConformanceFamilyPlanContext,
   ConformanceManifest,
+  DelegatedChildGroupReviewState,
   DelegatedChildOperation,
   DelegatedChildSurfaceOutput,
   DiscoveredSurface,
@@ -10,7 +11,11 @@ import type {
   MergeResult,
   ParseResult
 } from '@structuredmerge/ast-merge';
-import { executeNestedMerge } from '@structuredmerge/ast-merge';
+import {
+  delegatedChildApplyPlan as astDelegatedChildApplyPlan,
+  executeNestedMerge,
+  executeReviewedNestedMerge
+} from '@structuredmerge/ast-merge';
 import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
@@ -53,6 +58,8 @@ interface MarkdownSection {
   readonly path: string;
   readonly text: string;
 }
+
+type DelegatedChildApplyPlan = ReturnType<typeof astDelegatedChildApplyPlan>;
 
 export interface MarkdownEmbeddedFamilyCandidate {
   readonly path: string;
@@ -440,6 +447,43 @@ export function mergeMarkdownWithNestedOutputs(
           operations,
           applyPlan,
           appliedChildren as readonly AppliedDelegatedChildOutput[]
+        )
+    }
+  );
+}
+
+export function mergeMarkdownWithReviewedNestedOutputs(
+  templateSource: string,
+  destinationSource: string,
+  dialect: MarkdownDialect,
+  reviewState: DelegatedChildGroupReviewState,
+  appliedChildren: readonly AppliedChildOutput[],
+  backend?: MarkdownBackend
+): MergeResult<string> {
+  return executeReviewedNestedMerge<string>(
+    reviewState,
+    'markdown',
+    appliedChildren as readonly AppliedDelegatedChildOutput[],
+    {
+      mergeParent: () => mergeMarkdown(templateSource, destinationSource, dialect, backend),
+      discoverOperations: (mergedOutput) => {
+        const analysis = parseMarkdown(mergedOutput, dialect, backend);
+        if (!analysis.ok || !analysis.analysis) {
+          return { ok: false, diagnostics: analysis.diagnostics };
+        }
+
+        return {
+          ok: true,
+          diagnostics: [],
+          operations: markdownDelegatedChildOperations(analysis.analysis)
+        };
+      },
+      applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+        applyMarkdownDelegatedChildOutputs(
+          mergedOutput,
+          operations,
+          applyPlan,
+          resolvedChildren as readonly AppliedDelegatedChildOutput[]
         )
     }
   );

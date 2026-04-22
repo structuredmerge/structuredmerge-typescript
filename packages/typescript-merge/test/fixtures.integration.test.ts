@@ -175,6 +175,7 @@ describe('typescript-merge shared fixtures', () => {
         };
         feature_profile: {
           backend: string;
+          backend_ref: { id: 'kreuzberg-language-pack'; family: 'tree-sitter' };
           supports_dialects: boolean;
           supported_policies: Array<{ surface: 'array'; name: string }>;
         };
@@ -189,7 +190,7 @@ describe('typescript-merge shared fixtures', () => {
       },
       featureProfile: {
         backend: fixture.tree_sitter.feature_profile.backend,
-        backendRef: fixture.tree_sitter.backend_ref,
+        backendRef: fixture.tree_sitter.feature_profile.backend_ref,
         supportsDialects: fixture.tree_sitter.feature_profile.supports_dialects,
         supportedPolicies: fixture.tree_sitter.feature_profile.supported_policies
       }

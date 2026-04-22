@@ -3,6 +3,7 @@ export {
   availableRubyBackends,
   matchRubyOwners,
   mergeRuby,
+  mergeRubyWithReviewedNestedOutputs,
   mergeRubyWithNestedOutputs,
   parseRuby,
   rubyBackendFeatureProfile,

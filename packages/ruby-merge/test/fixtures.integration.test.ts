@@ -20,6 +20,7 @@ import {
   availableRubyBackends,
   matchRubyOwners,
   mergeRuby,
+  mergeRubyWithReviewedNestedOutputs,
   mergeRubyWithNestedOutputs,
   parseRuby,
   rubyBackendFeatureProfile,
@@ -30,7 +31,7 @@ import {
 } from '../src/index';
 
 interface FixtureSurfaceOwner {
-  readonly kind: string;
+  readonly kind: 'owned_region';
   readonly address: string;
 }
 
@@ -54,7 +55,7 @@ interface FixtureSurface {
 interface FixtureChildOperation {
   readonly operation_id: string;
   readonly parent_operation_id: string;
-  readonly requested_strategy: string;
+  readonly requested_strategy: 'delegate_child_surface';
   readonly language_chain: string[];
   readonly surface: FixtureSurface;
 }
@@ -739,6 +740,94 @@ describe('ruby-merge shared fixtures', () => {
       'ruby',
       fixture.nested_outputs.map((entry) => ({
         surfaceAddress: entry.surface_address,
+        output: entry.output
+      }))
+    );
+
+    expect(result.ok).toBe(fixture.expected.ok);
+    expect(result.output).toBe(fixture.expected.output);
+  });
+
+  it('conforms to the slice-299 reviewed nested merge fixture', () => {
+    const fixture = readFixture<{
+      template: string;
+      destination: string;
+      review_state: {
+        requests: Array<{
+          id: string;
+          kind: 'delegated_child_group';
+          family: string;
+          message: string;
+          blocking: boolean;
+          delegated_group: {
+            delegated_apply_group: string;
+            parent_operation_id: string;
+            child_operation_id: string;
+            delegated_runtime_surface_path: string;
+            case_ids: string[];
+            delegated_case_ids: string[];
+          };
+          action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+          default_action: 'apply_delegated_child_group';
+        }>;
+        accepted_groups: Array<{
+          delegated_apply_group: string;
+          parent_operation_id: string;
+          child_operation_id: string;
+          delegated_runtime_surface_path: string;
+          case_ids: string[];
+          delegated_case_ids: string[];
+        }>;
+        applied_decisions: Array<{ request_id: string; action: 'apply_delegated_child_group' }>;
+        diagnostics: [];
+      };
+      applied_children: Array<{ operation_id: string; output: string }>;
+      expected: { ok: boolean; output: string };
+    }>('ruby', 'slice-299-reviewed-nested-merge', 'yard-example-reviewed-nested-merge.json');
+
+    const reviewState = {
+      requests: fixture.review_state.requests.map((request) => ({
+        id: request.id,
+        kind: request.kind,
+        family: request.family,
+        message: request.message,
+        blocking: request.blocking,
+        delegatedGroup: {
+          delegatedApplyGroup: request.delegated_group.delegated_apply_group,
+          parentOperationId: request.delegated_group.parent_operation_id,
+          childOperationId: request.delegated_group.child_operation_id,
+          delegatedRuntimeSurfacePath: request.delegated_group.delegated_runtime_surface_path,
+          caseIds: request.delegated_group.case_ids,
+          delegatedCaseIds: request.delegated_group.delegated_case_ids
+        },
+        actionOffers: request.action_offers.map((offer) => ({
+          action: offer.action,
+          requiresContext: offer.requires_context
+        })),
+        defaultAction: request.default_action
+      })),
+      acceptedGroups: fixture.review_state.accepted_groups.map((group) => ({
+        delegatedApplyGroup: group.delegated_apply_group,
+        parentOperationId: group.parent_operation_id,
+        childOperationId: group.child_operation_id,
+        delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+        caseIds: group.case_ids,
+        delegatedCaseIds: group.delegated_case_ids
+      })),
+      appliedDecisions: fixture.review_state.applied_decisions.map((decision) => ({
+        requestId: decision.request_id,
+        action: decision.action
+      })),
+      diagnostics: fixture.review_state.diagnostics
+    };
+
+    const result = mergeRubyWithReviewedNestedOutputs(
+      fixture.template,
+      fixture.destination,
+      'ruby',
+      reviewState,
+      fixture.applied_children.map((entry) => ({
+        operationId: entry.operation_id,
         output: entry.output
       }))
     );

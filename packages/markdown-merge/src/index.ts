@@ -28,6 +28,7 @@ export {
   markdownManifestRolePaths,
   markdownPlanContext,
   mergeMarkdown,
+  mergeMarkdownWithReviewedNestedOutputs,
   mergeMarkdownWithNestedOutputs,
   matchMarkdownOwners,
   normalizeMarkdownSource,
