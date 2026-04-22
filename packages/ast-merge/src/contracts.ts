@@ -348,6 +348,18 @@ export interface ReviewReplayBundleEnvelope {
   readonly replayBundle: ReviewReplayBundle;
 }
 
+export interface ReviewedNestedExecution {
+  readonly family: string;
+  readonly reviewState: DelegatedChildGroupReviewState;
+  readonly appliedChildren: readonly AppliedDelegatedChildOutput[];
+}
+
+export interface ReviewedNestedExecutionEnvelope {
+  readonly kind: 'reviewed_nested_execution';
+  readonly version: typeof REVIEW_TRANSPORT_VERSION;
+  readonly execution: ReviewedNestedExecution;
+}
+
 export interface ReviewHostHints {
   readonly interactive: boolean;
   readonly requireExplicitContexts: boolean;
@@ -870,6 +882,16 @@ export function reviewReplayBundleEnvelope(
   };
 }
 
+export function reviewedNestedExecutionEnvelope(
+  execution: ReviewedNestedExecution
+): ReviewedNestedExecutionEnvelope {
+  return {
+    kind: 'reviewed_nested_execution',
+    version: REVIEW_TRANSPORT_VERSION,
+    execution
+  };
+}
+
 export function importConformanceManifestReviewStateEnvelope(value: unknown): {
   state?: ConformanceManifestReviewState;
   error?: ReviewTransportImportError;
@@ -936,6 +958,40 @@ export function importReviewReplayBundleEnvelope(value: unknown): {
   }
 
   return { replayBundle: envelope.replayBundle };
+}
+
+export function importReviewedNestedExecutionEnvelope(value: unknown): {
+  execution?: ReviewedNestedExecution;
+  error?: ReviewTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'reviewed_nested_execution'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected reviewed_nested_execution envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    execution: ReviewedNestedExecution;
+  };
+
+  if (envelope.version !== REVIEW_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported reviewed_nested_execution envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { execution: envelope.execution };
 }
 
 export function conformanceManifestReviewRequestIds(

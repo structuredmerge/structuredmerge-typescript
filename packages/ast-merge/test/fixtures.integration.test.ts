@@ -41,6 +41,8 @@ import type {
   ReviewDecision,
   ReviewActionOffer,
   ReviewHostHints,
+  ReviewedNestedExecution,
+  ReviewedNestedExecutionEnvelope,
   ReviewReplayBundleEnvelope,
   ReviewReplayContext,
   ReviewDiagnosticReason,
@@ -85,9 +87,11 @@ import {
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
   importConformanceManifestReviewStateEnvelope,
+  importReviewedNestedExecutionEnvelope,
   importReviewReplayBundleEnvelope,
   reviewReplayBundleInputs,
   reviewReplayBundleEnvelope,
+  reviewedNestedExecutionEnvelope,
   reviewReplayContextCompatible,
   reviewRequestIdForFamilyContext,
   runConformanceCase,
@@ -794,6 +798,51 @@ interface ReviewTransportRejectionFixture {
   }>;
 }
 
+interface ReviewedNestedExecutionFixture {
+  execution: {
+    family: string;
+    review_state: {
+      requests: Array<{
+        id: string;
+        kind: ReviewRequest['kind'];
+        family: string;
+        message: string;
+        blocking: boolean;
+        proposed_context?: {
+          family_profile: NamedSuiteReportFixture['family_profile'];
+          feature_profile?: {
+            backend: string;
+            supports_dialects: boolean;
+            supported_policies: PolicyReference[];
+          };
+        };
+        delegated_group?: ProjectedChildReviewGroupsFixture['expected_groups'][number];
+        action_offers: Array<{
+          action: ReviewActionOffer['action'];
+          requires_context: boolean;
+          payload_kind?: ReviewActionOffer['payloadKind'];
+        }>;
+        default_action?: ReviewRequest['defaultAction'];
+      }>;
+      accepted_groups: ProjectedChildReviewGroupsFixture['expected_groups'];
+      applied_decisions: ReviewDecisionFixture[];
+      diagnostics: DiagnosticFixtureEntry[];
+    };
+    applied_children: Array<{
+      operation_id: string;
+      output: string;
+    }>;
+  };
+}
+
+interface ReviewedNestedExecutionEnvelopeFixture extends ReviewedNestedExecutionFixture {
+  expected_envelope: {
+    kind: 'reviewed_nested_execution';
+    version: 1;
+    execution: ReviewedNestedExecutionFixture['execution'];
+  };
+}
+
 interface FamilyContextExplicitReviewDecisionFixture {
   family: string;
   options: {
@@ -1232,6 +1281,26 @@ function normalizeManifestReviewState(raw: {
     appliedDecisions: raw.applied_decisions.map((decision) => normalizeReviewDecision(decision)),
     hostHints: normalizeReviewHostHints(raw.host_hints),
     replayContext: normalizeReviewReplayContext(raw.replay_context)
+  };
+}
+
+function normalizeReviewedNestedExecution(raw: ReviewedNestedExecutionFixture['execution']): ReviewedNestedExecution {
+  return {
+    family: raw.family,
+    reviewState: {
+      requests: raw.review_state.requests.map((request) => normalizeReviewRequest(request)),
+      acceptedGroups: raw.review_state.accepted_groups.map((group) =>
+        normalizeProjectedChildReviewGroup(group)
+      ),
+      appliedDecisions: raw.review_state.applied_decisions.map((decision) =>
+        normalizeReviewDecision(decision)
+      ),
+      diagnostics: raw.review_state.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic))
+    },
+    appliedChildren: raw.applied_children.map((entry) => ({
+      operationId: entry.operation_id,
+      output: entry.output
+    }))
   };
 }
 
@@ -3828,6 +3897,42 @@ describe('ast-merge shared fixtures', () => {
 
     for (const rejectionCase of fixture.cases) {
       expect(importReviewReplayBundleEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-300 reviewed nested execution JSON roundtrip fixture', () => {
+    const fixture = readFixture<ReviewedNestedExecutionFixture>(
+      ...diagnosticsFixturePath('reviewed_nested_execution_json_roundtrip')
+    );
+    const execution = normalizeReviewedNestedExecution(fixture.execution);
+
+    expect(JSON.parse(JSON.stringify(execution))).toEqual(execution);
+  });
+
+  it('conforms to the slice-301 reviewed nested execution transport envelope fixture', () => {
+    const fixture = readFixture<ReviewedNestedExecutionEnvelopeFixture>(
+      ...diagnosticsFixturePath('reviewed_nested_execution_envelope')
+    );
+    const execution = normalizeReviewedNestedExecution(fixture.execution);
+    const expected: ReviewedNestedExecutionEnvelope = {
+      kind: fixture.expected_envelope.kind,
+      version: REVIEW_TRANSPORT_VERSION,
+      execution: normalizeReviewedNestedExecution(fixture.expected_envelope.execution)
+    };
+
+    expect(reviewedNestedExecutionEnvelope(execution)).toEqual(expected);
+    expect(importReviewedNestedExecutionEnvelope(expected)).toEqual({ execution });
+  });
+
+  it('conforms to the slice-302 reviewed nested execution transport rejection fixture', () => {
+    const fixture = readFixture<ReviewTransportRejectionFixture>(
+      ...diagnosticsFixturePath('reviewed_nested_execution_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importReviewedNestedExecutionEnvelope(rejectionCase.envelope)).toEqual({
         error: rejectionCase.expected_error
       });
     }
