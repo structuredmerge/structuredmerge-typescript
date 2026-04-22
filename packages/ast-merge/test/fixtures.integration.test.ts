@@ -50,6 +50,7 @@ import type {
   ReviewTransportImportError,
   ReviewRequest,
   ReviewedNestedExecutionApplication,
+  TemplateTokenConfig,
   SurfaceOwnerRef,
   SurfaceSpan
 } from '../src/index';
@@ -77,9 +78,11 @@ import {
   normalizeTemplateSourcePath,
   classifyTemplateTargetPath,
   resolveTemplateDestinationPath,
+  templateTokenKeys,
   selectTemplateStrategy,
   planTemplateEntries,
   enrichTemplatePlanEntries,
+  enrichTemplatePlanEntriesWithTokenState,
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
@@ -184,6 +187,21 @@ interface TemplateStrategySelectionFixture {
   }>;
 }
 
+interface TemplateTokenKeysFixture {
+  cases: Array<{
+    content: string;
+    config?: {
+      pre: string;
+      post: string;
+      separators: string[];
+      min_segments: number;
+      max_segments?: number;
+      segment_pattern: string;
+    };
+    expected_token_keys: string[];
+  }>;
+}
+
 interface TemplateEntryPlanFixture {
   template_source_paths: string[];
   context: {
@@ -216,6 +234,28 @@ interface TemplateEntryPlanStateFixture {
     TemplateEntryPlanFixture['expected_entries'][number] & {
       destination_exists: boolean;
       write_action: 'omit' | 'keep' | 'create' | 'update';
+    }
+  >;
+}
+
+interface TemplateEntryTokenStateFixture {
+  planned_entries: Array<
+    TemplateEntryPlanFixture['expected_entries'][number] & {
+      destination_exists: boolean;
+      write_action: 'omit' | 'keep' | 'create' | 'update';
+    }
+  >;
+  template_contents: Record<string, string>;
+  replacements: Record<string, string>;
+  expected_entries: Array<
+    TemplateEntryPlanFixture['expected_entries'][number] & {
+      destination_exists: boolean;
+      write_action: 'omit' | 'keep' | 'create' | 'update';
+      token_keys: string[];
+      unresolved_token_keys: string[];
+      token_resolution_required: boolean;
+      blocked: boolean;
+      block_reason: 'unresolved_tokens' | null;
     }
   >;
 }
@@ -1420,8 +1460,8 @@ function normalizeReviewReplayBundleEnvelope(raw: {
       decisions: raw.replay_bundle.decisions.map((decision) => normalizeReviewDecision(decision)),
       ...(raw.replay_bundle.reviewed_nested_executions
         ? {
-            reviewedNestedExecutions: raw.replay_bundle.reviewed_nested_executions.map((execution) =>
-              normalizeReviewedNestedExecution(execution)
+            reviewedNestedExecutions: raw.replay_bundle.reviewed_nested_executions.map(
+              (execution) => normalizeReviewedNestedExecution(execution)
             )
           }
         : {})
@@ -1492,7 +1532,9 @@ function normalizeManifestReviewState(raw: {
   };
 }
 
-function normalizeReviewedNestedExecution(raw: ReviewedNestedExecutionFixture['execution']): ReviewedNestedExecution {
+function normalizeReviewedNestedExecution(
+  raw: ReviewedNestedExecutionFixture['execution']
+): ReviewedNestedExecution {
   return {
     family: raw.family,
     reviewState: {
@@ -1545,7 +1587,12 @@ function reviewedNestedExecutionCallbacks(
         }
       }))
     }),
-    applyResolvedOutputs: (_mergedOutput: string, _operations: readonly DelegatedChildOperation[], _applyPlan: unknown, appliedChildren: readonly { operationId: string; output: string }[]) => {
+    applyResolvedOutputs: (
+      _mergedOutput: string,
+      _operations: readonly DelegatedChildOperation[],
+      _applyPlan: unknown,
+      appliedChildren: readonly { operationId: string; output: string }[]
+    ) => {
       expect(appliedChildren).toEqual(execution.appliedChildren);
       return {
         ok: true as const,
@@ -1810,8 +1857,38 @@ describe('ast-merge shared fixtures', () => {
 
     for (const testCase of fixture.cases) {
       expect(
-        selectTemplateStrategy(testCase.destination_path, testCase.default_strategy, testCase.overrides)
+        selectTemplateStrategy(
+          testCase.destination_path,
+          testCase.default_strategy,
+          testCase.overrides
+        )
       ).toBe(testCase.expected_strategy);
+    }
+  });
+
+  it('conforms to the template token keys fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateTokenKeysFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_token_keys') ??
+        []) as string[])
+    );
+
+    for (const testCase of fixture.cases) {
+      const config = testCase.config
+        ? ({
+            pre: testCase.config.pre,
+            post: testCase.config.post,
+            separators: testCase.config.separators,
+            minSegments: testCase.config.min_segments,
+            maxSegments: testCase.config.max_segments,
+            segmentPattern: testCase.config.segment_pattern
+          } satisfies TemplateTokenConfig)
+        : undefined;
+      expect(templateTokenKeys(testCase.content, config)).toEqual(testCase.expected_token_keys);
     }
   });
 
@@ -1846,6 +1923,61 @@ describe('ast-merge shared fixtures', () => {
         },
         strategy: entry.strategy,
         action: entry.action
+      }))
+    ).toEqual(fixture.expected_entries);
+  });
+
+  it('conforms to the template entry token state fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateEntryTokenStateFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_entry_token_state') ??
+        []) as string[])
+    );
+
+    const actual = enrichTemplatePlanEntriesWithTokenState(
+      fixture.planned_entries.map((entry) => ({
+        templateSourcePath: entry.template_source_path,
+        logicalDestinationPath: entry.logical_destination_path,
+        destinationPath: entry.destination_path ?? undefined,
+        classification: {
+          destinationPath: entry.classification.destination_path,
+          fileType: entry.classification.file_type,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destinationExists: entry.destination_exists,
+        writeAction: entry.write_action
+      })),
+      fixture.template_contents,
+      fixture.replacements
+    );
+
+    expect(
+      actual.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        classification: {
+          destination_path: entry.classification.destinationPath,
+          file_type: entry.classification.fileType,
+          family: entry.classification.family,
+          dialect: entry.classification.dialect
+        },
+        strategy: entry.strategy,
+        action: entry.action,
+        destination_exists: entry.destinationExists,
+        write_action: entry.writeAction,
+        token_keys: entry.tokenKeys,
+        unresolved_token_keys: entry.unresolvedTokenKeys,
+        token_resolution_required: entry.tokenResolutionRequired,
+        blocked: entry.blocked,
+        block_reason: entry.blockReason ?? null
       }))
     ).toEqual(fixture.expected_entries);
   });
@@ -2345,9 +2477,11 @@ describe('ast-merge shared fixtures', () => {
     }>('diagnostics', 'slice-125-source-family-suite-definitions', 'source-suite-definitions.json');
 
     expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
-    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
-      fixture.suite_definitions
-    );
+    expect(
+      fixture.suite_selectors.map((selector) =>
+        conformanceSuiteDefinition(fixture.manifest, selector)
+      )
+    ).toEqual(fixture.suite_definitions);
   });
 
   it('conforms to the slice-44 named conformance suite-report fixture', () => {
@@ -2573,9 +2707,11 @@ describe('ast-merge shared fixtures', () => {
     }>('diagnostics', 'slice-138-toml-family-suite-definitions', 'toml-suite-definitions.json');
 
     expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
-    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
-      fixture.suite_definitions
-    );
+    expect(
+      fixture.suite_selectors.map((selector) =>
+        conformanceSuiteDefinition(fixture.manifest, selector)
+      )
+    ).toEqual(fixture.suite_definitions);
   });
 
   it('conforms to the slice-139 TOML family named suite-plans fixture', () => {
@@ -2850,9 +2986,11 @@ describe('ast-merge shared fixtures', () => {
     }>('diagnostics', 'slice-144-yaml-family-suite-definitions', 'yaml-suite-definitions.json');
 
     expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
-    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
-      fixture.suite_definitions
-    );
+    expect(
+      fixture.suite_selectors.map((selector) =>
+        conformanceSuiteDefinition(fixture.manifest, selector)
+      )
+    ).toEqual(fixture.suite_definitions);
   });
 
   it('conforms to the slice-145 YAML family named suite-plans fixture', () => {
@@ -2910,9 +3048,11 @@ describe('ast-merge shared fixtures', () => {
     );
 
     expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
-    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
-      fixture.suite_definitions
-    );
+    expect(
+      fixture.suite_selectors.map((selector) =>
+        conformanceSuiteDefinition(fixture.manifest, selector)
+      )
+    ).toEqual(fixture.suite_definitions);
   });
 
   it('conforms to the slice-201 Markdown family named suite-plans fixture', () => {
@@ -2970,9 +3110,11 @@ describe('ast-merge shared fixtures', () => {
     );
 
     expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
-    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
-      fixture.suite_definitions
-    );
+    expect(
+      fixture.suite_selectors.map((selector) =>
+        conformanceSuiteDefinition(fixture.manifest, selector)
+      )
+    ).toEqual(fixture.suite_definitions);
   });
 
   it('conforms to the slice-247 Markdown nested named suite-plans fixture', () => {
@@ -3030,9 +3172,11 @@ describe('ast-merge shared fixtures', () => {
     );
 
     expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
-    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
-      fixture.suite_definitions
-    );
+    expect(
+      fixture.suite_selectors.map((selector) =>
+        conformanceSuiteDefinition(fixture.manifest, selector)
+      )
+    ).toEqual(fixture.suite_definitions);
   });
 
   it('conforms to the slice-250 Ruby nested named suite-plans fixture', () => {
@@ -3172,9 +3316,11 @@ describe('ast-merge shared fixtures', () => {
     }>('diagnostics', 'slice-148-config-family-aggregate-manifest', 'config-family-aggregate.json');
 
     expect(conformanceSuiteSelectors(fixture.manifest)).toEqual(fixture.suite_selectors);
-    expect(fixture.suite_selectors.map((selector) => conformanceSuiteDefinition(fixture.manifest, selector))).toEqual(
-      fixture.suite_definitions
-    );
+    expect(
+      fixture.suite_selectors.map((selector) =>
+        conformanceSuiteDefinition(fixture.manifest, selector)
+      )
+    ).toEqual(fixture.suite_definitions);
   });
 
   it('conforms to the slice-149 config-family aggregate suite-plans fixture', () => {
@@ -4461,7 +4607,9 @@ describe('ast-merge shared fixtures', () => {
           normalizeReviewReplayBundleEnvelope(fixtureCase.review_replay_bundle_envelope as never),
           (run) => {
             const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-            return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+            return (
+              fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+            );
           }
         )
       ).toEqual(normalizeManifestReviewState(fixtureCase.expected_state as never));
@@ -4495,8 +4643,8 @@ describe('ast-merge shared fixtures', () => {
           decisions: fixture.replay_bundle.decisions.map((decision) =>
             normalizeReviewDecision(decision)
           ),
-          reviewedNestedExecutions: fixture.replay_bundle.reviewed_nested_executions.map((execution) =>
-            normalizeReviewedNestedExecution(execution)
+          reviewedNestedExecutions: fixture.replay_bundle.reviewed_nested_executions.map(
+            (execution) => normalizeReviewedNestedExecution(execution)
           )
         }
       : undefined;
@@ -4514,7 +4662,9 @@ describe('ast-merge shared fixtures', () => {
         execution_family: entry.execution_family,
         result: {
           ok: entry.result.ok,
-          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          diagnostics: entry.result.diagnostics.map((diagnostic) =>
+            normalizeDiagnostic(diagnostic)
+          ),
           output: entry.result.output,
           policies: entry.result.policies
         }
@@ -4540,7 +4690,9 @@ describe('ast-merge shared fixtures', () => {
         execution_family: entry.execution_family,
         result: {
           ok: entry.result.ok,
-          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          diagnostics: entry.result.diagnostics.map((diagnostic) =>
+            normalizeDiagnostic(diagnostic)
+          ),
           output: entry.result.output,
           policies: entry.result.policies
         }
@@ -4550,7 +4702,9 @@ describe('ast-merge shared fixtures', () => {
 
   it('conforms to the slice-320 review replay bundle envelope reviewed nested execution application fixture', () => {
     const fixture = readFixture<ReviewedNestedExecutionEnvelopeApplicationFixture>(
-      ...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
+      ...diagnosticsFixturePath(
+        'review_replay_bundle_envelope_reviewed_nested_execution_application'
+      )
     );
 
     const application = executeReviewReplayBundleEnvelopeReviewedNestedExecutions(
@@ -4569,12 +4723,16 @@ describe('ast-merge shared fixtures', () => {
         result: run.result
       }))
     }).toEqual({
-      diagnostics: fixture.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+      diagnostics: fixture.expected_application.diagnostics.map((entry) =>
+        normalizeDiagnostic(entry)
+      ),
       results: fixture.expected_application.results.map((entry) => ({
         execution_family: entry.execution_family,
         result: {
           ok: entry.result.ok,
-          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          diagnostics: entry.result.diagnostics.map((diagnostic) =>
+            normalizeDiagnostic(diagnostic)
+          ),
           output: entry.result.output,
           policies: entry.result.policies
         }
@@ -4605,12 +4763,16 @@ describe('ast-merge shared fixtures', () => {
         result: run.result
       }))
     }).toEqual({
-      diagnostics: fixture.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+      diagnostics: fixture.expected_application.diagnostics.map((entry) =>
+        normalizeDiagnostic(entry)
+      ),
       results: fixture.expected_application.results.map((entry) => ({
         execution_family: entry.execution_family,
         result: {
           ok: entry.result.ok,
-          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          diagnostics: entry.result.diagnostics.map((diagnostic) =>
+            normalizeDiagnostic(diagnostic)
+          ),
           output: entry.result.output,
           policies: entry.result.policies
         }
@@ -4626,7 +4788,9 @@ describe('ast-merge shared fixtures', () => {
         replay_bundle_envelope: unknown;
         expected_application: ReviewedNestedExecutionEnvelopeApplicationFixture['expected_application'];
       }>;
-    }>(...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_rejection'));
+    }>(
+      ...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_rejection')
+    );
 
     for (const fixtureCase of fixture.cases) {
       expect(
@@ -4637,7 +4801,9 @@ describe('ast-merge shared fixtures', () => {
           }
         )
       ).toEqual({
-        diagnostics: fixtureCase.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+        diagnostics: fixtureCase.expected_application.diagnostics.map((entry) =>
+          normalizeDiagnostic(entry)
+        ),
         results: []
       });
     }
@@ -4660,7 +4826,9 @@ describe('ast-merge shared fixtures', () => {
           }
         )
       ).toEqual({
-        diagnostics: fixtureCase.expected_application.diagnostics.map((entry) => normalizeDiagnostic(entry)),
+        diagnostics: fixtureCase.expected_application.diagnostics.map((entry) =>
+          normalizeDiagnostic(entry)
+        ),
         results: []
       });
     }
@@ -4668,7 +4836,9 @@ describe('ast-merge shared fixtures', () => {
 
   it('conforms to the slice-324 review replay bundle envelope reviewed nested manifest application fixture', () => {
     const fixture = readFixture<ReviewedNestedManifestApplicationFixture>(
-      ...diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
+      ...diagnosticsFixturePath(
+        'review_replay_bundle_envelope_reviewed_nested_manifest_application'
+      )
     );
 
     const application = reviewAndExecuteConformanceManifestWithReplayBundleEnvelope(
@@ -4698,7 +4868,9 @@ describe('ast-merge shared fixtures', () => {
         execution_family: entry.execution_family,
         result: {
           ok: entry.result.ok,
-          diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          diagnostics: entry.result.diagnostics.map((diagnostic) =>
+            normalizeDiagnostic(diagnostic)
+          ),
           output: entry.result.output,
           policies: entry.result.policies
         }
@@ -4721,7 +4893,9 @@ describe('ast-merge shared fixtures', () => {
           normalizeReviewReplayBundleEnvelope(fixtureCase.review_replay_bundle_envelope as never),
           (run) => {
             const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-            return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+            return (
+              fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] }
+            );
           },
           () => {
             throw new Error('callbacks should not run for rejected replay bundle envelopes');
@@ -4742,7 +4916,9 @@ describe('ast-merge shared fixtures', () => {
           },
           result: {
             ok: entry.result.ok,
-            diagnostics: entry.result.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+            diagnostics: entry.result.diagnostics.map((diagnostic) =>
+              normalizeDiagnostic(diagnostic)
+            ),
             output: entry.result.output,
             policies: entry.result.policies
           }

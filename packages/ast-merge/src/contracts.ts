@@ -131,6 +131,15 @@ export interface TemplateDestinationContext {
   readonly projectName?: string;
 }
 
+export interface TemplateTokenConfig {
+  readonly pre: string;
+  readonly post: string;
+  readonly separators: readonly string[];
+  readonly minSegments: number;
+  readonly maxSegments?: number;
+  readonly segmentPattern: string;
+}
+
 export type TemplateStrategy = 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
 
 export interface TemplateStrategyOverride {
@@ -150,6 +159,16 @@ export interface TemplatePlanEntry {
 export interface TemplatePlanStateEntry extends TemplatePlanEntry {
   readonly destinationExists: boolean;
   readonly writeAction: 'omit' | 'keep' | 'create' | 'update';
+}
+
+export type TemplatePlanBlockReason = 'unresolved_tokens';
+
+export interface TemplatePlanTokenStateEntry extends TemplatePlanStateEntry {
+  readonly tokenKeys: readonly string[];
+  readonly unresolvedTokenKeys: readonly string[];
+  readonly tokenResolutionRequired: boolean;
+  readonly blocked: boolean;
+  readonly blockReason?: TemplatePlanBlockReason;
 }
 
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
@@ -513,7 +532,11 @@ export function classifyTemplateTargetPath(path: string): TemplateTargetClassifi
   const lowerPath = normalizedPath.toLowerCase();
   const base = normalizedPath.split('/').at(-1) ?? normalizedPath;
   const lowerBase = base.toLowerCase();
-  const classify = (fileType: string, family: string, dialect: string): TemplateTargetClassification => ({
+  const classify = (
+    fileType: string,
+    family: string,
+    dialect: string
+  ): TemplateTargetClassification => ({
     destinationPath: path,
     fileType,
     family,
@@ -600,6 +623,107 @@ export function resolveTemplateDestinationPath(
   return path;
 }
 
+export const DEFAULT_TEMPLATE_TOKEN_CONFIG: TemplateTokenConfig = {
+  pre: '{',
+  post: '}',
+  separators: ['|', ':'],
+  minSegments: 2,
+  segmentPattern: '[A-Za-z0-9_]'
+};
+
+function separatorAt(config: TemplateTokenConfig, boundaryIndex: number): string {
+  return config.separators[Math.min(boundaryIndex, config.separators.length - 1)] ?? '';
+}
+
+function segmentPatternRegExp(pattern: string): RegExp {
+  return new RegExp(`^${pattern}$`);
+}
+
+function isValidTemplateTokenKey(key: string, config: TemplateTokenConfig): boolean {
+  if (!key.length) {
+    return false;
+  }
+
+  const segmentCharacter = segmentPatternRegExp(config.segmentPattern);
+  let index = 0;
+  let segments = 0;
+  let boundaryIndex = 0;
+
+  while (index < key.length) {
+    const segmentStart = index;
+    while (index < key.length && segmentCharacter.test(key[index] ?? '')) {
+      index += 1;
+    }
+
+    if (index === segmentStart) {
+      return false;
+    }
+
+    segments += 1;
+    if (index === key.length) {
+      break;
+    }
+
+    const separator = separatorAt(config, boundaryIndex);
+    if (!separator || !key.startsWith(separator, index)) {
+      return false;
+    }
+
+    index += separator.length;
+    boundaryIndex += 1;
+  }
+
+  if (segments < config.minSegments) {
+    return false;
+  }
+
+  return config.maxSegments === undefined || segments <= config.maxSegments;
+}
+
+export function templateTokenKeys(
+  content: string,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): readonly string[] {
+  if (!content || !content.includes(config.pre)) {
+    return [];
+  }
+
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  let offset = 0;
+
+  while (offset < content.length) {
+    const tokenStart = content.indexOf(config.pre, offset);
+    if (tokenStart === -1) {
+      break;
+    }
+
+    const contentStart = tokenStart + config.pre.length;
+    const tokenEnd = content.indexOf(config.post, contentStart);
+    if (tokenEnd === -1) {
+      break;
+    }
+
+    const key = content.slice(contentStart, tokenEnd);
+    if (isValidTemplateTokenKey(key, config) && !seen.has(key)) {
+      seen.add(key);
+      keys.push(key);
+    }
+
+    offset = tokenEnd + config.post.length;
+  }
+
+  return keys;
+}
+
+export function unresolvedTemplateTokenKeys(
+  content: string,
+  replacements: Readonly<Record<string, string>>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): readonly string[] {
+  return templateTokenKeys(content, config).filter((key) => !(key in replacements));
+}
+
 export function selectTemplateStrategy(
   path: string,
   defaultStrategy: TemplateStrategy = 'merge',
@@ -652,6 +776,33 @@ export function enrichTemplatePlanEntries(
       ...entry,
       destinationExists,
       writeAction
+    };
+  });
+}
+
+export function enrichTemplatePlanEntriesWithTokenState(
+  entries: readonly TemplatePlanStateEntry[],
+  templateContents: Readonly<Record<string, string>>,
+  replacements: Readonly<Record<string, string>>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): readonly TemplatePlanTokenStateEntry[] {
+  return entries.map((entry) => {
+    const content = templateContents[entry.templateSourcePath] ?? '';
+    const tokenKeys = templateTokenKeys(content, config);
+    const unresolvedTokenKeys = tokenKeys.filter((key) => !(key in replacements));
+    const tokenResolutionRequired =
+      entry.destinationPath !== undefined &&
+      entry.strategy !== 'keep_destination' &&
+      entry.strategy !== 'raw_copy';
+    const blocked = tokenResolutionRequired && unresolvedTokenKeys.length > 0;
+
+    return {
+      ...entry,
+      tokenKeys,
+      unresolvedTokenKeys,
+      tokenResolutionRequired,
+      blocked,
+      blockReason: blocked ? 'unresolved_tokens' : undefined
     };
   });
 }
@@ -1105,7 +1256,10 @@ export function executeReviewStateReviewedNestedExecutions<TOutput>(
     index: number
   ) => NestedMergeExecutionCallbacks<TOutput>
 ): readonly ReviewedNestedExecutionResult<TOutput>[] {
-  return executeReviewedNestedExecutions(state.reviewedNestedExecutions ?? [], callbacksForExecution);
+  return executeReviewedNestedExecutions(
+    state.reviewedNestedExecutions ?? [],
+    callbacksForExecution
+  );
 }
 
 export function executeReviewStateEnvelopeReviewedNestedExecutions<TOutput>(
@@ -2157,9 +2311,7 @@ export function reviewConformanceManifest(
     appliedDecisions,
     hostHints: conformanceReviewHostHints(options),
     replayContext,
-    ...(reviewedNestedExecutions.length > 0
-      ? { reviewedNestedExecutions }
-      : {})
+    ...(reviewedNestedExecutions.length > 0 ? { reviewedNestedExecutions } : {})
   };
 }
 
@@ -2231,7 +2383,11 @@ function suiteSelectorsEqual(
   left: ConformanceSuiteSelector,
   right: ConformanceSuiteSelector
 ): boolean {
-  return left.kind === right.kind && left.subject.grammar === right.subject.grammar && left.subject.variant === right.subject.variant;
+  return (
+    left.kind === right.kind &&
+    left.subject.grammar === right.subject.grammar &&
+    left.subject.variant === right.subject.variant
+  );
 }
 
 function isSuiteDefinition(value: unknown): value is ConformanceSuiteDefinition {
