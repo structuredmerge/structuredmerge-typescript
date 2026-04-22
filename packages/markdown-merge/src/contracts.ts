@@ -1,5 +1,6 @@
 import type {
   ConformanceFamilyPlanContext,
+  DelegatedChildApplyPlan,
   ConformanceManifest,
   DelegatedChildOperation,
   DiscoveredSurface,
@@ -58,6 +59,11 @@ export interface MarkdownEmbeddedFamilyCandidate {
   readonly dialect: string;
 }
 
+export interface AppliedChildOutput {
+  readonly operationId: string;
+  readonly output: string;
+}
+
 export interface MarkdownFeatureProfile extends FamilyFeatureProfile {
   readonly family: 'markdown';
   readonly supportedDialects: readonly MarkdownDialect[];
@@ -71,6 +77,10 @@ export interface MarkdownBackendFeatureProfile extends MarkdownFeatureProfile {
 
 function unsupportedFeature(message: string): Diagnostic {
   return { severity: 'error', category: 'unsupported_feature', message };
+}
+
+function configurationError(message: string): Diagnostic {
+  return { severity: 'error', category: 'configuration_error', message };
 }
 
 export function normalizeMarkdownSource(source: string): string {
@@ -296,6 +306,98 @@ function collectMarkdownSections(source: string, owners: readonly MarkdownOwner[
     const text = lines.slice(start, endExclusive).join('\n').trim();
     return { path: owner.path, text };
   });
+}
+
+interface MarkdownFenceRange {
+  readonly start: number;
+  readonly end: number;
+}
+
+function markdownFenceRanges(source: string): ReadonlyMap<string, MarkdownFenceRange> {
+  const lines = normalizeMarkdownSource(source).split('\n');
+  const ranges = new Map<string, MarkdownFenceRange>();
+  let codeFenceIndex = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
+    const fence = line.match(/^\s*(`{3,}|~{3,})\s*(.*?)\s*$/);
+    if (!fence) {
+      continue;
+    }
+
+    const marker = fence[1]!;
+    const markerChar = marker[0]!;
+    const markerLength = marker.length;
+    let end = index;
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      if (new RegExp(`^\\s*${markerChar}{${markerLength},}\\s*$`).test(lines[cursor] ?? '')) {
+        end = cursor;
+        break;
+      }
+      if (cursor === lines.length - 1) {
+        end = cursor;
+      }
+    }
+
+    ranges.set(`/code_fence/${codeFenceIndex}`, { start: index, end });
+    codeFenceIndex += 1;
+    index = end;
+  }
+
+  return ranges;
+}
+
+export function applyMarkdownDelegatedChildOutputs(
+  source: string,
+  operations: readonly DelegatedChildOperation[],
+  applyPlan: DelegatedChildApplyPlan,
+  appliedChildren: readonly AppliedChildOutput[]
+): MergeResult<string> {
+  const lines = normalizeMarkdownSource(source).split('\n');
+  const ranges = markdownFenceRanges(source);
+  const operationsById = new Map(operations.map((operation) => [operation.operationId, operation]));
+  const outputsById = new Map(appliedChildren.map((entry) => [entry.operationId, entry.output]));
+
+  const replacements = applyPlan.entries.flatMap((entry) => {
+    const operation = operationsById.get(entry.delegatedGroup.childOperationId);
+    const output = outputsById.get(entry.delegatedGroup.childOperationId);
+    if (!operation || output === undefined) {
+      return [];
+    }
+
+    const ownerPath = operation.surface.owner.address;
+    const range = ranges.get(ownerPath);
+    if (!range) {
+      throw new Error(`missing fenced-code range for ${ownerPath}`);
+    }
+
+    return [{ range, output }];
+  });
+
+  try {
+    replacements
+      .sort((left, right) => right.range.start - left.range.start)
+      .forEach(({ range, output }) => {
+        const bodyLines = output.replace(/\n$/, '').split('\n');
+        const replacement = output.length === 0 ? [] : bodyLines;
+        lines.splice(range.start + 1, Math.max(0, range.end - range.start - 1), ...replacement);
+      });
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostics: [
+        configurationError(error instanceof Error ? error.message : 'failed to apply delegated child outputs.')
+      ],
+      policies: []
+    };
+  }
+
+  return {
+    ok: true,
+    diagnostics: [],
+    output: `${lines.join('\n').replace(/\n+$/, '')}\n`,
+    policies: []
+  };
 }
 
 export function mergeMarkdown(

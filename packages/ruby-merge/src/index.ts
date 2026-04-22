@@ -1,4 +1,5 @@
 export {
+  applyRubyDelegatedChildOutputs,
   availableRubyBackends,
   matchRubyOwners,
   mergeRuby,
@@ -11,6 +12,7 @@ export {
 } from './contracts';
 
 export type {
+  AppliedChildOutput,
   RubyAnalysis,
   RubyBackend,
   RubyDialect,

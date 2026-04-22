@@ -1,5 +1,6 @@
 import type {
   ConformanceFamilyPlanContext,
+  DelegatedChildApplyPlan,
   DelegatedChildOperation,
   DiscoveredSurface,
   FamilyFeatureProfile,
@@ -49,6 +50,11 @@ export interface RubyFeatureProfile extends FamilyFeatureProfile {
   readonly supportedPolicies: readonly PolicyReference[];
 }
 
+export interface AppliedChildOutput {
+  readonly operationId: string;
+  readonly output: string;
+}
+
 export type RubyBackend = 'kreuzberg-language-pack';
 
 const destinationWinsArrayPolicy: PolicyReference = {
@@ -71,6 +77,10 @@ const magicCommentPrefixes = [
   'typed',
   'warn_indent'
 ] as const;
+
+function configurationError(message: string) {
+  return { severity: 'error', category: 'configuration_error', message } as const;
+}
 
 interface CommentEntry {
   readonly line: number;
@@ -198,6 +208,66 @@ function surfacesForOwner(
   }
 
   return [docSurface, ...exampleSurfaces];
+}
+
+function rubyExampleLinePrefix(line: string): string {
+  const match = line.match(/^(\s*#\s*)/);
+  return match?.[1] ?? '# ';
+}
+
+export function applyRubyDelegatedChildOutputs(
+  source: string,
+  operations: readonly DelegatedChildOperation[],
+  applyPlan: DelegatedChildApplyPlan,
+  appliedChildren: readonly AppliedChildOutput[]
+): MergeResult<string> {
+  const lines = normalizeSource(source).split('\n');
+  const operationsById = new Map(operations.map((operation) => [operation.operationId, operation]));
+  const outputsById = new Map(appliedChildren.map((entry) => [entry.operationId, entry.output]));
+
+  try {
+    applyPlan.entries
+      .flatMap((entry) => {
+        const operation = operationsById.get(entry.delegatedGroup.childOperationId);
+        const output = outputsById.get(entry.delegatedGroup.childOperationId);
+        if (!operation || output === undefined || !operation.surface.span) {
+          return [];
+        }
+
+        return [
+          {
+            start: operation.surface.span.startLine - 1,
+            end: operation.surface.span.endLine - 1,
+            output
+          }
+        ];
+      })
+      .sort((left, right) => right.start - left.start)
+      .forEach(({ start, end, output }) => {
+        const prefix = rubyExampleLinePrefix(lines[start] ?? '# ');
+        const bodyLines = output
+          .replace(/\n$/, '')
+          .split('\n')
+          .map((line) => `${prefix}${line}`);
+        const replacement = output.length === 0 ? [] : bodyLines;
+        lines.splice(start, Math.max(1, end - start + 1), ...replacement);
+      });
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostics: [
+        configurationError(error instanceof Error ? error.message : 'failed to apply delegated child outputs.')
+      ],
+      policies: []
+    };
+  }
+
+  return {
+    ok: true,
+    diagnostics: [],
+    output: `${lines.join('\n').replace(/\n+$/, '')}\n`,
+    policies: [destinationWinsArrayPolicy]
+  };
 }
 
 function analyzeRubyDocument(source: string): RubyAnalysis {

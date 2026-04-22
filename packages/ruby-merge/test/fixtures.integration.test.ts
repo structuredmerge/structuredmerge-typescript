@@ -16,6 +16,7 @@ import {
   type Diagnostic
 } from '@structuredmerge/ast-merge';
 import {
+  applyRubyDelegatedChildOutputs,
   availableRubyBackends,
   matchRubyOwners,
   mergeRuby,
@@ -94,6 +95,30 @@ interface RubyDelegatedChildApplyPlanFixture {
         readonly action: 'apply_delegated_child_group';
       };
     }>;
+  };
+}
+
+interface RubyDelegatedChildApplyOutputFixture {
+  readonly source: string;
+  readonly delegated_operations: FixtureChildOperation[];
+  readonly apply_plan: {
+    readonly entries: Array<{
+      readonly request_id: string;
+      readonly family: string;
+      readonly delegated_group: FixtureProjectedChildGroup;
+      readonly decision: {
+        readonly request_id: string;
+        readonly action: 'apply_delegated_child_group';
+      };
+    }>;
+  };
+  readonly applied_children: Array<{
+    readonly operation_id: string;
+    readonly output: string;
+  }>;
+  readonly expected: {
+    readonly ok: boolean;
+    readonly output: string;
   };
 }
 
@@ -628,6 +653,63 @@ describe('ruby-merge shared fixtures', () => {
         }
       }))
     });
+
+    const applyOutputFixture = readFixture<RubyDelegatedChildApplyOutputFixture>(
+      'ruby',
+      'slice-289-delegated-child-apply-output',
+      'yard-example-applied-output.json'
+    );
+
+    const applyOutputResult = applyRubyDelegatedChildOutputs(
+      applyOutputFixture.source,
+      applyOutputFixture.delegated_operations.map((entry) => ({
+        operationId: entry.operation_id,
+        parentOperationId: entry.parent_operation_id,
+        requestedStrategy: 'delegate_child_surface',
+        languageChain: entry.language_chain,
+        surface: {
+          surfaceKind: entry.surface.surface_kind,
+          declaredLanguage: entry.surface.declared_language,
+          effectiveLanguage: entry.surface.effective_language,
+          address: entry.surface.address,
+          parentAddress: entry.surface.parent_address,
+          owner: entry.surface.owner,
+          span: entry.surface.span
+            ? {
+                startLine: entry.surface.span.start_line,
+                endLine: entry.surface.span.end_line
+              }
+            : undefined,
+          reconstructionStrategy: entry.surface.reconstruction_strategy,
+          metadata: entry.surface.metadata
+        }
+      })),
+      {
+        entries: applyOutputFixture.apply_plan.entries.map((entry) => ({
+          requestId: entry.request_id,
+          family: entry.family,
+          delegatedGroup: {
+            delegatedApplyGroup: entry.delegated_group.delegated_apply_group,
+            parentOperationId: entry.delegated_group.parent_operation_id,
+            childOperationId: entry.delegated_group.child_operation_id,
+            delegatedRuntimeSurfacePath: entry.delegated_group.delegated_runtime_surface_path,
+            caseIds: entry.delegated_group.case_ids,
+            delegatedCaseIds: entry.delegated_group.delegated_case_ids
+          },
+          decision: {
+            requestId: entry.decision.request_id,
+            action: entry.decision.action
+          }
+        }))
+      },
+      applyOutputFixture.applied_children.map((entry) => ({
+        operationId: entry.operation_id,
+        output: entry.output
+      }))
+    );
+
+    expect(applyOutputResult.ok).toBe(applyOutputFixture.expected.ok);
+    expect(applyOutputResult.output).toBe(applyOutputFixture.expected.output);
   });
 
   it('conforms to the Ruby family backend and plan-context fixtures', () => {

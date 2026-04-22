@@ -15,6 +15,7 @@ import {
   type ConformanceManifest
 } from '@structuredmerge/ast-merge';
 import {
+  applyMarkdownDelegatedChildOutputs,
   availableMarkdownBackends,
   markdownBackendFeatureProfile,
   markdownDelegatedChildOperations,
@@ -112,6 +113,30 @@ interface MarkdownDelegatedChildApplyPlanFixture {
         action: 'apply_delegated_child_group';
       };
     }>;
+  };
+}
+
+interface MarkdownDelegatedChildApplyOutputFixture {
+  readonly source: string;
+  readonly delegated_operations: FixtureChildOperation[];
+  readonly apply_plan: {
+    readonly entries: Array<{
+      readonly request_id: string;
+      readonly family: string;
+      readonly delegated_group: FixtureProjectedChildGroup;
+      readonly decision: {
+        readonly request_id: string;
+        readonly action: 'apply_delegated_child_group';
+      };
+    }>;
+  };
+  readonly applied_children: Array<{
+    readonly operation_id: string;
+    readonly output: string;
+  }>;
+  readonly expected: {
+    readonly ok: boolean;
+    readonly output: string;
   };
 }
 
@@ -733,5 +758,58 @@ describe('markdown-merge shared fixtures', () => {
         }
       }))
     });
+  });
+
+  it('conforms to the slice-288 delegated child apply-output fixture', () => {
+    const fixture = readFixture<MarkdownDelegatedChildApplyOutputFixture>(
+      'markdown',
+      'slice-288-delegated-child-apply-output',
+      'fenced-code-applied-output.json'
+    );
+
+    const result = applyMarkdownDelegatedChildOutputs(
+      fixture.source,
+      fixture.delegated_operations.map((entry) => ({
+        operationId: entry.operation_id,
+        parentOperationId: entry.parent_operation_id,
+        requestedStrategy: 'delegate_child_surface',
+        languageChain: entry.language_chain,
+        surface: {
+          surfaceKind: entry.surface.surface_kind,
+          declaredLanguage: entry.surface.declared_language,
+          effectiveLanguage: entry.surface.effective_language,
+          address: entry.surface.address,
+          parentAddress: entry.surface.parent_address,
+          owner: entry.surface.owner,
+          reconstructionStrategy: entry.surface.reconstruction_strategy,
+          metadata: entry.surface.metadata
+        }
+      })),
+      {
+        entries: fixture.apply_plan.entries.map((entry) => ({
+          requestId: entry.request_id,
+          family: entry.family,
+          delegatedGroup: {
+            delegatedApplyGroup: entry.delegated_group.delegated_apply_group,
+            parentOperationId: entry.delegated_group.parent_operation_id,
+            childOperationId: entry.delegated_group.child_operation_id,
+            delegatedRuntimeSurfacePath: entry.delegated_group.delegated_runtime_surface_path,
+            caseIds: entry.delegated_group.case_ids,
+            delegatedCaseIds: entry.delegated_group.delegated_case_ids
+          },
+          decision: {
+            requestId: entry.decision.request_id,
+            action: entry.decision.action
+          }
+        }))
+      },
+      fixture.applied_children.map((entry) => ({
+        operationId: entry.operation_id,
+        output: entry.output
+      }))
+    );
+
+    expect(result.ok).toBe(fixture.expected.ok);
+    expect(result.output).toBe(fixture.expected.output);
   });
 });

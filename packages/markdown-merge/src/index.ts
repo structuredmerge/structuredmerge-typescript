@@ -1,6 +1,7 @@
 export const packageName = '@structuredmerge/markdown-merge';
 
 export type {
+  AppliedChildOutput,
   MarkdownAnalysis,
   MarkdownBackend,
   MarkdownBackendFeatureProfile,
@@ -16,6 +17,7 @@ export type {
 
 export {
   availableMarkdownBackends,
+  applyMarkdownDelegatedChildOutputs,
   collectMarkdownOwners,
   markdownDelegatedChildOperations,
   markdownDiscoveredSurfaces,
