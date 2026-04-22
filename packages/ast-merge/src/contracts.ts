@@ -1902,6 +1902,47 @@ export function reviewConformanceManifest(
   };
 }
 
+export function reviewConformanceManifestWithReplayBundleEnvelope(
+  manifest: ConformanceManifest,
+  options: ConformanceManifestReviewOptions,
+  replayBundleEnvelope: unknown,
+  execute: (run: ConformanceCaseRun) => ConformanceCaseExecution
+): ConformanceManifestReviewState {
+  const imported = importReviewReplayBundleEnvelope(replayBundleEnvelope);
+
+  if (imported.replayBundle) {
+    return reviewConformanceManifest(
+      manifest,
+      {
+        ...options,
+        reviewReplayBundle: imported.replayBundle
+      },
+      execute
+    );
+  }
+
+  const state = reviewConformanceManifest(
+    manifest,
+    {
+      ...options,
+      reviewReplayBundle: undefined
+    },
+    execute
+  );
+
+  return {
+    ...state,
+    diagnostics: [
+      ...state.diagnostics,
+      {
+        severity: 'error',
+        category: imported.error!.category,
+        message: imported.error!.message
+      }
+    ]
+  };
+}
+
 function suiteSelectorsEqual(
   left: ConformanceSuiteSelector,
   right: ConformanceSuiteSelector

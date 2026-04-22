@@ -113,6 +113,7 @@ export {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  reviewConformanceManifestWithReplayBundleEnvelope,
   importConformanceManifestReviewStateEnvelope,
   importReviewedNestedExecutionEnvelope,
   importReviewReplayBundleEnvelope,

@@ -88,6 +88,7 @@ import {
   reportConformanceSuite,
   reviewConformanceFamilyContext,
   reviewConformanceManifest,
+  reviewConformanceManifestWithReplayBundleEnvelope,
   importConformanceManifestReviewStateEnvelope,
   importReviewedNestedExecutionEnvelope,
   importReviewReplayBundleEnvelope,
@@ -1271,6 +1272,36 @@ function normalizeReviewReplayContext(raw: {
     surface: raw.surface,
     families: raw.families,
     requireExplicitContexts: raw.require_explicit_contexts
+  };
+}
+
+function normalizeReviewReplayBundleEnvelope(raw: {
+  kind: ReviewReplayBundleEnvelope['kind'];
+  version: number;
+  replay_bundle: {
+    replay_context: {
+      surface: 'conformance_manifest';
+      families: string[];
+      require_explicit_contexts: boolean;
+    };
+    decisions: ReviewDecisionFixture[];
+    reviewed_nested_executions?: ReviewedNestedExecutionFixture[];
+  };
+}): ReviewReplayBundleEnvelope {
+  return {
+    kind: raw.kind,
+    version: raw.version,
+    replayBundle: {
+      replayContext: normalizeReviewReplayContext(raw.replay_bundle.replay_context),
+      decisions: raw.replay_bundle.decisions.map((decision) => normalizeReviewDecision(decision)),
+      ...(raw.replay_bundle.reviewed_nested_executions
+        ? {
+            reviewedNestedExecutions: raw.replay_bundle.reviewed_nested_executions.map((execution) =>
+              normalizeReviewedNestedExecution(execution)
+            )
+          }
+        : {})
+    }
   };
 }
 
@@ -4077,6 +4108,68 @@ describe('ast-merge shared fixtures', () => {
         }
       )
     ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-317 review replay bundle envelope application fixture', () => {
+    const fixture = readFixture<
+      ConformanceManifestReviewStateFixture & { review_replay_bundle_envelope: unknown }
+    >(...diagnosticsFixturePath('review_replay_bundle_envelope_application'));
+
+    expect(
+      reviewConformanceManifestWithReplayBundleEnvelope(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        normalizeReviewReplayBundleEnvelope(fixture.review_replay_bundle_envelope as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-318 explicit review replay bundle envelope application fixture', () => {
+    const fixture = readFixture<
+      ConformanceManifestReviewStateFixture & { review_replay_bundle_envelope: unknown }
+    >(...diagnosticsFixturePath('explicit_review_replay_bundle_envelope_application'));
+
+    expect(
+      reviewConformanceManifestWithReplayBundleEnvelope(
+        fixture.manifest,
+        normalizeManifestReviewOptions(fixture.options as never),
+        normalizeReviewReplayBundleEnvelope(fixture.review_replay_bundle_envelope as never),
+        (run) => {
+          const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+          return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+        }
+      )
+    ).toEqual(normalizeManifestReviewState(fixture.expected_state as never));
+  });
+
+  it('conforms to the slice-319 review replay bundle envelope rejection fixture', () => {
+    const fixture = readFixture<{
+      manifest: ConformanceManifest;
+      options: unknown;
+      executions: Record<string, ConformanceCaseExecution>;
+      cases: Array<{
+        review_replay_bundle_envelope: unknown;
+        expected_state: unknown;
+      }>;
+    }>(...diagnosticsFixturePath('review_replay_bundle_envelope_review_rejection'));
+
+    for (const fixtureCase of fixture.cases) {
+      expect(
+        reviewConformanceManifestWithReplayBundleEnvelope(
+          fixture.manifest,
+          normalizeManifestReviewOptions(fixture.options as never),
+          normalizeReviewReplayBundleEnvelope(fixtureCase.review_replay_bundle_envelope as never),
+          (run) => {
+            const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
+            return fixture.executions[key] ?? { outcome: 'failed', messages: ['missing execution'] };
+          }
+        )
+      ).toEqual(normalizeManifestReviewState(fixtureCase.expected_state as never));
+    }
   });
 
   it('conforms to the slice-306 review state reviewed nested executions fixture', () => {
