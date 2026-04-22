@@ -202,6 +202,15 @@ export interface TemplatePreviewResult {
   readonly omittedPaths: readonly string[];
 }
 
+export interface TemplateApplyResult extends TemplatePreviewResult {
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+export interface TemplateConvergenceResult {
+  readonly converged: boolean;
+  readonly pendingPaths: readonly string[];
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -1017,6 +1026,122 @@ export function previewTemplateExecution(
     keptPaths,
     blockedPaths,
     omittedPaths
+  };
+}
+
+export function applyTemplateExecution(
+  entries: readonly TemplateExecutionPlanEntry[],
+  mergePreparedContent: (entry: TemplateExecutionPlanEntry) => MergeResult<string>
+): TemplateApplyResult {
+  const preview = previewTemplateExecution([]);
+  const resultFiles: Record<string, string> = {};
+  const createdPaths: string[] = [];
+  const updatedPaths: string[] = [];
+  const keptPaths: string[] = [];
+  const blockedPaths: string[] = [];
+  const omittedPaths: string[] = [];
+  const diagnostics: Diagnostic[] = [];
+
+  for (const entry of entries) {
+    const destinationPath = entry.destinationPath;
+    switch (entry.executionAction) {
+      case 'blocked':
+        if (destinationPath !== undefined) {
+          blockedPaths.push(destinationPath);
+        }
+        break;
+      case 'omit':
+        omittedPaths.push(entry.logicalDestinationPath);
+        break;
+      case 'keep':
+        if (destinationPath !== undefined && entry.destinationContent !== undefined) {
+          resultFiles[destinationPath] = entry.destinationContent;
+          keptPaths.push(destinationPath);
+        }
+        break;
+      case 'raw_copy':
+      case 'write_prepared_content':
+        if (destinationPath !== undefined && entry.preparedTemplateContent !== undefined) {
+          resultFiles[destinationPath] = entry.preparedTemplateContent;
+          (entry.destinationExists ? updatedPaths : createdPaths).push(destinationPath);
+        }
+        break;
+      case 'merge_prepared_content':
+        if (destinationPath === undefined || entry.preparedTemplateContent === undefined) {
+          break;
+        }
+        if (entry.destinationContent === undefined) {
+          resultFiles[destinationPath] = entry.preparedTemplateContent;
+          (entry.destinationExists ? updatedPaths : createdPaths).push(destinationPath);
+          break;
+        }
+        {
+          const mergeResult = mergePreparedContent(entry);
+          diagnostics.push(...mergeResult.diagnostics);
+          if (!mergeResult.ok || mergeResult.output === undefined) {
+            blockedPaths.push(destinationPath);
+            break;
+          }
+          resultFiles[destinationPath] = mergeResult.output;
+          (entry.destinationExists ? updatedPaths : createdPaths).push(destinationPath);
+        }
+        break;
+    }
+  }
+
+  void preview;
+  return {
+    resultFiles,
+    createdPaths,
+    updatedPaths,
+    keptPaths,
+    blockedPaths,
+    omittedPaths,
+    diagnostics
+  };
+}
+
+export function evaluateTemplateTreeConvergence(
+  templateSourcePaths: readonly string[],
+  templateContents: Readonly<Record<string, string>>,
+  destinationContents: Readonly<Record<string, string>>,
+  context: TemplateDestinationContext = {},
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = [],
+  replacements: Readonly<Record<string, string>> = {},
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): TemplateConvergenceResult {
+  const executionPlan = planTemplateTreeExecution(
+    templateSourcePaths,
+    templateContents,
+    Object.keys(destinationContents).sort(),
+    destinationContents,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    config
+  );
+  const pendingPaths = executionPlan
+    .filter((entry) => {
+      if (entry.blocked) {
+        return true;
+      }
+      if (!entry.ready) {
+        return false;
+      }
+
+      return (
+        entry.destinationContent === undefined ||
+        entry.preparedTemplateContent === undefined ||
+        entry.destinationContent !== entry.preparedTemplateContent
+      );
+    })
+    .map((entry) => entry.destinationPath ?? entry.logicalDestinationPath);
+
+  return {
+    converged: pendingPaths.length === 0,
+    pendingPaths
   };
 }
 

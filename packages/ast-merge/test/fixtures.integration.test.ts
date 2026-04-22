@@ -56,6 +56,7 @@ import type {
 } from '../src/index';
 import {
   REVIEW_TRANSPORT_VERSION,
+  applyTemplateExecution,
   conformanceManifestReplayContext,
   conformanceManifestReviewStateEnvelope,
   conformanceManifestReviewRequestIds,
@@ -87,6 +88,7 @@ import {
   planTemplateEntries,
   enrichTemplatePlanEntries,
   enrichTemplatePlanEntriesWithTokenState,
+  evaluateTemplateTreeConvergence,
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
@@ -131,6 +133,8 @@ import {
 // parity anchors:
 // diagnosticsFixturePath('mini_template_tree_plan')
 // diagnosticsFixturePath('mini_template_tree_preview')
+// diagnosticsFixturePath('mini_template_tree_apply')
+// diagnosticsFixturePath('mini_template_tree_convergence')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
 
@@ -322,6 +326,45 @@ interface MiniTemplateTreePreviewFixture {
     kept_paths: string[];
     blocked_paths: string[];
     omitted_paths: string[];
+  };
+}
+
+interface MiniTemplateTreeApplyFixture {
+  merge_results: Record<
+    string,
+    {
+      ok: boolean;
+      diagnostics: Array<{
+        severity: DiagnosticSeverity;
+        category: DiagnosticCategory;
+        message: string;
+        path?: string;
+      }>;
+      output: string | null;
+      policies: PolicyReference[];
+    }
+  >;
+  expected_result: {
+    result_files: Record<string, string>;
+    created_paths: string[];
+    updated_paths: string[];
+    kept_paths: string[];
+    blocked_paths: string[];
+    omitted_paths: string[];
+    diagnostics: Array<{
+      severity: DiagnosticSeverity;
+      category: DiagnosticCategory;
+      message: string;
+      path?: string;
+    }>;
+  };
+}
+
+interface MiniTemplateTreeConvergenceFixture {
+  replacements: Record<string, string>;
+  expected: {
+    converged: boolean;
+    pending_paths: string[];
   };
 }
 
@@ -2304,6 +2347,126 @@ describe('ast-merge shared fixtures', () => {
       blocked_paths: preview.blockedPaths,
       omitted_paths: preview.omittedPaths
     }).toEqual(previewFixture.expected_preview);
+  });
+
+  it('conforms to the mini template tree apply fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const planFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_plan') ??
+      []) as string[];
+    const applyFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_apply') ??
+      []) as string[];
+    const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
+    const applyFixture = readFixture<MiniTemplateTreeApplyFixture>(...applyFixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...planFixturePath.slice(0, -1));
+    const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
+    const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
+    const templateSourcePaths = Object.keys(templateContents).sort();
+    const existingDestinationPaths = Object.keys(destinationContents).sort();
+
+    const executionPlan = planTemplateTreeExecution(
+      templateSourcePaths,
+      templateContents,
+      existingDestinationPaths,
+      destinationContents,
+      { projectName: planFixture.context.project_name },
+      planFixture.default_strategy,
+      planFixture.overrides,
+      planFixture.replacements
+    );
+
+    const actual = applyTemplateExecution(executionPlan, (entry) => {
+      const fixtureResult = applyFixture.merge_results[entry.destinationPath ?? ''];
+      return {
+        ok: fixtureResult.ok,
+        diagnostics: fixtureResult.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+        output: fixtureResult.output ?? undefined,
+        policies: fixtureResult.policies
+      };
+    });
+
+    expect({
+      result_files: actual.resultFiles,
+      created_paths: actual.createdPaths,
+      updated_paths: actual.updatedPaths,
+      kept_paths: actual.keptPaths,
+      blocked_paths: actual.blockedPaths,
+      omitted_paths: actual.omittedPaths,
+      diagnostics: actual.diagnostics
+    }).toEqual({
+      result_files: applyFixture.expected_result.result_files,
+      created_paths: applyFixture.expected_result.created_paths,
+      updated_paths: applyFixture.expected_result.updated_paths,
+      kept_paths: applyFixture.expected_result.kept_paths,
+      blocked_paths: applyFixture.expected_result.blocked_paths,
+      omitted_paths: applyFixture.expected_result.omitted_paths,
+      diagnostics: applyFixture.expected_result.diagnostics.map((diagnostic) =>
+        normalizeDiagnostic(diagnostic)
+      )
+    });
+  });
+
+  it('conforms to the mini template tree convergence fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const planFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_plan') ??
+      []) as string[];
+    const applyFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_apply') ??
+      []) as string[];
+    const convergenceFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_convergence'
+    ) ?? []) as string[];
+    const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
+    const applyFixture = readFixture<MiniTemplateTreeApplyFixture>(...applyFixturePath);
+    const convergenceFixture = readFixture<MiniTemplateTreeConvergenceFixture>(...convergenceFixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...planFixturePath.slice(0, -1));
+    const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
+    const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
+    const templateSourcePaths = Object.keys(templateContents).sort();
+    const existingDestinationPaths = Object.keys(destinationContents).sort();
+
+    const executionPlan = planTemplateTreeExecution(
+      templateSourcePaths,
+      templateContents,
+      existingDestinationPaths,
+      destinationContents,
+      { projectName: planFixture.context.project_name },
+      planFixture.default_strategy,
+      planFixture.overrides,
+      planFixture.replacements
+    );
+    const applyResult = applyTemplateExecution(executionPlan, (entry) => {
+      const fixtureResult = applyFixture.merge_results[entry.destinationPath ?? ''];
+      return {
+        ok: fixtureResult.ok,
+        diagnostics: fixtureResult.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+        output: fixtureResult.output ?? undefined,
+        policies: fixtureResult.policies
+      };
+    });
+
+    expect(
+      evaluateTemplateTreeConvergence(
+        templateSourcePaths,
+        templateContents,
+        applyResult.resultFiles,
+        { projectName: planFixture.context.project_name },
+        planFixture.default_strategy,
+        planFixture.overrides,
+        convergenceFixture.replacements
+      )
+    ).toEqual({
+      converged: convergenceFixture.expected.converged,
+      pendingPaths: convergenceFixture.expected.pending_paths
+    });
   });
 
   it('conforms to the template entry plan state fixture', () => {
