@@ -2,10 +2,12 @@ import MarkdownIt from 'markdown-it';
 import { registerBackend, type BackendReference } from '@structuredmerge/tree-haver';
 import type {
   ConformanceFamilyPlanContext,
+  ConformanceManifestReviewState,
   DelegatedChildGroupReviewState,
   Diagnostic,
   MergeResult,
-  ParseResult
+  ParseResult,
+  ReviewReplayBundle
 } from '@structuredmerge/ast-merge';
 import {
   collectMarkdownOwners,
@@ -14,6 +16,8 @@ import {
   markdownEmbeddedFamilies as markdownEmbeddedFamiliesWithSubstrate,
   type MarkdownFeatureProfile,
   mergeMarkdown as mergeMarkdownWithSubstrate,
+  mergeMarkdownWithReviewedNestedOutputsFromReplayBundle as mergeMarkdownWithReviewedNestedOutputsFromReplayBundleWithSubstrate,
+  mergeMarkdownWithReviewedNestedOutputsFromReviewState as mergeMarkdownWithReviewedNestedOutputsFromReviewStateWithSubstrate,
   mergeMarkdownWithReviewedNestedOutputs as mergeMarkdownWithReviewedNestedOutputsWithSubstrate,
   matchMarkdownOwners as matchMarkdownOwnersWithSubstrate,
   markdownFeatureProfile,
@@ -152,6 +156,56 @@ export function mergeMarkdownWithReviewedNestedOutputs(
     dialect,
     reviewState,
     appliedChildren,
+    'kreuzberg-language-pack'
+  );
+}
+
+export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
+  templateSource: string,
+  destinationSource: string,
+  dialect: 'markdown',
+  replayBundle: ReviewReplayBundle,
+  backend?: string
+): MergeResult<string> {
+  const requested = backend ?? 'markdown-it';
+  if (requested !== 'markdown-it') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported Markdown backend ${requested}.`)],
+      policies: []
+    };
+  }
+
+  return mergeMarkdownWithReviewedNestedOutputsFromReplayBundleWithSubstrate(
+    templateSource,
+    destinationSource,
+    dialect,
+    replayBundle,
+    'kreuzberg-language-pack'
+  );
+}
+
+export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
+  templateSource: string,
+  destinationSource: string,
+  dialect: 'markdown',
+  reviewState: ConformanceManifestReviewState,
+  backend?: string
+): MergeResult<string> {
+  const requested = backend ?? 'markdown-it';
+  if (requested !== 'markdown-it') {
+    return {
+      ok: false,
+      diagnostics: [unsupportedFeature(`Unsupported Markdown backend ${requested}.`)],
+      policies: []
+    };
+  }
+
+  return mergeMarkdownWithReviewedNestedOutputsFromReviewStateWithSubstrate(
+    templateSource,
+    destinationSource,
+    dialect,
+    reviewState,
     'kreuzberg-language-pack'
   );
 }

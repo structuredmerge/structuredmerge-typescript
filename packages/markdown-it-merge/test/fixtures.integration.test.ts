@@ -17,6 +17,8 @@ import {
   matchMarkdownOwners,
   mergeMarkdown,
   mergeMarkdownWithReviewedNestedOutputs,
+  mergeMarkdownWithReviewedNestedOutputsFromReplayBundle,
+  mergeMarkdownWithReviewedNestedOutputsFromReviewState,
   parseMarkdown
 } from '../src/index';
 
@@ -212,6 +214,116 @@ describe('markdown-it-merge shared fixtures', () => {
 
     expect(result.ok).toBe((fixture.expected as Record<string, unknown>).ok as boolean);
     expect(result.output).toBe((fixture.expected as Record<string, unknown>).output);
+  });
+
+  it('conforms to the slice-309 reviewed nested review artifact application fixture', () => {
+    const fixture = readFixture(
+      'markdown',
+      'slice-309-reviewed-nested-review-artifact-application',
+      'fenced-code-reviewed-nested-review-artifact-application.json'
+    );
+
+    const replayBundle = {
+      replayContext: {
+        surface: ((fixture.replay_bundle as Record<string, unknown>).replay_context as Record<string, unknown>)
+          .surface as 'conformance_manifest',
+        families: ((fixture.replay_bundle as Record<string, unknown>).replay_context as Record<string, unknown>)
+          .families as string[],
+        requireExplicitContexts: ((fixture.replay_bundle as Record<string, unknown>).replay_context as Record<string, unknown>)
+          .require_explicit_contexts as boolean
+      },
+      decisions: ((fixture.replay_bundle as Record<string, unknown>).decisions as Array<Record<string, unknown>>).map(
+        (decision) => ({
+          requestId: decision.request_id as string,
+          action: decision.action as 'accept_default_context' | 'apply_delegated_child_group'
+        })
+      ),
+      reviewedNestedExecutions: ((fixture.replay_bundle as Record<string, unknown>).reviewed_nested_executions as Array<Record<string, unknown>>).map(
+        (execution) => ({
+          family: execution.family as string,
+          reviewState: {
+            requests: ((execution.review_state as Record<string, unknown>).requests as Array<Record<string, unknown>>).map(
+              (request) => ({
+                id: request.id as string,
+                kind: request.kind as 'delegated_child_group',
+                family: request.family as string,
+                message: request.message as string,
+                blocking: request.blocking as boolean,
+                delegatedGroup: {
+                  delegatedApplyGroup: (request.delegated_group as Record<string, unknown>).delegated_apply_group as string,
+                  parentOperationId: (request.delegated_group as Record<string, unknown>).parent_operation_id as string,
+                  childOperationId: (request.delegated_group as Record<string, unknown>).child_operation_id as string,
+                  delegatedRuntimeSurfacePath: (request.delegated_group as Record<string, unknown>).delegated_runtime_surface_path as string,
+                  caseIds: (request.delegated_group as Record<string, unknown>).case_ids as string[],
+                  delegatedCaseIds: (request.delegated_group as Record<string, unknown>).delegated_case_ids as string[]
+                },
+                actionOffers: (request.action_offers as Array<Record<string, unknown>>).map((offer) => ({
+                  action: offer.action as 'apply_delegated_child_group',
+                  requiresContext: offer.requires_context as boolean
+                })),
+                defaultAction: request.default_action as 'apply_delegated_child_group'
+              })
+            ),
+            acceptedGroups: ((execution.review_state as Record<string, unknown>).accepted_groups as Array<Record<string, unknown>>).map(
+              (group) => ({
+                delegatedApplyGroup: group.delegated_apply_group as string,
+                parentOperationId: group.parent_operation_id as string,
+                childOperationId: group.child_operation_id as string,
+                delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path as string,
+                caseIds: group.case_ids as string[],
+                delegatedCaseIds: group.delegated_case_ids as string[]
+              })
+            ),
+            appliedDecisions: ((execution.review_state as Record<string, unknown>).applied_decisions as Array<Record<string, unknown>>).map(
+              (decision) => ({
+                requestId: decision.request_id as string,
+                action: decision.action as 'apply_delegated_child_group'
+              })
+            ),
+            diagnostics: ((execution.review_state as Record<string, unknown>).diagnostics ?? []) as []
+          },
+          appliedChildren: (execution.applied_children as Array<Record<string, unknown>>).map((entry) => ({
+            operationId: entry.operation_id as string,
+            output: entry.output as string
+          }))
+        })
+      )
+    };
+
+    const reviewState = {
+      report: (fixture.review_state as Record<string, unknown>).report as { entries: []; summary: { total: 0; passed: 0; failed: 0; skipped: 0 } },
+      diagnostics: ((fixture.review_state as Record<string, unknown>).diagnostics ?? []) as [],
+      requests: ((fixture.review_state as Record<string, unknown>).requests ?? []) as [],
+      appliedDecisions: ((fixture.review_state as Record<string, unknown>).applied_decisions ?? []) as [],
+      hostHints: {
+        interactive: ((fixture.review_state as Record<string, unknown>).host_hints as Record<string, unknown>).interactive as boolean,
+        requireExplicitContexts: ((fixture.review_state as Record<string, unknown>).host_hints as Record<string, unknown>).require_explicit_contexts as boolean
+      },
+      replayContext: {
+        surface: ((fixture.review_state as Record<string, unknown>).replay_context as Record<string, unknown>).surface as 'conformance_manifest',
+        families: ((fixture.review_state as Record<string, unknown>).replay_context as Record<string, unknown>).families as string[],
+        requireExplicitContexts: ((fixture.review_state as Record<string, unknown>).replay_context as Record<string, unknown>).require_explicit_contexts as boolean
+      },
+      reviewedNestedExecutions: replayBundle.reviewedNestedExecutions
+    };
+
+    const replayResult = mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
+      fixture.template as string,
+      fixture.destination as string,
+      'markdown',
+      replayBundle
+    );
+    expect(replayResult.ok).toBe((fixture.expected as Record<string, unknown>).ok as boolean);
+    expect(replayResult.output).toBe((fixture.expected as Record<string, unknown>).output);
+
+    const stateResult = mergeMarkdownWithReviewedNestedOutputsFromReviewState(
+      fixture.template as string,
+      fixture.destination as string,
+      'markdown',
+      reviewState
+    );
+    expect(stateResult.ok).toBe((fixture.expected as Record<string, unknown>).ok as boolean);
+    expect(stateResult.output).toBe((fixture.expected as Record<string, unknown>).output);
   });
 
   it('conforms to the provider named-suite plan fixture', () => {
