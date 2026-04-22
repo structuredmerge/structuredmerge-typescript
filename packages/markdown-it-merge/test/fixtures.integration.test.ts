@@ -336,12 +336,17 @@ describe('markdown-it-merge shared fixtures', () => {
     expect(stateResult.output).toBe(expected.output);
   });
 
-  it('conforms to the slice-311 reviewed nested review artifact rejection fixture', () => {
-    const fixture = readFixture(
-      'markdown',
-      'slice-311-reviewed-nested-review-artifact-rejection',
-      'fenced-code-reviewed-nested-review-artifact-rejection.json'
+  it('conforms to the slice-327 markdown provider reviewed nested review artifact rejection fixture', () => {
+    const providerFixture = readFixture(
+      'diagnostics',
+      'slice-327-markdown-provider-reviewed-nested-review-artifact-rejection',
+      'typescript-markdown-provider-reviewed-nested-review-artifact-rejection.json'
     );
+    const sharedFixturePath = providerFixture.shared_fixture_path as string[];
+    const fixture = readFixture(...sharedFixturePath);
+    const provider = (providerFixture.providers as Record<string, Record<string, unknown>>)[
+      'markdown-it'
+    ] as Record<string, unknown>;
 
     expect(
       mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
@@ -351,8 +356,8 @@ describe('markdown-it-merge shared fixtures', () => {
         fixture.replay_bundle as never
       )
     ).toEqual({
-      ok: (fixture.expected as Record<string, unknown>).ok,
-      diagnostics: (fixture.expected as Record<string, unknown>).diagnostics,
+      ok: (provider.expected_replay_bundle as Record<string, unknown>).ok,
+      diagnostics: (provider.expected_replay_bundle as Record<string, unknown>).diagnostics,
       policies: []
     });
 
@@ -364,8 +369,8 @@ describe('markdown-it-merge shared fixtures', () => {
         fixture.review_state as never
       )
     ).toEqual({
-      ok: (fixture.expected_review_state as Record<string, unknown>).ok,
-      diagnostics: (fixture.expected_review_state as Record<string, unknown>).diagnostics,
+      ok: (provider.expected_review_state as Record<string, unknown>).ok,
+      diagnostics: (provider.expected_review_state as Record<string, unknown>).diagnostics,
       policies: []
     });
   });
