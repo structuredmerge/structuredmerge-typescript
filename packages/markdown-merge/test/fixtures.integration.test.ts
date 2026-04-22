@@ -23,6 +23,7 @@ import {
   markdownFeatureProfile,
   markdownPlanContext,
   matchMarkdownOwners,
+  mergeMarkdown,
   parseMarkdown
 } from '../src/index';
 
@@ -222,6 +223,11 @@ describe('markdown-merge shared fixtures', () => {
       'slice-199-matching',
       'path-equality.json'
     ]);
+    expect(conformanceFixturePath(manifest, 'markdown', 'merge')).toEqual([
+      'markdown',
+      'slice-286-merge',
+      'section-merge.json'
+    ]);
   });
 
   it('conforms to the slice-198 Markdown analysis fixture', () => {
@@ -282,6 +288,23 @@ describe('markdown-merge shared fixtures', () => {
         unmatchedTemplate: fixture.expected.unmatched_template,
         unmatchedDestination: fixture.expected.unmatched_destination
       });
+    }
+  });
+
+  it('conforms to the slice-286 Markdown merge fixture', () => {
+    const fixture = readFixture<{
+      template: string;
+      destination: string;
+      expected: {
+        ok: true;
+        output: string;
+      };
+    }>('markdown', 'slice-286-merge', 'section-merge.json');
+
+    for (const backend of availableMarkdownBackends()) {
+      const result = mergeMarkdown(fixture.template, fixture.destination, 'markdown', backend);
+      expect(result.ok).toBe(fixture.expected.ok);
+      expect(result.output).toBe(fixture.expected.output);
     }
   });
 

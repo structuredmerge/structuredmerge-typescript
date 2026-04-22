@@ -24,6 +24,7 @@ export {
   markdownFeatureProfile,
   markdownManifestRolePaths,
   markdownPlanContext,
+  mergeMarkdown,
   matchMarkdownOwners,
   normalizeMarkdownSource,
   parseMarkdown

@@ -1,6 +1,7 @@
 export {
   availableRubyBackends,
   matchRubyOwners,
+  mergeRuby,
   parseRuby,
   rubyBackendFeatureProfile,
   rubyDelegatedChildOperations,

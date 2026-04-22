@@ -3,6 +3,7 @@ import type {
   DelegatedChildOperation,
   DiscoveredSurface,
   FamilyFeatureProfile,
+  MergeResult,
   ParseResult,
   PolicyReference
 } from '@structuredmerge/ast-merge';
@@ -74,6 +75,15 @@ const magicCommentPrefixes = [
 interface CommentEntry {
   readonly line: number;
   readonly raw: string;
+}
+
+interface RubyRequireEntry {
+  readonly text: string;
+}
+
+interface RubyDeclarationEntry {
+  readonly path: string;
+  readonly text: string;
 }
 
 function rubyParseRequest(source: string): ParserRequest {
@@ -252,6 +262,79 @@ function analyzeRubyDocument(source: string): RubyAnalysis {
   };
 }
 
+function collectRubyRequireEntries(source: string): RubyRequireEntry[] {
+  const normalized = normalizeSource(source);
+  return normalized
+    .split('\n')
+    .filter((line) => requirePattern.test(line))
+    .map((line) => ({ text: line.trimEnd() }));
+}
+
+function collectRubyDeclarationEntries(source: string): RubyDeclarationEntry[] {
+  const normalized = normalizeSource(source);
+  const lines = normalized.split('\n');
+  const entries: RubyDeclarationEntry[] = [];
+  let pendingComments: number[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
+    const stripped = line.trim();
+
+    if (commentLine(line)) {
+      pendingComments = [...pendingComments, index];
+      continue;
+    }
+
+    if (stripped.length === 0) {
+      pendingComments = [];
+      continue;
+    }
+
+    if (requirePattern.test(line)) {
+      pendingComments = [];
+      continue;
+    }
+
+    const declarationMatch =
+      line.match(classPattern) ?? line.match(modulePattern) ?? line.match(defPattern);
+    if (!declarationMatch?.[1]) {
+      pendingComments = [];
+      continue;
+    }
+
+    const start = pendingComments[0] ?? index;
+    const name = declarationMatch[1];
+    let depth = 1;
+    let cursor = index + 1;
+    for (; cursor < lines.length; cursor += 1) {
+      const candidate = lines[cursor]?.trim() ?? '';
+      if (
+        classPattern.test(candidate) ||
+        modulePattern.test(candidate) ||
+        defPattern.test(candidate)
+      ) {
+        depth += 1;
+      }
+      if (candidate === 'end') {
+        depth -= 1;
+        if (depth === 0) {
+          cursor += 1;
+          break;
+        }
+      }
+    }
+
+    entries.push({
+      path: `/declarations/${name}`,
+      text: lines.slice(start, cursor).join('\n').trim()
+    });
+    index = Math.max(index, cursor - 1);
+    pendingComments = [];
+  }
+
+  return entries;
+}
+
 export function rubyFeatureProfile(): RubyFeatureProfile {
   return {
     family: 'ruby',
@@ -319,6 +402,51 @@ export function matchRubyOwners(
     unmatchedDestination: destination.owners
       .map((owner) => owner.path)
       .filter((path) => !templateOwners.has(path))
+  };
+}
+
+export function mergeRuby(
+  templateSource: string,
+  destinationSource: string,
+  dialect: RubyDialect
+): MergeResult<string> {
+  const template = parseRuby(templateSource, dialect);
+  if (!template.ok || !template.analysis) {
+    return { ok: false, diagnostics: template.diagnostics, policies: [] };
+  }
+
+  const destination = parseRuby(destinationSource, dialect);
+  if (!destination.ok || !destination.analysis) {
+    return {
+      ok: false,
+      diagnostics: destination.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        category:
+          diagnostic.category === 'parse_error' ? 'destination_parse_error' : diagnostic.category
+      })),
+      policies: []
+    };
+  }
+
+  const destinationRequires = collectRubyRequireEntries(destination.analysis.source);
+  const destinationDeclarations = collectRubyDeclarationEntries(destination.analysis.source);
+  const templateDeclarations = collectRubyDeclarationEntries(template.analysis.source);
+  const destinationDeclarationPaths = new Set(
+    destinationDeclarations.map((entry) => entry.path)
+  );
+  const sections = [
+    destinationRequires.map((entry) => entry.text).join('\n').trim(),
+    ...destinationDeclarations.map((entry) => entry.text),
+    ...templateDeclarations
+      .filter((entry) => !destinationDeclarationPaths.has(entry.path))
+      .map((entry) => entry.text)
+  ].filter((section) => section.length > 0);
+
+  return {
+    ok: true,
+    diagnostics: [],
+    output: `${sections.join('\n\n').trimEnd()}\n`,
+    policies: [destinationWinsArrayPolicy]
   };
 }
 

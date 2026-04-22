@@ -18,6 +18,7 @@ import {
 import {
   availableRubyBackends,
   matchRubyOwners,
+  mergeRuby,
   parseRuby,
   rubyBackendFeatureProfile,
   rubyDelegatedChildOperations,
@@ -253,6 +254,47 @@ describe('ruby-merge shared fixtures', () => {
     ).toEqual(matchingFixture.expected.matched);
     expect(matched.unmatchedTemplate).toEqual(matchingFixture.expected.unmatched_template);
     expect(matched.unmatchedDestination).toEqual(matchingFixture.expected.unmatched_destination);
+
+    const mergeFixture = readFixture<{
+      template: string;
+      destination: string;
+      expected: { ok: true; output: string };
+    }>('ruby', 'slice-287-merge', 'module-merge.json');
+    const mergeResult = mergeRuby(mergeFixture.template, mergeFixture.destination, 'ruby');
+    expect(mergeResult.ok).toBe(mergeFixture.expected.ok);
+    expect(mergeResult.output).toBe(mergeFixture.expected.output);
+
+    const invalidTemplateFixture = readFixture<{
+      template: string;
+      destination: string;
+      expected: { ok: false; diagnostics: Array<{ category: string }> };
+    }>('ruby', 'slice-287-merge', 'invalid-template.json');
+    const invalidTemplateResult = mergeRuby(
+      invalidTemplateFixture.template,
+      invalidTemplateFixture.destination,
+      'ruby'
+    );
+    expect(invalidTemplateResult.ok).toBe(false);
+    expect(invalidTemplateResult.diagnostics.map((diagnostic) => diagnostic.category)).toEqual(
+      invalidTemplateFixture.expected.diagnostics.map((diagnostic) => diagnostic.category)
+    );
+
+    const invalidDestinationFixture = readFixture<{
+      template: string;
+      destination: string;
+      expected: { ok: false; diagnostics: Array<{ category: string }> };
+    }>('ruby', 'slice-287-merge', 'invalid-destination.json');
+    const invalidDestinationResult = mergeRuby(
+      invalidDestinationFixture.template,
+      invalidDestinationFixture.destination,
+      'ruby'
+    );
+    expect(invalidDestinationResult.ok).toBe(false);
+    expect(
+      invalidDestinationResult.diagnostics.map((diagnostic) => diagnostic.category)
+    ).toEqual(
+      invalidDestinationFixture.expected.diagnostics.map((diagnostic) => diagnostic.category)
+    );
 
     const surfacesFixture = readFixture<{
       source: string;
@@ -664,6 +706,11 @@ describe('ruby-merge shared fixtures', () => {
       'ruby',
       'slice-219-matching',
       'path-equality.json'
+    ]);
+    expect(conformanceFixturePath(manifest, 'ruby', 'merge')).toEqual([
+      'ruby',
+      'slice-287-merge',
+      'module-merge.json'
     ]);
   });
 });

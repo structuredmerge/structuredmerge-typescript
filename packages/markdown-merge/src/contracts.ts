@@ -5,6 +5,7 @@ import type {
   DiscoveredSurface,
   Diagnostic,
   FamilyFeatureProfile,
+  MergeResult,
   ParseResult
 } from '@structuredmerge/ast-merge';
 import {
@@ -43,6 +44,11 @@ export interface MarkdownAnalysis {
   readonly normalizedSource: string;
   readonly rootKind: MarkdownRootKind;
   readonly owners: readonly MarkdownOwner[];
+}
+
+interface MarkdownSection {
+  readonly path: string;
+  readonly text: string;
 }
 
 export interface MarkdownEmbeddedFamilyCandidate {
@@ -235,6 +241,103 @@ export function matchMarkdownOwners(
   };
 }
 
+function markdownOwnerStartIndices(source: string): Map<string, number> {
+  const starts = new Map<string, number>();
+  const lines = normalizeMarkdownSource(source).split('\n');
+  let headingIndex = 0;
+  let codeFenceIndex = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
+    const heading = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      starts.set(`/heading/${headingIndex}`, index);
+      headingIndex += 1;
+      continue;
+    }
+
+    const fence = line.match(/^\s*(`{3,}|~{3,})\s*(.*?)\s*$/);
+    if (!fence) {
+      continue;
+    }
+
+    starts.set(`/code_fence/${codeFenceIndex}`, index);
+    codeFenceIndex += 1;
+
+    const marker = fence[1];
+    const markerChar = marker[0];
+    const markerLength = marker.length;
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      if (new RegExp(`^\\s*${markerChar}{${markerLength},}\\s*$`).test(lines[cursor] ?? '')) {
+        index = cursor;
+        break;
+      }
+      if (cursor === lines.length - 1) {
+        index = cursor;
+      }
+    }
+  }
+
+  return starts;
+}
+
+function collectMarkdownSections(source: string, owners: readonly MarkdownOwner[]): MarkdownSection[] {
+  const normalized = normalizeMarkdownSource(source);
+  const lines = normalized.split('\n');
+  const starts = markdownOwnerStartIndices(normalized);
+  const orderedStarts = owners
+    .map((owner) => ({ owner, start: starts.get(owner.path) }))
+    .filter((entry): entry is { owner: MarkdownOwner; start: number } => entry.start !== undefined)
+    .sort((left, right) => left.start - right.start);
+
+  return orderedStarts.map(({ owner, start }, index) => {
+    const nextStart = orderedStarts[index + 1]?.start ?? lines.length - 1;
+    const endExclusive = index + 1 < orderedStarts.length ? nextStart : lines.length;
+    const text = lines.slice(start, endExclusive).join('\n').trim();
+    return { path: owner.path, text };
+  });
+}
+
+export function mergeMarkdown(
+  templateSource: string,
+  destinationSource: string,
+  dialect: MarkdownDialect,
+  backend?: MarkdownBackend
+): MergeResult<string> {
+  const template = parseMarkdown(templateSource, dialect, backend);
+  if (!template.ok || !template.analysis) {
+    return { ok: false, diagnostics: template.diagnostics, policies: [] };
+  }
+
+  const destination = parseMarkdown(destinationSource, dialect, backend);
+  if (!destination.ok || !destination.analysis) {
+    return { ok: false, diagnostics: destination.diagnostics, policies: [] };
+  }
+
+  const destinationSections = collectMarkdownSections(
+    destination.analysis.normalizedSource,
+    destination.analysis.owners
+  );
+  const templateSections = collectMarkdownSections(
+    template.analysis.normalizedSource,
+    template.analysis.owners
+  );
+  const destinationPaths = new Set(destinationSections.map((section) => section.path));
+  const mergedSections = [
+    ...destinationSections.map((section) => section.text),
+    ...templateSections
+      .filter((section) => !destinationPaths.has(section.path))
+      .map((section) => section.text)
+  ].filter((section) => section.length > 0);
+
+  return {
+    ok: true,
+    diagnostics: [],
+    output: `${mergedSections.join('\n\n').trimEnd()}\n`,
+    policies: []
+  };
+}
+
 function codeFenceFamily(
   infoString?: string
 ): MarkdownEmbeddedFamilyCandidate['family'] | undefined {
@@ -349,11 +452,13 @@ export function markdownManifestRolePaths(manifest: ConformanceManifest): {
   readonly familyProfile: readonly string[] | undefined;
   readonly analysis: readonly string[] | undefined;
   readonly matching: readonly string[] | undefined;
+  readonly merge: readonly string[] | undefined;
 } {
   return {
     familyProfile: manifest.family_feature_profiles.find((entry) => entry.family === 'markdown')
       ?.path,
     analysis: manifest.families.markdown?.find((entry) => entry.role === 'analysis')?.path,
-    matching: manifest.families.markdown?.find((entry) => entry.role === 'matching')?.path
+    matching: manifest.families.markdown?.find((entry) => entry.role === 'matching')?.path,
+    merge: manifest.families.markdown?.find((entry) => entry.role === 'merge')?.path
   };
 }
