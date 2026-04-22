@@ -76,6 +76,8 @@ import {
   conformanceFixturePath,
   normalizeTemplateSourcePath,
   classifyTemplateTargetPath,
+  resolveTemplateDestinationPath,
+  selectTemplateStrategy,
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
@@ -155,6 +157,28 @@ interface TemplateTargetClassificationFixture {
       family: string;
       dialect: string;
     };
+  }>;
+}
+
+interface TemplateDestinationMappingFixture {
+  cases: Array<{
+    logical_destination_path: string;
+    context: {
+      project_name?: string;
+    };
+    expected_destination_path: string | null;
+  }>;
+}
+
+interface TemplateStrategySelectionFixture {
+  cases: Array<{
+    destination_path: string;
+    default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+    overrides: Array<{
+      path: string;
+      strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+    }>;
+    expected_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
   }>;
 }
 
@@ -1712,6 +1736,44 @@ describe('ast-merge shared fixtures', () => {
         family: actual.family,
         dialect: actual.dialect
       }).toEqual(testCase.expected);
+    }
+  });
+
+  it('conforms to the template destination mapping fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateDestinationMappingFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_destination_mapping') ??
+        []) as string[])
+    );
+
+    for (const testCase of fixture.cases) {
+      expect(
+        resolveTemplateDestinationPath(testCase.logical_destination_path, {
+          projectName: testCase.context.project_name
+        })
+      ).toBe(testCase.expected_destination_path ?? undefined);
+    }
+  });
+
+  it('conforms to the template strategy selection fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixture = readFixture<TemplateStrategySelectionFixture>(
+      ...((conformanceFixturePath(manifest, 'diagnostics', 'template_strategy_selection') ??
+        []) as string[])
+    );
+
+    for (const testCase of fixture.cases) {
+      expect(
+        selectTemplateStrategy(testCase.destination_path, testCase.default_strategy, testCase.overrides)
+      ).toBe(testCase.expected_strategy);
     }
   });
 

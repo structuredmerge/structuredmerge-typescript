@@ -127,6 +127,17 @@ export interface TemplateTargetClassification {
   readonly dialect: string;
 }
 
+export interface TemplateDestinationContext {
+  readonly projectName?: string;
+}
+
+export type TemplateStrategy = 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+
+export interface TemplateStrategyOverride {
+  readonly path: string;
+  readonly strategy: TemplateStrategy;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -556,6 +567,33 @@ export function classifyTemplateTargetPath(path: string): TemplateTargetClassifi
   }
 
   return classify('text', 'text', 'text');
+}
+
+export function resolveTemplateDestinationPath(
+  path: string,
+  context: TemplateDestinationContext = {}
+): string | undefined {
+  if (path === '.kettle-jem.yml') {
+    return undefined;
+  }
+  if (path === '.env.local') {
+    return '.env.local.example';
+  }
+  if (path === 'gem.gemspec' && context.projectName?.trim()) {
+    return `${context.projectName.trim()}.gemspec`;
+  }
+
+  return path;
+}
+
+export function selectTemplateStrategy(
+  path: string,
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = []
+): TemplateStrategy {
+  const normalizedPath = path.replace(/^\.\//, '');
+  const override = overrides.find((entry) => entry.path.replace(/^\.\//, '') === normalizedPath);
+  return override?.strategy ?? defaultStrategy;
 }
 
 export function conformanceSuiteDefinition(
