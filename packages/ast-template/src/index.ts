@@ -163,6 +163,21 @@ export interface SessionCommand {
   request?: SessionRunnerRequest;
 }
 
+export interface SessionCommandPayload {
+  operation: string;
+  request_kind?: 'options' | 'profile';
+  default_profile_name?: string;
+  profile_name?: string;
+  mode: DirectorySessionMode;
+  template_root: string;
+  destination_root: string;
+  context?: { project_name?: string };
+  default_strategy?: TemplateStrategy;
+  overrides?: readonly TemplateStrategyOverride[];
+  replacements?: Readonly<Record<string, string>>;
+  allowed_families?: readonly string[] | null;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1353,6 +1368,31 @@ export function runTemplateDirectorySessionCommand(
     {
       payload: command.payload,
       request: command.request
+    },
+    profiles
+  );
+}
+
+export function runTemplateDirectorySessionCommandPayload(
+  command: SessionCommandPayload,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionDispatchReport {
+  return runTemplateDirectorySessionCommand(
+    {
+      operation: command.operation,
+      payload: {
+        request_kind: command.request_kind,
+        default_profile_name: command.default_profile_name,
+        profile_name: command.profile_name,
+        mode: command.mode,
+        template_root: command.template_root,
+        destination_root: command.destination_root,
+        context: command.context,
+        default_strategy: command.default_strategy,
+        overrides: command.overrides,
+        replacements: command.replacements,
+        allowed_families: command.allowed_families
+      }
     },
     profiles
   );

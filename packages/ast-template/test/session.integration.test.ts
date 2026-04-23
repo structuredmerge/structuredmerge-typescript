@@ -38,6 +38,7 @@ import {
   reportTemplateDirectorySessionInspection,
   reportTemplateDirectorySessionResolution,
   runTemplateDirectorySessionCommand,
+  runTemplateDirectorySessionCommandPayload,
   runTemplateDirectorySessionDispatch,
   runTemplateDirectorySessionEntrypoint,
   runTemplateDirectorySessionRequest,
@@ -1309,6 +1310,35 @@ describe('template directory session report fixture', () => {
       );
     }
   });
+
+  it('conforms to the session-command-payload-report fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-379-template-directory-session-command-payload-report',
+      'template-directory-session-command-payload-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Record<string, Record<string, unknown>>;
+      inspect_ready: { input: Record<string, unknown>; expected: unknown };
+      run_profile_ready: { input: Record<string, unknown>; expected: unknown };
+      run_profile_blocked: { input: Record<string, unknown>; expected: unknown };
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    for (const key of ['inspect_ready', 'run_profile_ready', 'run_profile_blocked'] as const) {
+      const input = resolveSessionCommandPayloadFixturePaths(
+        fixture[key].input as Record<string, unknown>,
+        fixtureRoot
+      );
+      expect(runTemplateDirectorySessionCommandPayload(input as any, profiles)).toEqual(
+        resolveSessionDispatchExpectedPaths(fixture[key].expected, fixtureRoot)
+      );
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -1511,6 +1541,13 @@ function resolveSessionCommandFixturePaths(command: Record<string, unknown>, fix
     );
   }
   return cloned;
+}
+
+function resolveSessionCommandPayloadFixturePaths(
+  command: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  return resolveSessionRunnerPayloadFixturePaths(command, fixtureRoot);
 }
 
 function resolveSessionDispatchExpectedPaths(value: unknown, fixtureRoot: string): unknown {
