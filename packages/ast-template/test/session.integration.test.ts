@@ -17,6 +17,7 @@ import {
   applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirectory,
+  runTemplateDirectorySessionWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionWithRegistryToDirectory,
   defaultFamilyMergeAdapterRegistry,
@@ -515,6 +516,72 @@ describe('template directory session report fixture', () => {
       ).toEqual(section.expected);
       rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it('conforms to the session-runner fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-361-template-directory-session-runner-report',
+      'template-directory-session-runner-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      plan_run: SessionFixtureSection & { mode: 'plan'; allowed_families: string[] | null };
+      apply_run: SessionFixtureSection & { mode: 'apply'; allowed_families: string[] | null };
+      reapply_run: SessionFixtureSection & { mode: 'reapply'; allowed_families: string[] | null };
+    };
+
+    expect(
+      runTemplateDirectorySessionWithDefaultRegistryToDirectory(
+        fixture.plan_run.mode,
+        path.join(fixtureRoot, 'dry-run', 'template'),
+        path.join(fixtureRoot, 'dry-run', 'destination'),
+        normalizeContext(fixture.plan_run.context),
+        fixture.plan_run.default_strategy,
+        fixture.plan_run.overrides,
+        fixture.plan_run.replacements,
+        fixture.plan_run.allowed_families ?? undefined
+      )
+    ).toEqual(fixture.plan_run.expected);
+
+    const tempRoot = path.resolve(process.cwd(), 'packages', 'ast-template', 'tmp', 'runner');
+    rmSync(tempRoot, { recursive: true, force: true });
+    mkdirSync(tempRoot, { recursive: true });
+    writeRelativeFileTree(
+      tempRoot,
+      readRelativeFileTree(path.join(fixtureRoot, 'apply-run', 'destination'))
+    );
+
+    expect(
+      runTemplateDirectorySessionWithDefaultRegistryToDirectory(
+        fixture.apply_run.mode,
+        path.join(fixtureRoot, 'apply-run', 'template'),
+        tempRoot,
+        normalizeContext(fixture.apply_run.context),
+        fixture.apply_run.default_strategy,
+        fixture.apply_run.overrides,
+        fixture.apply_run.replacements,
+        fixture.apply_run.allowed_families ?? undefined
+      )
+    ).toEqual(fixture.apply_run.expected);
+
+    expect(
+      runTemplateDirectorySessionWithDefaultRegistryToDirectory(
+        fixture.reapply_run.mode,
+        path.join(fixtureRoot, 'apply-run', 'template'),
+        tempRoot,
+        normalizeContext(fixture.reapply_run.context),
+        fixture.reapply_run.default_strategy,
+        fixture.reapply_run.overrides,
+        fixture.reapply_run.replacements,
+        fixture.reapply_run.allowed_families ?? undefined
+      )
+    ).toEqual(fixture.reapply_run.expected);
+
+    rmSync(tempRoot, { recursive: true, force: true });
   });
 });
 

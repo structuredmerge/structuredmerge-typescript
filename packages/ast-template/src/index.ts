@@ -668,6 +668,96 @@ export function applyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirecto
   );
 }
 
+export function reapplyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirectory(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionOutcomeReport {
+  const registry = defaultFamilyMergeAdapterRegistry(allowedFamilies);
+  const result = applyTemplateTreeExecutionToDirectory(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    (entry) => mergePreparedContentFromRegistry(registry, entry),
+    config
+  );
+  const sessionReport = reportTemplateDirectoryRegistrySession(
+    'reapply',
+    result.executionPlan,
+    registry,
+    result
+  );
+  const capabilities = reportAdapterCapabilities(result.executionPlan, registry);
+  const diagnostics = reportTemplateDirectorySessionDiagnostics(
+    'reapply',
+    result.executionPlan,
+    capabilities,
+    result
+  );
+  return reportTemplateDirectorySessionOutcome(
+    sessionReport,
+    reportTemplateDirectorySessionStatus(
+      reportTemplateDirectorySessionEnvelope(sessionReport, capabilities)
+    ),
+    diagnostics
+  );
+}
+
+export function runTemplateDirectorySessionWithDefaultRegistryToDirectory(
+  mode: DirectorySessionMode,
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionOutcomeReport {
+  if (mode === 'plan') {
+    return planTemplateDirectorySessionOutcomeFromDirectories(
+      templateRoot,
+      destinationRoot,
+      context,
+      defaultStrategy,
+      overrides,
+      replacements,
+      allowedFamilies,
+      config
+    );
+  }
+  if (mode === 'apply') {
+    return applyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirectory(
+      templateRoot,
+      destinationRoot,
+      context,
+      defaultStrategy,
+      overrides,
+      replacements,
+      allowedFamilies,
+      config
+    );
+  }
+  return reapplyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirectory(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    allowedFamilies,
+    config
+  );
+}
+
 function snakeifyKeys(value: unknown): unknown {
   if (value === undefined) {
     return null;
