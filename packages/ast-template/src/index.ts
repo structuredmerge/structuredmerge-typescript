@@ -151,6 +151,12 @@ export interface SessionInspectionReport {
   diagnostics: SessionDiagnosticsReport;
 }
 
+export interface SessionDispatchReport {
+  operation: string;
+  inspection: SessionInspectionReport | null;
+  outcome: SessionOutcomeReport | null;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1310,6 +1316,25 @@ export function reportTemplateDirectorySessionInspection(
     adapter_capabilities: adapterCapabilities,
     status,
     diagnostics
+  };
+}
+
+export function runTemplateDirectorySessionDispatch(
+  operation: string,
+  entrypoint: SessionEntrypoint,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionDispatchReport {
+  if (operation === 'inspect') {
+    return {
+      operation,
+      inspection: reportTemplateDirectorySessionInspection(entrypoint, profiles),
+      outcome: null
+    };
+  }
+  return {
+    operation,
+    inspection: null,
+    outcome: runTemplateDirectorySessionEntrypoint(entrypoint, profiles)
   };
 }
 

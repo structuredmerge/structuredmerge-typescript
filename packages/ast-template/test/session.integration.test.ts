@@ -37,6 +37,7 @@ import {
   reportTemplateDirectorySessionEntrypoint,
   reportTemplateDirectorySessionInspection,
   reportTemplateDirectorySessionResolution,
+  runTemplateDirectorySessionDispatch,
   runTemplateDirectorySessionEntrypoint,
   runTemplateDirectorySessionRequest,
   runTemplateDirectorySessionRunnerPayload,
@@ -1242,6 +1243,42 @@ describe('template directory session report fixture', () => {
       resolveSessionInspectionExpectedPaths(fixture.payload_blocked.expected, fixtureRoot)
     );
   });
+
+  it('conforms to the session-dispatch-report fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-377-template-directory-session-dispatch-report',
+      'template-directory-session-dispatch-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Record<string, Record<string, unknown>>;
+      inspect_payload_ready: { input: Record<string, unknown>; expected: unknown };
+      inspect_request_blocked: { input: Record<string, unknown>; expected: unknown };
+      run_request_ready: { input: Record<string, unknown>; expected: unknown };
+      run_payload_blocked: { input: Record<string, unknown>; expected: unknown };
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    for (const key of [
+      'inspect_payload_ready',
+      'inspect_request_blocked',
+      'run_request_ready',
+      'run_payload_blocked'
+    ] as const) {
+      const input = fixture[key].input as Record<string, unknown>;
+      expect(
+        runTemplateDirectorySessionDispatch(
+          String(input.operation),
+          resolveSessionEntrypointFixturePaths(input.entrypoint as Record<string, unknown>, fixtureRoot) as any,
+          profiles
+        )
+      ).toEqual(resolveSessionDispatchExpectedPaths(fixture[key].expected, fixtureRoot));
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -1425,6 +1462,14 @@ function resolveSessionInspectionExpectedPaths(value: unknown, fixtureRoot: stri
       sessionRequest.resolved_options as Record<string, unknown>,
       fixtureRoot
     );
+  }
+  return cloned;
+}
+
+function resolveSessionDispatchExpectedPaths(value: unknown, fixtureRoot: string): unknown {
+  const cloned = JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  if (cloned.inspection) {
+    cloned.inspection = resolveSessionInspectionExpectedPaths(cloned.inspection, fixtureRoot);
   }
   return cloned;
 }
