@@ -57,6 +57,7 @@ import type {
   TemplateExecutionPlanEntry,
   TemplateDirectoryApplyReport,
   TemplateDirectoryPlanReport,
+  TemplateDirectoryRunnerReport,
   SurfaceOwnerRef,
   SurfaceSpan,
   TemplateTreeRunReport,
@@ -95,6 +96,7 @@ import {
   reportTemplateTreeRun,
   reportTemplateDirectoryApply,
   reportTemplateDirectoryPlan,
+  reportTemplateDirectoryRunner,
   runTemplateTreeExecution,
   runTemplateTreeExecutionFromDirectories,
   planTemplateTreeExecutionFromDirectories,
@@ -161,6 +163,7 @@ import {
 // diagnosticsFixturePath('mini_template_tree_directory_apply_convergence')
 // diagnosticsFixturePath('mini_template_tree_directory_apply_report')
 // diagnosticsFixturePath('mini_template_tree_directory_plan_report')
+// diagnosticsFixturePath('mini_template_tree_directory_runner_report')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
 
@@ -506,6 +509,53 @@ interface MiniTemplateTreeDirectoryPlanReportFixture {
       previewable: boolean;
     }>;
     summary: TemplateDirectoryPlanReport['summary'];
+  };
+}
+
+interface MiniTemplateTreeDirectoryRunnerReportFixture {
+  dry_run: {
+    context: Record<string, string>;
+    default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+    overrides: Array<{
+      path: string;
+      strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+    }>;
+    replacements: Record<string, string>;
+    expected: {
+      plan_report: MiniTemplateTreeDirectoryPlanReportFixture['expected'];
+      preview: {
+        result_files: Record<string, string>;
+        created_paths: string[];
+        updated_paths: string[];
+        kept_paths: string[];
+        blocked_paths: string[];
+        omitted_paths: string[];
+      };
+      run_report: null;
+      apply_report: null;
+    };
+  };
+  apply_run: {
+    context: Record<string, string>;
+    default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+    overrides: Array<{
+      path: string;
+      strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+    }>;
+    replacements: Record<string, string>;
+    expected: {
+      plan_report: MiniTemplateTreeDirectoryPlanReportFixture['expected'];
+      preview: {
+        result_files: Record<string, string>;
+        created_paths: string[];
+        updated_paths: string[];
+        kept_paths: string[];
+        blocked_paths: string[];
+        omitted_paths: string[];
+      };
+      run_report: MiniTemplateTreeRunReportFixture['expected'];
+      apply_report: MiniTemplateTreeDirectoryApplyReportFixture['expected_first_report'];
+    };
   };
 }
 
@@ -3224,6 +3274,127 @@ describe('ast-merge shared fixtures', () => {
       })),
       summary: actual.summary
     }).toEqual(fixture.expected);
+  });
+
+  it('conforms to the mini template tree directory runner report fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_directory_runner_report'
+    ) ?? []) as string[];
+    const fixture = readFixture<MiniTemplateTreeDirectoryRunnerReportFixture>(...fixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...fixturePath.slice(0, -1));
+
+    const dryRunPlan = planTemplateTreeExecutionFromDirectories(
+      path.join(fixtureDir, 'dry-run', 'template'),
+      path.join(fixtureDir, 'dry-run', 'destination'),
+      { projectName: fixture.dry_run.context.project_name },
+      fixture.dry_run.default_strategy,
+      fixture.dry_run.overrides,
+      fixture.dry_run.replacements
+    );
+    const dryRunActual = reportTemplateDirectoryRunner(dryRunPlan);
+    expect({
+      plan_report: {
+        entries: dryRunActual.planReport.entries.map((entry) => ({
+          template_source_path: entry.templateSourcePath,
+          logical_destination_path: entry.logicalDestinationPath,
+          destination_path: entry.destinationPath ?? null,
+          execution_action: entry.executionAction,
+          write_action: entry.writeAction,
+          status: entry.status,
+          previewable: entry.previewable
+        })),
+        summary: dryRunActual.planReport.summary
+      },
+      preview: {
+        result_files: dryRunActual.preview?.resultFiles ?? {},
+        created_paths: [...(dryRunActual.preview?.createdPaths ?? [])],
+        updated_paths: [...(dryRunActual.preview?.updatedPaths ?? [])],
+        kept_paths: [...(dryRunActual.preview?.keptPaths ?? [])],
+        blocked_paths: [...(dryRunActual.preview?.blockedPaths ?? [])],
+        omitted_paths: [...(dryRunActual.preview?.omittedPaths ?? [])]
+      },
+      run_report: null,
+      apply_report: null
+    }).toEqual(fixture.dry_run.expected);
+
+    const tempRoot = repoTempDir();
+    const destinationRoot = path.join(tempRoot, 'destination');
+    try {
+      writeRelativeFileTreeFromLibrary(
+        destinationRoot,
+        readRelativeFileTree(path.join(fixtureDir, 'apply-run', 'destination'))
+      );
+      const applyPlan = planTemplateTreeExecutionFromDirectories(
+        path.join(fixtureDir, 'apply-run', 'template'),
+        destinationRoot,
+        { projectName: fixture.apply_run.context.project_name },
+        fixture.apply_run.default_strategy,
+        fixture.apply_run.overrides,
+        fixture.apply_run.replacements
+      );
+      const applyRun = applyTemplateTreeExecutionToDirectory(
+        path.join(fixtureDir, 'apply-run', 'template'),
+        destinationRoot,
+        { projectName: fixture.apply_run.context.project_name },
+        fixture.apply_run.default_strategy,
+        fixture.apply_run.overrides,
+        fixture.apply_run.replacements,
+        multiFamilyMergeCallback
+      );
+      const applyActual = reportTemplateDirectoryRunner(applyPlan, applyRun);
+      expect({
+        plan_report: {
+          entries: applyActual.planReport.entries.map((entry) => ({
+            template_source_path: entry.templateSourcePath,
+            logical_destination_path: entry.logicalDestinationPath,
+            destination_path: entry.destinationPath ?? null,
+            execution_action: entry.executionAction,
+            write_action: entry.writeAction,
+            status: entry.status,
+            previewable: entry.previewable
+          })),
+          summary: applyActual.planReport.summary
+        },
+        preview: {
+          result_files: applyActual.preview?.resultFiles ?? {},
+          created_paths: [...(applyActual.preview?.createdPaths ?? [])],
+          updated_paths: [...(applyActual.preview?.updatedPaths ?? [])],
+          kept_paths: [...(applyActual.preview?.keptPaths ?? [])],
+          blocked_paths: [...(applyActual.preview?.blockedPaths ?? [])],
+          omitted_paths: [...(applyActual.preview?.omittedPaths ?? [])]
+        },
+        run_report: {
+          entries: applyActual.runReport?.entries.map((entry) => ({
+            template_source_path: entry.templateSourcePath,
+            logical_destination_path: entry.logicalDestinationPath,
+            destination_path: entry.destinationPath ?? null,
+            execution_action: entry.executionAction,
+            status: entry.status
+          })) ?? [],
+          summary: applyActual.runReport?.summary
+        },
+        apply_report: {
+          entries: applyActual.applyReport?.entries.map((entry) => ({
+            template_source_path: entry.templateSourcePath,
+            logical_destination_path: entry.logicalDestinationPath,
+            destination_path: entry.destinationPath ?? null,
+            execution_action: entry.executionAction,
+            status: entry.status,
+            written: entry.written
+          })) ?? [],
+          summary: applyActual.applyReport?.summary
+        }
+      }).toEqual(fixture.apply_run.expected);
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 
   it('conforms to the template entry plan state fixture', () => {

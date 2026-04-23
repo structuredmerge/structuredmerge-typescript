@@ -284,6 +284,13 @@ export interface TemplateDirectoryPlanReport {
   }>;
 }
 
+export interface TemplateDirectoryRunnerReport {
+  readonly planReport: TemplateDirectoryPlanReport;
+  readonly preview?: TemplatePreviewResult;
+  readonly runReport?: TemplateTreeRunReport;
+  readonly applyReport?: TemplateDirectoryApplyReport;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -1514,6 +1521,18 @@ export function reportTemplateDirectoryPlan(
       blocked: reportEntries.filter((entry) => entry.status === 'blocked').length,
       omitted: reportEntries.filter((entry) => entry.status === 'omitted').length
     }
+  };
+}
+
+export function reportTemplateDirectoryRunner(
+  entries: readonly TemplateExecutionPlanEntry[],
+  result?: TemplateTreeRunResult
+): TemplateDirectoryRunnerReport {
+  return {
+    planReport: reportTemplateDirectoryPlan(entries),
+    preview: previewTemplateExecution(entries),
+    runReport: result ? reportTemplateTreeRun(result) : undefined,
+    applyReport: result ? reportTemplateDirectoryApply(result) : undefined
   };
 }
 
