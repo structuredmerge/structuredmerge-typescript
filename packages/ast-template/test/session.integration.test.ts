@@ -763,6 +763,47 @@ describe('template directory session report fixture', () => {
       )
     ).toEqual(fixture.profile_missing_roots.expected);
   });
+
+  it('conforms to the session-profile-configuration-outcome fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-365-template-directory-session-profile-configuration-outcome-report',
+      'template-directory-session-profile-configuration-outcome-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Record<string, Record<string, unknown>>;
+      missing_profile: {
+        profile: string;
+        overrides: Record<string, unknown>;
+        expected: unknown;
+      };
+      missing_roots: {
+        profile: string;
+        overrides: Record<string, unknown>;
+        expected: unknown;
+      };
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    expect(
+      runTemplateDirectorySessionWithProfile(
+        profiles,
+        fixture.missing_profile.profile,
+        normalizeOptionsDirect(fixture.missing_profile.overrides) as any
+      )
+    ).toEqual(fixture.missing_profile.expected);
+
+    expect(
+      runTemplateDirectorySessionWithProfile(
+        profiles,
+        fixture.missing_roots.profile,
+        normalizeOptionsDirect(fixture.missing_roots.overrides) as any
+      )
+    ).toEqual(fixture.missing_roots.expected);
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {

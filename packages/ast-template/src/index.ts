@@ -859,6 +859,24 @@ export function reportTemplateDirectorySessionProfileConfiguration(
   };
 }
 
+function reportTemplateDirectorySessionConfigurationOutcome(
+  mode: DirectorySessionMode,
+  diagnostics: SessionDiagnosticsReport
+): SessionOutcomeReport {
+  return reportTemplateDirectorySessionOutcome(
+    reportTemplateDirectorySession(mode, []),
+    {
+      mode,
+      ready: false,
+      missing_families: [],
+      blocked_paths: [],
+      planned_write_count: 0,
+      written_count: 0
+    },
+    diagnostics
+  );
+}
+
 export function resolveTemplateDirectorySessionOptions(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
@@ -885,9 +903,17 @@ export function runTemplateDirectorySessionWithProfile(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
   overrides: DirectorySessionOptions
-): SessionOutcomeReport | undefined {
+): SessionOutcomeReport {
+  const configuration = reportTemplateDirectorySessionProfileConfiguration(
+    profiles,
+    profileName,
+    overrides
+  );
+  if (!configuration.ready) {
+    return reportTemplateDirectorySessionConfigurationOutcome(configuration.mode, configuration);
+  }
   const options = resolveTemplateDirectorySessionOptions(profiles, profileName, overrides);
-  return options ? runTemplateDirectorySessionWithOptions(options) : undefined;
+  return runTemplateDirectorySessionWithOptions(options as DirectorySessionOptions);
 }
 
 function snakeifyKeys(value: unknown): unknown {
