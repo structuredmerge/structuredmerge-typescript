@@ -37,6 +37,13 @@ export interface TemplateDirectoryRegistrySessionReport {
   runner_report: Record<string, unknown>;
 }
 
+export interface AdapterCapabilityReport {
+  required_families: readonly string[];
+  adapter_families: readonly string[];
+  missing_families: readonly string[];
+  ready: boolean;
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -224,6 +231,77 @@ export function applyTemplateDirectorySessionWithDefaultRegistryToDirectory(
   config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
 ): TemplateDirectoryRegistrySessionReport {
   return applyTemplateDirectorySessionWithRegistryToDirectory(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    defaultFamilyMergeAdapterRegistry(allowedFamilies),
+    config
+  );
+}
+
+export function requiredFamilies(
+  entries: readonly TemplateExecutionPlanEntry[]
+): readonly string[] {
+  return [
+    ...new Set(
+      entries
+        .filter((entry) => entry.executionAction === 'merge_prepared_content')
+        .map((entry) => entry.classification.family)
+    )
+  ].sort();
+}
+
+export function reportAdapterCapabilities(
+  entries: readonly TemplateExecutionPlanEntry[],
+  registry: FamilyMergeAdapterRegistry
+): AdapterCapabilityReport {
+  const required = requiredFamilies(entries);
+  const available = registeredAdapterFamilies(registry);
+  const missing = required.filter((family) => !available.includes(family));
+  return {
+    required_families: required,
+    adapter_families: available,
+    missing_families: missing,
+    ready: missing.length === 0
+  };
+}
+
+export function reportAdapterCapabilitiesFromDirectories(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  registry: FamilyMergeAdapterRegistry,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): AdapterCapabilityReport {
+  const plan = planTemplateTreeExecutionFromDirectories(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    config
+  );
+  return reportAdapterCapabilities(plan, registry);
+}
+
+export function reportDefaultAdapterCapabilitiesFromDirectories(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): AdapterCapabilityReport {
+  return reportAdapterCapabilitiesFromDirectories(
     templateRoot,
     destinationRoot,
     context,

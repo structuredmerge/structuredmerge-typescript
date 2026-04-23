@@ -19,6 +19,8 @@ import {
   defaultFamilyMergeAdapterRegistry,
   mergePreparedContentFromRegistry,
   planTemplateDirectorySessionFromDirectories,
+  reportAdapterCapabilitiesFromDirectories,
+  reportDefaultAdapterCapabilitiesFromDirectories,
   reapplyTemplateDirectorySessionToDirectory
 } from '../src/index';
 
@@ -195,6 +197,69 @@ describe('template directory session report fixture', () => {
       );
       rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it('conforms to the adapter-capability fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-356-template-directory-adapter-capability-report',
+      'template-directory-adapter-capability-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      full_registry: SessionFixtureSection;
+      partial_registry: SessionFixtureSection;
+      filtered_discovery: SessionFixtureSection & { allowed_families: string[] | null };
+    };
+
+    const fullRegistry = {
+      markdown: markdownAdapter,
+      ruby: rubyAdapter,
+      toml: tomlAdapter
+    };
+    const partialRegistry = {
+      markdown: markdownAdapter,
+      toml: tomlAdapter
+    };
+
+    expect(
+      reportAdapterCapabilitiesFromDirectories(
+        path.join(fixtureRoot, 'apply-run', 'template'),
+        path.join(fixtureRoot, 'apply-run', 'destination'),
+        normalizeContext(fixture.full_registry.context),
+        fixture.full_registry.default_strategy,
+        fixture.full_registry.overrides,
+        fixture.full_registry.replacements,
+        fullRegistry
+      )
+    ).toEqual(fixture.full_registry.expected);
+
+    expect(
+      reportAdapterCapabilitiesFromDirectories(
+        path.join(fixtureRoot, 'apply-run', 'template'),
+        path.join(fixtureRoot, 'apply-run', 'destination'),
+        normalizeContext(fixture.partial_registry.context),
+        fixture.partial_registry.default_strategy,
+        fixture.partial_registry.overrides,
+        fixture.partial_registry.replacements,
+        partialRegistry
+      )
+    ).toEqual(fixture.partial_registry.expected);
+
+    expect(
+      reportDefaultAdapterCapabilitiesFromDirectories(
+        path.join(fixtureRoot, 'apply-run', 'template'),
+        path.join(fixtureRoot, 'apply-run', 'destination'),
+        normalizeContext(fixture.filtered_discovery.context),
+        fixture.filtered_discovery.default_strategy,
+        fixture.filtered_discovery.overrides,
+        fixture.filtered_discovery.replacements,
+        fixture.filtered_discovery.allowed_families ?? undefined
+      )
+    ).toEqual(fixture.filtered_discovery.expected);
   });
 });
 
