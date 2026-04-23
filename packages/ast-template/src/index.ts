@@ -24,6 +24,16 @@ export interface TemplateDirectorySessionReport {
   runner_report: Record<string, unknown>;
 }
 
+export type FamilyMergeAdapter = (entry: TemplateExecutionPlanEntry) => MergeResult<string>;
+export type FamilyMergeAdapterRegistry = Readonly<Record<string, FamilyMergeAdapter>>;
+
+export interface TemplateDirectoryRegistrySessionReport {
+  mode: DirectorySessionMode;
+  adapter_families: readonly string[];
+  diagnostics: readonly Record<string, unknown>[];
+  runner_report: Record<string, unknown>;
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -103,6 +113,75 @@ export function reapplyTemplateDirectorySessionToDirectory(
     config
   );
   return reportTemplateDirectorySession('reapply', result.executionPlan, result);
+}
+
+export function mergePreparedContentFromRegistry(
+  registry: FamilyMergeAdapterRegistry,
+  entry: TemplateExecutionPlanEntry
+): MergeResult<string> {
+  const family = entry.classification.family;
+  const adapter = registry[family];
+  if (!adapter) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: `missing family adapter for ${family}`
+        }
+      ],
+      policies: []
+    };
+  }
+  return adapter(entry);
+}
+
+export function registeredAdapterFamilies(registry: FamilyMergeAdapterRegistry): readonly string[] {
+  return Object.keys(registry).sort();
+}
+
+export function reportTemplateDirectoryRegistrySession(
+  mode: DirectorySessionMode,
+  entries: readonly TemplateExecutionPlanEntry[],
+  registry: FamilyMergeAdapterRegistry,
+  result?: TemplateTreeRunResult
+): TemplateDirectoryRegistrySessionReport {
+  return {
+    mode,
+    adapter_families: registeredAdapterFamilies(registry),
+    diagnostics: snakeifyKeys(result?.applyResult.diagnostics ?? []) as readonly Record<
+      string,
+      unknown
+    >[],
+    runner_report: snakeifyKeys(reportTemplateDirectoryRunner(entries, result)) as Record<
+      string,
+      unknown
+    >
+  };
+}
+
+export function applyTemplateDirectorySessionWithRegistryToDirectory(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  registry: FamilyMergeAdapterRegistry,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): TemplateDirectoryRegistrySessionReport {
+  const result = applyTemplateTreeExecutionToDirectory(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    (entry) => mergePreparedContentFromRegistry(registry, entry),
+    config
+  );
+  return reportTemplateDirectoryRegistrySession('apply', result.executionPlan, registry, result);
 }
 
 function snakeifyKeys(value: unknown): unknown {

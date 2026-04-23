@@ -14,6 +14,8 @@ import { mergeRuby } from '../../ruby-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import {
   applyTemplateDirectorySessionToDirectory,
+  applyTemplateDirectorySessionWithRegistryToDirectory,
+  mergePreparedContentFromRegistry,
   planTemplateDirectorySessionFromDirectories,
   reapplyTemplateDirectorySessionToDirectory
 } from '../src/index';
@@ -85,31 +87,92 @@ describe('template directory session report fixture', () => {
 
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  it('conforms to the adapter-registry fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-354-template-directory-adapter-registry-report',
+      'template-directory-adapter-registry-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      full_registry: SessionFixtureSection;
+      partial_registry: SessionFixtureSection;
+    };
+
+    const fullRegistry = {
+      markdown: markdownAdapter,
+      ruby: rubyAdapter,
+      toml: tomlAdapter
+    };
+    const partialRegistry = {
+      markdown: markdownAdapter,
+      toml: tomlAdapter
+    };
+
+    for (const [label, section, registry] of [
+      ['full_registry', fixture.full_registry, fullRegistry] as const,
+      ['partial_registry', fixture.partial_registry, partialRegistry] as const
+    ]) {
+      const tempRoot = path.resolve(
+        process.cwd(),
+        'packages',
+        'ast-template',
+        'tmp',
+        `registry-${label}`
+      );
+      rmSync(tempRoot, { recursive: true, force: true });
+      mkdirSync(tempRoot, { recursive: true });
+      writeRelativeFileTree(
+        tempRoot,
+        readRelativeFileTree(path.join(fixtureRoot, 'apply-run', 'destination'))
+      );
+
+      const actual = applyTemplateDirectorySessionWithRegistryToDirectory(
+        path.join(fixtureRoot, 'apply-run', 'template'),
+        tempRoot,
+        normalizeContext(section.context),
+        section.default_strategy,
+        section.overrides,
+        section.replacements,
+        registry
+      );
+      expect(actual).toEqual(section.expected);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
+  return mergePreparedContentFromRegistry(
+    {
+      markdown: markdownAdapter,
+      ruby: rubyAdapter,
+      toml: tomlAdapter
+    },
+    entry
+  );
+}
+
+function markdownAdapter(entry: TemplateExecutionPlanEntry): MergeResult<string> {
   const destination = entry.destinationContent ?? '';
   const template = entry.preparedTemplateContent ?? '';
-  switch (entry.classification.family) {
-    case 'markdown':
-      return mergeMarkdown(template, destination, 'markdown');
-    case 'toml':
-      return mergeToml(template, destination, 'toml');
-    case 'ruby':
-      return mergeRuby(template, destination, 'ruby');
-    default:
-      return {
-        ok: false,
-        diagnostics: [
-          {
-            severity: 'error',
-            category: 'configuration_error',
-            message: `missing family merge adapter for ${entry.classification.family}`
-          }
-        ],
-        policies: []
-      };
-  }
+  return mergeMarkdown(template, destination, 'markdown');
+}
+
+function tomlAdapter(entry: TemplateExecutionPlanEntry): MergeResult<string> {
+  const destination = entry.destinationContent ?? '';
+  const template = entry.preparedTemplateContent ?? '';
+  return mergeToml(template, destination, 'toml');
+}
+
+function rubyAdapter(entry: TemplateExecutionPlanEntry): MergeResult<string> {
+  const destination = entry.destinationContent ?? '';
+  const template = entry.preparedTemplateContent ?? '';
+  return mergeRuby(template, destination, 'ruby');
 }
 
 function normalizeContext(context: Record<string, unknown>): TemplateDestinationContext {
