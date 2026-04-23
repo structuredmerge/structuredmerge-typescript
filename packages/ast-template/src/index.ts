@@ -127,6 +127,11 @@ export interface SessionRunnerPayload {
   allowed_families?: readonly string[] | null;
 }
 
+export interface SessionEntrypoint {
+  payload?: SessionRunnerPayload;
+  request?: SessionRunnerRequest;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1117,6 +1122,45 @@ export function runTemplateDirectorySessionRunnerPayload(
     ),
     profiles
   );
+}
+
+export function runTemplateDirectorySessionEntrypoint(
+  entrypoint: SessionEntrypoint,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionOutcomeReport {
+  if (entrypoint.payload) {
+    return runTemplateDirectorySessionRunnerPayload(entrypoint.payload, profiles);
+  }
+  if (entrypoint.request) {
+    return runTemplateDirectorySessionRunnerRequest(entrypoint.request, profiles);
+  }
+  return {
+    session_report: {
+      mode: 'plan',
+      runner_report: {
+        plan_report: { entries: [], summary: { create: 0, update: 0, keep: 0, blocked: 0, omitted: 0 } },
+        preview: {
+          result_files: {},
+          created_paths: [],
+          updated_paths: [],
+          kept_paths: [],
+          blocked_paths: [],
+          omitted_paths: []
+        },
+        run_report: null,
+        apply_report: null
+      }
+    },
+    status: {
+      mode: 'plan',
+      ready: false,
+      missing_families: [],
+      blocked_paths: [],
+      planned_write_count: 0,
+      written_count: 0
+    },
+    diagnostics: { mode: 'plan', ready: false, diagnostics: [] }
+  };
 }
 
 export function resolveTemplateDirectorySessionOptions(

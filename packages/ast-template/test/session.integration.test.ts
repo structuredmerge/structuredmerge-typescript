@@ -34,6 +34,7 @@ import {
   reportTemplateDirectorySessionProfileRequest,
   reportTemplateDirectorySessionRunnerInput,
   reportTemplateDirectorySessionRunnerPayload,
+  runTemplateDirectorySessionEntrypoint,
   runTemplateDirectorySessionRequest,
   runTemplateDirectorySessionRunnerPayload,
   runTemplateDirectorySessionRunnerRequest,
@@ -1082,6 +1083,51 @@ describe('template directory session report fixture', () => {
       )
     ).toEqual(fixture.profile_blocked.expected);
   });
+
+  it('conforms to the session-entrypoint-outcome fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-373-template-directory-session-entrypoint-outcome-report',
+      'template-directory-session-entrypoint-outcome-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Record<string, Record<string, unknown>>;
+      payload_ready: { input: Record<string, unknown>; expected: unknown };
+      request_blocked: { input: Record<string, unknown>; expected: unknown };
+      request_ready: { input: Record<string, unknown>; expected: unknown };
+      payload_blocked: { input: Record<string, unknown>; expected: unknown };
+    };
+    const fixtureRoot = path.dirname(fixturePath);
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    expect(
+      runTemplateDirectorySessionEntrypoint(
+        resolveSessionEntrypointFixturePaths(fixture.payload_ready.input, fixtureRoot) as any,
+        profiles
+      )
+    ).toEqual(fixture.payload_ready.expected);
+    expect(
+      runTemplateDirectorySessionEntrypoint(
+        resolveSessionEntrypointFixturePaths(fixture.request_blocked.input, fixtureRoot) as any,
+        profiles
+      )
+    ).toEqual(fixture.request_blocked.expected);
+    expect(
+      runTemplateDirectorySessionEntrypoint(
+        resolveSessionEntrypointFixturePaths(fixture.request_ready.input, fixtureRoot) as any,
+        profiles
+      )
+    ).toEqual(fixture.request_ready.expected);
+    expect(
+      runTemplateDirectorySessionEntrypoint(
+        resolveSessionEntrypointFixturePaths(fixture.payload_blocked.input, fixtureRoot) as any,
+        profiles
+      )
+    ).toEqual(fixture.payload_blocked.expected);
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -1210,6 +1256,26 @@ function resolveSessionRunnerPayloadFixturePaths(
   }
   if (typeof cloned.destination_root === 'string' && cloned.destination_root.length > 0) {
     cloned.destination_root = path.join(fixtureRoot, cloned.destination_root);
+  }
+  return cloned;
+}
+
+function resolveSessionEntrypointFixturePaths(
+  entrypoint: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  const cloned = JSON.parse(JSON.stringify(entrypoint)) as Record<string, unknown>;
+  if (cloned.payload && typeof cloned.payload === 'object') {
+    cloned.payload = resolveSessionRunnerPayloadFixturePaths(
+      cloned.payload as Record<string, unknown>,
+      fixtureRoot
+    );
+  }
+  if (cloned.request && typeof cloned.request === 'object') {
+    cloned.request = resolveRunnerRequestFixturePaths(
+      cloned.request as Record<string, unknown>,
+      fixtureRoot
+    );
   }
   return cloned;
 }
