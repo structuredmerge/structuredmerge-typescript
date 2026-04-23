@@ -240,6 +240,27 @@ export interface TemplateTreeRunReport {
   }>;
 }
 
+export interface TemplateDirectoryApplyReportEntry {
+  readonly templateSourcePath: string;
+  readonly logicalDestinationPath: string;
+  readonly destinationPath?: string;
+  readonly executionAction: TemplateExecutionAction;
+  readonly status: TemplateTreeRunStatus;
+  readonly written: boolean;
+}
+
+export interface TemplateDirectoryApplyReport {
+  readonly entries: readonly TemplateDirectoryApplyReportEntry[];
+  readonly summary: Readonly<{
+    created: number;
+    updated: number;
+    kept: number;
+    blocked: number;
+    omitted: number;
+    written: number;
+  }>;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -1359,6 +1380,37 @@ export function reportTemplateTreeRun(result: TemplateTreeRunResult): TemplateTr
       kept: entries.filter((entry) => entry.status === 'kept').length,
       blocked: entries.filter((entry) => entry.status === 'blocked').length,
       omitted: entries.filter((entry) => entry.status === 'omitted').length
+    }
+  };
+}
+
+export function reportTemplateDirectoryApply(
+  result: TemplateTreeRunResult
+): TemplateDirectoryApplyReport {
+  const runReport = reportTemplateTreeRun(result);
+  const created = new Set(result.applyResult.createdPaths);
+  const updated = new Set(result.applyResult.updatedPaths);
+
+  const entries = runReport.entries.map((entry) => ({
+    templateSourcePath: entry.templateSourcePath,
+    logicalDestinationPath: entry.logicalDestinationPath,
+    destinationPath: entry.destinationPath,
+    executionAction: entry.executionAction,
+    status: entry.status,
+    written:
+      entry.destinationPath !== undefined &&
+      (created.has(entry.destinationPath) || updated.has(entry.destinationPath))
+  }));
+
+  return {
+    entries,
+    summary: {
+      created: entries.filter((entry) => entry.status === 'created').length,
+      updated: entries.filter((entry) => entry.status === 'updated').length,
+      kept: entries.filter((entry) => entry.status === 'kept').length,
+      blocked: entries.filter((entry) => entry.status === 'blocked').length,
+      omitted: entries.filter((entry) => entry.status === 'omitted').length,
+      written: entries.filter((entry) => entry.written).length
     }
   };
 }

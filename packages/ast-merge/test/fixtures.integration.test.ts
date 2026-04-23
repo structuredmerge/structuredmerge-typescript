@@ -55,6 +55,7 @@ import type {
   ReviewedNestedExecutionApplication,
   TemplateTokenConfig,
   TemplateExecutionPlanEntry,
+  TemplateDirectoryApplyReport,
   SurfaceOwnerRef,
   SurfaceSpan,
   TemplateTreeRunReport,
@@ -91,6 +92,7 @@ import {
   planTemplateTreeExecution,
   previewTemplateExecution,
   reportTemplateTreeRun,
+  reportTemplateDirectoryApply,
   runTemplateTreeExecution,
   runTemplateTreeExecutionFromDirectories,
   selectTemplateStrategy,
@@ -154,6 +156,7 @@ import {
 // diagnosticsFixturePath('mini_template_tree_multi_family_run_report')
 // diagnosticsFixturePath('mini_template_tree_directory_run_report')
 // diagnosticsFixturePath('mini_template_tree_directory_apply_convergence')
+// diagnosticsFixturePath('mini_template_tree_directory_apply_report')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
 
@@ -446,6 +449,38 @@ interface MiniTemplateTreeDirectoryApplyConvergenceFixture {
   expected_destination_files: Record<string, string>;
   expected_first_report: MiniTemplateTreeRunReportFixture['expected'];
   expected_second_report: MiniTemplateTreeRunReportFixture['expected'];
+}
+
+interface MiniTemplateTreeDirectoryApplyReportFixture {
+  context: Record<string, string>;
+  default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  overrides: Array<{
+    path: string;
+    strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  }>;
+  replacements: Record<string, string>;
+  expected_first_report: {
+    entries: Array<{
+      template_source_path: string;
+      logical_destination_path: string;
+      destination_path: string | null;
+      execution_action: string;
+      status: string;
+      written: boolean;
+    }>;
+    summary: TemplateDirectoryApplyReport['summary'];
+  };
+  expected_second_report: {
+    entries: Array<{
+      template_source_path: string;
+      logical_destination_path: string;
+      destination_path: string | null;
+      execution_action: string;
+      status: string;
+      written: boolean;
+    }>;
+    summary: TemplateDirectoryApplyReport['summary'];
+  };
 }
 
 function readRelativeFileTree(rootPath: string): Record<string, string> {
@@ -3053,6 +3088,73 @@ describe('ast-merge shared fixtures', () => {
           destination_path: entry.destinationPath ?? null,
           execution_action: entry.executionAction,
           status: entry.status
+        })),
+        summary: secondActual.summary
+      }).toEqual(fixture.expected_second_report);
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('conforms to the mini template tree directory apply report fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_directory_apply_report'
+    ) ?? []) as string[];
+    const fixture = readFixture<MiniTemplateTreeDirectoryApplyReportFixture>(...fixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...fixturePath.slice(0, -1));
+    const tempRoot = repoTempDir();
+    const destinationRoot = path.join(tempRoot, 'destination');
+
+    try {
+      writeRelativeFileTreeFromLibrary(destinationRoot, readRelativeFileTree(path.join(fixtureDir, 'destination')));
+
+      const firstRun = applyTemplateTreeExecutionToDirectory(
+        path.join(fixtureDir, 'template'),
+        destinationRoot,
+        { projectName: fixture.context.project_name },
+        fixture.default_strategy,
+        fixture.overrides,
+        fixture.replacements,
+        multiFamilyMergeCallback
+      );
+      const firstActual = reportTemplateDirectoryApply(firstRun);
+      expect({
+        entries: firstActual.entries.map((entry) => ({
+          template_source_path: entry.templateSourcePath,
+          logical_destination_path: entry.logicalDestinationPath,
+          destination_path: entry.destinationPath ?? null,
+          execution_action: entry.executionAction,
+          status: entry.status,
+          written: entry.written
+        })),
+        summary: firstActual.summary
+      }).toEqual(fixture.expected_first_report);
+
+      const secondRun = applyTemplateTreeExecutionToDirectory(
+        path.join(fixtureDir, 'template'),
+        destinationRoot,
+        { projectName: fixture.context.project_name },
+        fixture.default_strategy,
+        fixture.overrides,
+        fixture.replacements,
+        multiFamilyMergeCallback
+      );
+      const secondActual = reportTemplateDirectoryApply(secondRun);
+      expect({
+        entries: secondActual.entries.map((entry) => ({
+          template_source_path: entry.templateSourcePath,
+          logical_destination_path: entry.logicalDestinationPath,
+          destination_path: entry.destinationPath ?? null,
+          execution_action: entry.executionAction,
+          status: entry.status,
+          written: entry.written
         })),
         summary: secondActual.summary
       }).toEqual(fixture.expected_second_report);
