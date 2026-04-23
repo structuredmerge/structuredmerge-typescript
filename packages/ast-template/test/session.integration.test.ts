@@ -34,6 +34,7 @@ import {
   reportTemplateDirectorySessionProfileRequest,
   reportTemplateDirectorySessionRunnerInput,
   reportTemplateDirectorySessionRunnerPayload,
+  reportTemplateDirectorySessionEntrypoint,
   runTemplateDirectorySessionEntrypoint,
   runTemplateDirectorySessionRequest,
   runTemplateDirectorySessionRunnerPayload,
@@ -1127,6 +1128,36 @@ describe('template directory session report fixture', () => {
         profiles
       )
     ).toEqual(fixture.payload_blocked.expected);
+  });
+
+  it('conforms to the session-entrypoint-report fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-374-template-directory-session-entrypoint-report',
+      'template-directory-session-entrypoint-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      payload_ready: { input: Record<string, unknown>; expected: unknown };
+      request_blocked: { input: Record<string, unknown>; expected: unknown };
+      request_ready: { input: Record<string, unknown>; expected: unknown };
+      payload_blocked: { input: Record<string, unknown>; expected: unknown };
+    };
+
+    expect(reportTemplateDirectorySessionEntrypoint(fixture.payload_ready.input as any)).toEqual(
+      fixture.payload_ready.expected
+    );
+    expect(reportTemplateDirectorySessionEntrypoint(fixture.request_blocked.input as any)).toEqual(
+      fixture.request_blocked.expected
+    );
+    expect(reportTemplateDirectorySessionEntrypoint(fixture.request_ready.input as any)).toEqual(
+      fixture.request_ready.expected
+    );
+    expect(reportTemplateDirectorySessionEntrypoint(fixture.payload_blocked.input as any)).toEqual(
+      fixture.payload_blocked.expected
+    );
   });
 });
 

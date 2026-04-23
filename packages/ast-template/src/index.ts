@@ -132,6 +132,11 @@ export interface SessionEntrypoint {
   request?: SessionRunnerRequest;
 }
 
+export interface SessionEntrypointReport {
+  source_kind: '' | 'payload' | 'request';
+  runner_request: SessionRunnerRequest;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1160,6 +1165,29 @@ export function runTemplateDirectorySessionEntrypoint(
       written_count: 0
     },
     diagnostics: { mode: 'plan', ready: false, diagnostics: [] }
+  };
+}
+
+export function reportTemplateDirectorySessionEntrypoint(
+  entrypoint: SessionEntrypoint
+): SessionEntrypointReport {
+  if (entrypoint.payload) {
+    return {
+      source_kind: 'payload',
+      runner_request: reportTemplateDirectorySessionRunnerInput(
+        reportTemplateDirectorySessionRunnerPayload(entrypoint.payload)
+      )
+    };
+  }
+  if (entrypoint.request) {
+    return {
+      source_kind: 'request',
+      runner_request: entrypoint.request
+    };
+  }
+  return {
+    source_kind: '',
+    runner_request: { request_kind: 'options' }
   };
 }
 
