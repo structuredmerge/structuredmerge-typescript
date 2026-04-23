@@ -1,0 +1,15 @@
+{
+  "name": "@structuredmerge/ast-template",
+  "version": "0.0.0",
+  "private": false,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@structuredmerge/ast-merge": "workspace:*"
+  },
+  "devDependencies": {
+    "@structuredmerge/markdown-merge": "workspace:*",
+    "@structuredmerge/ruby-merge": "workspace:*",
+    "@structuredmerge/toml-merge": "workspace:*"
+  }
+}
