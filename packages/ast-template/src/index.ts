@@ -73,6 +73,12 @@ export interface SessionDiagnosticsReport {
   diagnostics: readonly SessionDiagnostic[];
 }
 
+export interface SessionOutcomeReport {
+  session_report: unknown;
+  status: SessionStatusReport;
+  diagnostics: SessionDiagnosticsReport;
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -558,6 +564,107 @@ export function applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDir
     result.executionPlan,
     reportAdapterCapabilities(result.executionPlan, registry),
     result
+  );
+}
+
+export function reportTemplateDirectorySessionOutcome(
+  sessionReport: unknown,
+  status: SessionStatusReport,
+  diagnostics: SessionDiagnosticsReport
+): SessionOutcomeReport {
+  return {
+    session_report: sessionReport,
+    status,
+    diagnostics
+  };
+}
+
+export function planTemplateDirectorySessionOutcomeFromDirectories(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionOutcomeReport {
+  const sessionReport = planTemplateDirectorySessionFromDirectories(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    config
+  );
+  const envelope = planTemplateDirectorySessionEnvelopeFromDirectories(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    allowedFamilies,
+    config
+  );
+  const diagnostics = planTemplateDirectorySessionDiagnosticsFromDirectories(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    allowedFamilies,
+    config
+  );
+  return reportTemplateDirectorySessionOutcome(
+    sessionReport,
+    reportTemplateDirectorySessionStatus(envelope),
+    diagnostics
+  );
+}
+
+export function applyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirectory(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionOutcomeReport {
+  const registry = defaultFamilyMergeAdapterRegistry(allowedFamilies);
+  const result = applyTemplateTreeExecutionToDirectory(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    (entry) => mergePreparedContentFromRegistry(registry, entry),
+    config
+  );
+  const sessionReport = reportTemplateDirectoryRegistrySession(
+    'apply',
+    result.executionPlan,
+    registry,
+    result
+  );
+  const capabilities = reportAdapterCapabilities(result.executionPlan, registry);
+  const diagnostics = reportTemplateDirectorySessionDiagnostics(
+    'apply',
+    result.executionPlan,
+    capabilities,
+    result
+  );
+  return reportTemplateDirectorySessionOutcome(
+    sessionReport,
+    reportTemplateDirectorySessionStatus(
+      reportTemplateDirectorySessionEnvelope(sessionReport, capabilities)
+    ),
+    diagnostics
   );
 }
 
