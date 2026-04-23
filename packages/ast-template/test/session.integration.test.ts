@@ -18,6 +18,7 @@ import {
   applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirectory,
   runTemplateDirectorySessionWithDefaultRegistryToDirectory,
+  runTemplateDirectorySessionWithOptions,
   applyTemplateDirectorySessionWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionWithRegistryToDirectory,
   defaultFamilyMergeAdapterRegistry,
@@ -583,6 +584,63 @@ describe('template directory session report fixture', () => {
 
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  it('conforms to the session-options fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-362-template-directory-session-options-report',
+      'template-directory-session-options-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      plan_run: { options: Record<string, unknown>; expected: unknown };
+      apply_run: { options: Record<string, unknown>; expected: unknown };
+      reapply_run: { options: Record<string, unknown>; expected: unknown };
+    };
+
+    expect(
+      runTemplateDirectorySessionWithOptions(
+        normalizeOptions(
+          fixture.plan_run.options,
+          path.join(fixtureRoot, 'dry-run', 'template'),
+          path.join(fixtureRoot, 'dry-run', 'destination')
+        )
+      )
+    ).toEqual(fixture.plan_run.expected);
+
+    const tempRoot = path.resolve(process.cwd(), 'packages', 'ast-template', 'tmp', 'options');
+    rmSync(tempRoot, { recursive: true, force: true });
+    mkdirSync(tempRoot, { recursive: true });
+    writeRelativeFileTree(
+      tempRoot,
+      readRelativeFileTree(path.join(fixtureRoot, 'apply-run', 'destination'))
+    );
+
+    expect(
+      runTemplateDirectorySessionWithOptions(
+        normalizeOptions(
+          fixture.apply_run.options,
+          path.join(fixtureRoot, 'apply-run', 'template'),
+          tempRoot
+        )
+      )
+    ).toEqual(fixture.apply_run.expected);
+
+    expect(
+      runTemplateDirectorySessionWithOptions(
+        normalizeOptions(
+          fixture.reapply_run.options,
+          path.join(fixtureRoot, 'apply-run', 'template'),
+          tempRoot
+        )
+      )
+    ).toEqual(fixture.reapply_run.expected);
+
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -617,5 +675,22 @@ function rubyAdapter(entry: TemplateExecutionPlanEntry): MergeResult<string> {
 function normalizeContext(context: Record<string, unknown>): TemplateDestinationContext {
   return {
     projectName: typeof context.project_name === 'string' ? context.project_name : undefined
+  };
+}
+
+function normalizeOptions(
+  options: Record<string, unknown>,
+  templateRoot: string,
+  destinationRoot: string
+) {
+  return {
+    mode: options.mode as 'plan' | 'apply' | 'reapply',
+    templateRoot,
+    destinationRoot,
+    context: normalizeContext((options.context ?? {}) as Record<string, unknown>),
+    defaultStrategy: options.default_strategy as TemplateStrategy,
+    overrides: (options.overrides ?? []) as TemplateStrategyOverride[],
+    replacements: (options.replacements ?? {}) as Record<string, string>,
+    allowedFamilies: (options.allowed_families ?? undefined) as string[] | undefined
   };
 }

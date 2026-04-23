@@ -79,6 +79,18 @@ export interface SessionOutcomeReport {
   diagnostics: SessionDiagnosticsReport;
 }
 
+export interface DirectorySessionOptions {
+  mode: DirectorySessionMode;
+  templateRoot: string;
+  destinationRoot: string;
+  context: TemplateDestinationContext;
+  defaultStrategy: TemplateStrategy;
+  overrides: readonly TemplateStrategyOverride[];
+  replacements: Readonly<Record<string, string>>;
+  allowedFamilies?: readonly string[];
+  config?: TemplateTokenConfig;
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -755,6 +767,22 @@ export function runTemplateDirectorySessionWithDefaultRegistryToDirectory(
     replacements,
     allowedFamilies,
     config
+  );
+}
+
+export function runTemplateDirectorySessionWithOptions(
+  options: DirectorySessionOptions
+): SessionOutcomeReport {
+  return runTemplateDirectorySessionWithDefaultRegistryToDirectory(
+    options.mode,
+    options.templateRoot,
+    options.destinationRoot,
+    options.context,
+    options.defaultStrategy,
+    options.overrides,
+    options.replacements,
+    options.allowedFamilies,
+    options.config
   );
 }
 
