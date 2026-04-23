@@ -969,6 +969,21 @@ function reportTemplateDirectorySessionConfigurationOutcome(
   );
 }
 
+export function runTemplateDirectorySessionRequest(
+  request: SessionRequestReport
+): SessionOutcomeReport {
+  if (!request.ready) {
+    return reportTemplateDirectorySessionConfigurationOutcome(request.mode, {
+      mode: request.mode,
+      ready: request.ready,
+      diagnostics: request.diagnostics
+    });
+  }
+  return runTemplateDirectorySessionWithOptions(
+    denormalizeResolvedSessionOptions(request.resolved_options) as DirectorySessionOptions
+  );
+}
+
 export function resolveTemplateDirectorySessionOptions(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
@@ -1040,5 +1055,25 @@ function normalizeResolvedSessionOptions(options: DirectorySessionOptions | null
     overrides: options.overrides ?? [],
     replacements: options.replacements ?? {},
     allowed_families: options.allowedFamilies ?? null
+  };
+}
+
+function denormalizeResolvedSessionOptions(options: unknown): DirectorySessionOptions | null {
+  if (!options || typeof options !== 'object') {
+    return null;
+  }
+  const value = options as Record<string, unknown>;
+  const context = (value.context ?? {}) as Record<string, unknown>;
+  return {
+    mode: value.mode as DirectorySessionMode,
+    templateRoot: (value.template_root ?? '') as string,
+    destinationRoot: (value.destination_root ?? '') as string,
+    context: {
+      projectName: typeof context.project_name === 'string' ? context.project_name : undefined
+    },
+    defaultStrategy: value.default_strategy as TemplateStrategy,
+    overrides: (value.overrides ?? []) as TemplateStrategyOverride[],
+    replacements: (value.replacements ?? {}) as Record<string, string>,
+    allowedFamilies: (value.allowed_families ?? undefined) as string[] | undefined
   };
 }

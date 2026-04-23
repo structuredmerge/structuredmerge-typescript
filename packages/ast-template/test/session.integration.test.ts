@@ -32,6 +32,7 @@ import {
   reportTemplateDirectorySessionOptionsRequest,
   reportTemplateDirectorySessionProfileConfiguration,
   reportTemplateDirectorySessionProfileRequest,
+  runTemplateDirectorySessionRequest,
   reportAdapterCapabilitiesFromDirectories,
   reportDefaultAdapterCapabilitiesFromDirectories,
   reportTemplateDirectorySessionStatus,
@@ -880,6 +881,45 @@ describe('template directory session report fixture', () => {
       )
     ).toEqual(fixture.profile_invalid.expected);
   });
+
+  it('conforms to the session-request-outcome fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-368-template-directory-session-request-outcome-report',
+      'template-directory-session-request-outcome-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      options_ready: { request: unknown; expected: unknown };
+      options_blocked: { request: unknown; expected: unknown };
+      profile_ready: { request: unknown; expected: unknown };
+      profile_blocked: { request: unknown; expected: unknown };
+    };
+    const fixtureRoot = path.dirname(fixturePath);
+
+    expect(
+      runTemplateDirectorySessionRequest(
+        resolveRequestFixturePaths(fixture.options_ready.request as Record<string, unknown>, fixtureRoot) as any
+      )
+    ).toEqual(fixture.options_ready.expected);
+    expect(
+      runTemplateDirectorySessionRequest(
+        resolveRequestFixturePaths(fixture.options_blocked.request as Record<string, unknown>, fixtureRoot) as any
+      )
+    ).toEqual(fixture.options_blocked.expected);
+    expect(
+      runTemplateDirectorySessionRequest(
+        resolveRequestFixturePaths(fixture.profile_ready.request as Record<string, unknown>, fixtureRoot) as any
+      )
+    ).toEqual(fixture.profile_ready.expected);
+    expect(
+      runTemplateDirectorySessionRequest(
+        resolveRequestFixturePaths(fixture.profile_blocked.request as Record<string, unknown>, fixtureRoot) as any
+      )
+    ).toEqual(fixture.profile_blocked.expected);
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -963,4 +1003,14 @@ function normalizeOptionsDirect(options: Record<string, unknown>) {
     replacements: options.replacements as Record<string, string> | undefined,
     allowedFamilies: (options.allowed_families ?? undefined) as string[] | undefined
   };
+}
+
+function resolveRequestFixturePaths(request: Record<string, unknown>, fixtureRoot: string) {
+  const cloned = JSON.parse(JSON.stringify(request)) as Record<string, unknown>;
+  const resolved = cloned.resolved_options as Record<string, unknown> | null | undefined;
+  if (resolved) {
+    resolved.template_root = path.join(fixtureRoot, String(resolved.template_root ?? ''));
+    resolved.destination_root = path.join(fixtureRoot, String(resolved.destination_root ?? ''));
+  }
+  return cloned;
 }
