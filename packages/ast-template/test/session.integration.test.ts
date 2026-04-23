@@ -32,6 +32,7 @@ import {
   reportTemplateDirectorySessionOptionsRequest,
   reportTemplateDirectorySessionProfileConfiguration,
   reportTemplateDirectorySessionProfileRequest,
+  reportTemplateDirectorySessionRunnerInput,
   runTemplateDirectorySessionRequest,
   runTemplateDirectorySessionRunnerRequest,
   reportAdapterCapabilitiesFromDirectories,
@@ -963,6 +964,44 @@ describe('template directory session report fixture', () => {
       runTemplateDirectorySessionRunnerRequest(
         resolveRunnerRequestFixturePaths(fixture.profile_blocked.request, fixtureRoot) as any,
         profiles
+      )
+    ).toEqual(fixture.profile_blocked.expected);
+  });
+
+  it('conforms to the session-runner-input fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-370-template-directory-session-runner-input-report',
+      'template-directory-session-runner-input-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      options_ready: { input: Record<string, unknown>; expected: unknown };
+      options_blocked: { input: Record<string, unknown>; expected: unknown };
+      profile_ready: { input: Record<string, unknown>; expected: unknown };
+      profile_blocked: { input: Record<string, unknown>; expected: unknown };
+    };
+
+    expect(
+      reportTemplateDirectorySessionRunnerInput(
+        fixture.options_ready.input as any
+      )
+    ).toEqual(fixture.options_ready.expected);
+    expect(
+      reportTemplateDirectorySessionRunnerInput(
+        fixture.options_blocked.input as any
+      )
+    ).toEqual(fixture.options_blocked.expected);
+    expect(
+      reportTemplateDirectorySessionRunnerInput(
+        fixture.profile_ready.input as any
+      )
+    ).toEqual(fixture.profile_ready.expected);
+    expect(
+      reportTemplateDirectorySessionRunnerInput(
+        fixture.profile_blocked.input as any
       )
     ).toEqual(fixture.profile_blocked.expected);
   });

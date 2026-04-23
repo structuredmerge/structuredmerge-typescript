@@ -100,6 +100,19 @@ export interface SessionRunnerRequest {
   overrides?: unknown;
 }
 
+export interface SessionRunnerInput {
+  request_kind: 'options' | 'profile';
+  profile_name?: string;
+  mode: DirectorySessionMode;
+  template_root: string;
+  destination_root: string;
+  context?: { project_name?: string };
+  default_strategy?: TemplateStrategy;
+  overrides?: readonly TemplateStrategyOverride[];
+  replacements?: Readonly<Record<string, string>>;
+  allowed_families?: readonly string[] | null;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1009,6 +1022,42 @@ export function runTemplateDirectorySessionRunnerRequest(
       denormalizeRunnerOptions(request.options) as DirectorySessionOptions
     )
   );
+}
+
+export function reportTemplateDirectorySessionRunnerInput(
+  input: SessionRunnerInput
+): SessionRunnerRequest {
+  const normalizedOptions = {
+    mode: input.mode,
+    template_root: input.template_root,
+    destination_root: input.destination_root,
+    context: input.context ?? {},
+    default_strategy: input.default_strategy ?? 'merge',
+    overrides: input.overrides ?? [],
+    replacements: input.replacements ?? {},
+    allowed_families: input.allowed_families ?? null
+  };
+  if (input.request_kind === 'profile') {
+    const overrides: Record<string, unknown> = {
+      mode: input.mode,
+      template_root: input.template_root,
+      destination_root: input.destination_root
+    };
+    if (input.context !== undefined) overrides.context = input.context;
+    if (input.default_strategy !== undefined) overrides.default_strategy = input.default_strategy;
+    if (input.overrides !== undefined) overrides.overrides = input.overrides;
+    if (input.replacements !== undefined) overrides.replacements = input.replacements;
+    if (input.allowed_families !== undefined) overrides.allowed_families = input.allowed_families;
+    return {
+      request_kind: 'profile',
+      profile_name: input.profile_name,
+      overrides
+    };
+  }
+  return {
+    request_kind: 'options',
+    options: normalizedOptions
+  };
 }
 
 export function resolveTemplateDirectorySessionOptions(
