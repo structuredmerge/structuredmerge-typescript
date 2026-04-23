@@ -1057,11 +1057,22 @@ export function reportTemplateDirectorySessionRunnerInput(
       template_root: input.template_root,
       destination_root: input.destination_root
     };
-    if (input.context !== undefined) overrides.context = input.context;
-    if (input.default_strategy !== undefined) overrides.default_strategy = input.default_strategy;
-    if (input.overrides !== undefined) overrides.overrides = input.overrides;
-    if (input.replacements !== undefined) overrides.replacements = input.replacements;
-    if (input.allowed_families !== undefined) overrides.allowed_families = input.allowed_families;
+    if (input.context && input.context.project_name) overrides.context = input.context;
+    if (input.default_strategy !== undefined && input.default_strategy !== 'merge') {
+      overrides.default_strategy = input.default_strategy;
+    }
+    if (input.overrides !== undefined && input.overrides.length > 0) {
+      overrides.overrides = input.overrides;
+    }
+    if (
+      input.replacements !== undefined &&
+      Object.keys(input.replacements).length > 0
+    ) {
+      overrides.replacements = input.replacements;
+    }
+    if (input.allowed_families !== undefined && input.allowed_families !== null) {
+      overrides.allowed_families = input.allowed_families;
+    }
     return {
       request_kind: 'profile',
       profile_name: input.profile_name,
@@ -1094,6 +1105,18 @@ export function reportTemplateDirectorySessionRunnerPayload(
     replacements: payload.replacements ?? {},
     allowed_families: payload.allowed_families ?? null
   };
+}
+
+export function runTemplateDirectorySessionRunnerPayload(
+  payload: SessionRunnerPayload,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionOutcomeReport {
+  return runTemplateDirectorySessionRunnerRequest(
+    reportTemplateDirectorySessionRunnerInput(
+      reportTemplateDirectorySessionRunnerPayload(payload)
+    ),
+    profiles
+  );
 }
 
 export function resolveTemplateDirectorySessionOptions(
