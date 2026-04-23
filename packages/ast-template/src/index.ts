@@ -61,7 +61,12 @@ export interface SessionStatusReport {
 export interface SessionDiagnostic {
   severity: 'error' | 'warning' | 'info';
   category: 'configuration_error';
-  reason: 'missing_family_adapter' | 'unresolved_tokens';
+  reason:
+    | 'missing_destination_root'
+    | 'missing_family_adapter'
+    | 'missing_profile'
+    | 'missing_template_root'
+    | 'unresolved_tokens';
   path?: string;
   family?: string;
   message: string;
@@ -794,6 +799,64 @@ export function runTemplateDirectorySessionWithOptions(
     options.allowedFamilies,
     options.config
   );
+}
+
+function normalizeSessionMode(mode: DirectorySessionMode | undefined): DirectorySessionMode {
+  return mode === 'apply' || mode === 'reapply' ? mode : 'plan';
+}
+
+export function reportTemplateDirectorySessionOptionsConfiguration(
+  options: Pick<DirectorySessionOptions, 'mode' | 'templateRoot' | 'destinationRoot'>
+): SessionDiagnosticsReport {
+  const diagnostics: SessionDiagnostic[] = [];
+  if (!options.destinationRoot) {
+    diagnostics.push({
+      severity: 'error',
+      category: 'configuration_error',
+      reason: 'missing_destination_root',
+      message: 'missing destination_root for template session'
+    });
+  }
+  if (!options.templateRoot) {
+    diagnostics.push({
+      severity: 'error',
+      category: 'configuration_error',
+      reason: 'missing_template_root',
+      message: 'missing template_root for template session'
+    });
+  }
+  diagnostics.sort((a, b) => a.reason.localeCompare(b.reason));
+  return {
+    mode: normalizeSessionMode(options.mode),
+    ready: diagnostics.length === 0,
+    diagnostics
+  };
+}
+
+export function reportTemplateDirectorySessionProfileConfiguration(
+  profiles: Readonly<Record<string, DirectorySessionProfile>>,
+  profileName: string,
+  overrides: Pick<DirectorySessionOptions, 'mode' | 'templateRoot' | 'destinationRoot'>
+): SessionDiagnosticsReport {
+  const diagnostics = [
+    ...reportTemplateDirectorySessionOptionsConfiguration(overrides).diagnostics
+  ];
+  const profile = profiles[profileName];
+  const mode = normalizeSessionMode(overrides.mode ?? profile?.mode);
+  if (!profile) {
+    diagnostics.push({
+      severity: 'error',
+      category: 'configuration_error',
+      reason: 'missing_profile',
+      message: `unknown template session profile: ${profileName}`
+    });
+  }
+  diagnostics.sort((a, b) => a.reason.localeCompare(b.reason));
+  return {
+    mode,
+    ready: diagnostics.length === 0,
+    diagnostics
+  };
 }
 
 export function resolveTemplateDirectorySessionOptions(
