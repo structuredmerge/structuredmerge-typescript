@@ -93,6 +93,13 @@ export interface SessionRequestReport {
   resolved_options: unknown | null;
 }
 
+export interface SessionRunnerRequest {
+  request_kind: 'options' | 'profile';
+  profile_name?: string;
+  options?: unknown;
+  overrides?: unknown;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -984,6 +991,26 @@ export function runTemplateDirectorySessionRequest(
   );
 }
 
+export function runTemplateDirectorySessionRunnerRequest(
+  request: SessionRunnerRequest,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionOutcomeReport {
+  if (request.request_kind === 'profile') {
+    return runTemplateDirectorySessionRequest(
+      reportTemplateDirectorySessionProfileRequest(
+        profiles,
+        String(request.profile_name ?? ''),
+        denormalizeRunnerOptions(request.overrides) as DirectorySessionOptions
+      )
+    );
+  }
+  return runTemplateDirectorySessionRequest(
+    reportTemplateDirectorySessionOptionsRequest(
+      denormalizeRunnerOptions(request.options) as DirectorySessionOptions
+    )
+  );
+}
+
 export function resolveTemplateDirectorySessionOptions(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
@@ -1074,6 +1101,28 @@ function denormalizeResolvedSessionOptions(options: unknown): DirectorySessionOp
     defaultStrategy: value.default_strategy as TemplateStrategy,
     overrides: (value.overrides ?? []) as TemplateStrategyOverride[],
     replacements: (value.replacements ?? {}) as Record<string, string>,
+    allowedFamilies: (value.allowed_families ?? undefined) as string[] | undefined
+  };
+}
+
+function denormalizeRunnerOptions(options: unknown): DirectorySessionOptions | null {
+  if (!options || typeof options !== 'object') {
+    return null;
+  }
+  const value = options as Record<string, unknown>;
+  const context = value.context as Record<string, unknown> | undefined;
+  return {
+    mode: value.mode as DirectorySessionMode,
+    templateRoot: (value.template_root ?? '') as string,
+    destinationRoot: (value.destination_root ?? '') as string,
+    context: context
+      ? {
+          projectName: typeof context.project_name === 'string' ? context.project_name : undefined
+        }
+      : undefined,
+    defaultStrategy: value.default_strategy as TemplateStrategy | undefined,
+    overrides: value.overrides as TemplateStrategyOverride[] | undefined,
+    replacements: value.replacements as Record<string, string> | undefined,
     allowedFamilies: (value.allowed_families ?? undefined) as string[] | undefined
   };
 }
