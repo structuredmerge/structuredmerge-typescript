@@ -58,6 +58,21 @@ export interface SessionStatusReport {
   written_count: number;
 }
 
+export interface SessionDiagnostic {
+  severity: 'error' | 'warning' | 'info';
+  category: 'configuration_error';
+  reason: 'missing_family_adapter' | 'unresolved_tokens';
+  path?: string;
+  family?: string;
+  message: string;
+}
+
+export interface SessionDiagnosticsReport {
+  mode: DirectorySessionMode;
+  ready: boolean;
+  diagnostics: readonly SessionDiagnostic[];
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -441,6 +456,109 @@ export function reportTemplateDirectorySessionStatus(
       sessionReport.runner_report.plan_report.summary.update,
     written_count: sessionReport.runner_report.apply_report?.summary.written ?? 0
   };
+}
+
+export function reportTemplateDirectorySessionDiagnostics(
+  mode: DirectorySessionMode,
+  entries: readonly TemplateExecutionPlanEntry[],
+  capabilities: AdapterCapabilityReport,
+  result?: TemplateTreeRunResult
+): SessionDiagnosticsReport {
+  const missingFamilies = new Set(capabilities.missing_families);
+  const blockedApplyPaths = new Set(result?.applyResult.blockedPaths ?? []);
+  const diagnostics = entries.flatMap((entry): SessionDiagnostic[] => {
+    const path = entry.destinationPath ?? entry.logicalDestinationPath;
+    const output: SessionDiagnostic[] = [];
+    if (entry.blocked && entry.blockReason === 'unresolved_tokens') {
+      output.push({
+        severity: 'error',
+        category: 'configuration_error',
+        reason: 'unresolved_tokens',
+        path,
+        message: `unresolved template tokens block ${path}`
+      });
+    }
+    if (
+      entry.executionAction === 'merge_prepared_content' &&
+      missingFamilies.has(entry.classification.family) &&
+      (!result || blockedApplyPaths.size === 0 || blockedApplyPaths.has(path))
+    ) {
+      output.push({
+        severity: 'error',
+        category: 'configuration_error',
+        reason: 'missing_family_adapter',
+        path,
+        family: entry.classification.family,
+        message: `missing family adapter for ${entry.classification.family} blocks ${path}`
+      });
+    }
+    return output;
+  });
+  diagnostics.sort((a, b) =>
+    `${a.path ?? ''}:${a.reason}:${a.family ?? ''}`.localeCompare(
+      `${b.path ?? ''}:${b.reason}:${b.family ?? ''}`
+    )
+  );
+  return {
+    mode,
+    ready: diagnostics.length === 0,
+    diagnostics
+  };
+}
+
+export function planTemplateDirectorySessionDiagnosticsFromDirectories(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionDiagnosticsReport {
+  const entries = planTemplateTreeExecutionFromDirectories(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    config
+  );
+  return reportTemplateDirectorySessionDiagnostics(
+    'plan',
+    entries,
+    reportAdapterCapabilities(entries, defaultFamilyMergeAdapterRegistry(allowedFamilies))
+  );
+}
+
+export function applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionDiagnosticsReport {
+  const registry = defaultFamilyMergeAdapterRegistry(allowedFamilies);
+  const result = applyTemplateTreeExecutionToDirectory(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    (entry) => mergePreparedContentFromRegistry(registry, entry),
+    config
+  );
+  return reportTemplateDirectorySessionDiagnostics(
+    'apply',
+    result.executionPlan,
+    reportAdapterCapabilities(result.executionPlan, registry),
+    result
+  );
 }
 
 function snakeifyKeys(value: unknown): unknown {

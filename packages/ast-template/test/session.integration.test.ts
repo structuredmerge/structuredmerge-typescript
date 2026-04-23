@@ -15,10 +15,12 @@ import { mergeToml } from '../../toml-merge/src/index';
 import {
   applyTemplateDirectorySessionToDirectory,
   applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory,
+  applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionWithRegistryToDirectory,
   defaultFamilyMergeAdapterRegistry,
   mergePreparedContentFromRegistry,
+  planTemplateDirectorySessionDiagnosticsFromDirectories,
   planTemplateDirectorySessionFromDirectories,
   planTemplateDirectorySessionEnvelopeFromDirectories,
   reportAdapterCapabilitiesFromDirectories,
@@ -385,6 +387,67 @@ describe('template directory session report fixture', () => {
             section.replacements,
             section.allowed_families ?? undefined
           )
+        )
+      ).toEqual(section.expected);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('conforms to the session-diagnostics fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-359-template-directory-session-diagnostics-report',
+      'template-directory-session-diagnostics-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      dry_run: SessionFixtureSection & { allowed_families: string[] | null };
+      apply_run: SessionFixtureSection & { allowed_families: string[] | null };
+      filtered_discovery: SessionFixtureSection & { allowed_families: string[] | null };
+    };
+
+    expect(
+      planTemplateDirectorySessionDiagnosticsFromDirectories(
+        path.join(fixtureRoot, 'dry-run', 'template'),
+        path.join(fixtureRoot, 'dry-run', 'destination'),
+        normalizeContext(fixture.dry_run.context),
+        fixture.dry_run.default_strategy,
+        fixture.dry_run.overrides,
+        fixture.dry_run.replacements,
+        fixture.dry_run.allowed_families ?? undefined
+      )
+    ).toEqual(fixture.dry_run.expected);
+
+    for (const [label, section] of [
+      ['apply_run', fixture.apply_run] as const,
+      ['filtered_discovery', fixture.filtered_discovery] as const
+    ]) {
+      const tempRoot = path.resolve(
+        process.cwd(),
+        'packages',
+        'ast-template',
+        'tmp',
+        `diagnostics-${label}`
+      );
+      rmSync(tempRoot, { recursive: true, force: true });
+      mkdirSync(tempRoot, { recursive: true });
+      writeRelativeFileTree(
+        tempRoot,
+        readRelativeFileTree(path.join(fixtureRoot, 'apply-run', 'destination'))
+      );
+
+      expect(
+        applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory(
+          path.join(fixtureRoot, 'apply-run', 'template'),
+          tempRoot,
+          normalizeContext(section.context),
+          section.default_strategy,
+          section.overrides,
+          section.replacements,
+          section.allowed_families ?? undefined
         )
       ).toEqual(section.expected);
       rmSync(tempRoot, { recursive: true, force: true });
