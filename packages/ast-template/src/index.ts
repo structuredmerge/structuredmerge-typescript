@@ -49,6 +49,15 @@ export interface SessionEnvelopeReport {
   adapter_capabilities: AdapterCapabilityReport;
 }
 
+export interface SessionStatusReport {
+  mode: DirectorySessionMode;
+  ready: boolean;
+  missing_families: readonly string[];
+  blocked_paths: readonly string[];
+  planned_write_count: number;
+  written_count: number;
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -393,6 +402,45 @@ export function applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirect
       config
     )
   );
+}
+
+export function reportTemplateDirectorySessionStatus(
+  envelope: SessionEnvelopeReport
+): SessionStatusReport {
+  const sessionReport = envelope.session_report as {
+    mode: DirectorySessionMode;
+    runner_report: {
+      plan_report: {
+        entries: Array<{ destination_path: string | null; status: string }>;
+        summary: { create: number; update: number };
+      };
+      apply_report?: {
+        entries: Array<{ destination_path: string | null; status: string }>;
+        summary: { written: number };
+      } | null;
+    };
+  };
+  const blockedPaths = [
+    ...new Set(
+      [
+        ...sessionReport.runner_report.plan_report.entries,
+        ...(sessionReport.runner_report.apply_report?.entries ?? [])
+      ]
+        .filter((entry) => entry.status === 'blocked' && typeof entry.destination_path === 'string')
+        .map((entry) => entry.destination_path as string)
+    )
+  ].sort();
+  const missingFamilies = [...envelope.adapter_capabilities.missing_families].sort();
+  return {
+    mode: sessionReport.mode,
+    ready: envelope.adapter_capabilities.ready && blockedPaths.length === 0,
+    missing_families: missingFamilies,
+    blocked_paths: blockedPaths,
+    planned_write_count:
+      sessionReport.runner_report.plan_report.summary.create +
+      sessionReport.runner_report.plan_report.summary.update,
+    written_count: sessionReport.runner_report.apply_report?.summary.written ?? 0
+  };
 }
 
 function snakeifyKeys(value: unknown): unknown {

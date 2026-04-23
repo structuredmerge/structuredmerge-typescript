@@ -23,6 +23,7 @@ import {
   planTemplateDirectorySessionEnvelopeFromDirectories,
   reportAdapterCapabilitiesFromDirectories,
   reportDefaultAdapterCapabilitiesFromDirectories,
+  reportTemplateDirectorySessionStatus,
   reapplyTemplateDirectorySessionToDirectory
 } from '../src/index';
 
@@ -319,6 +320,71 @@ describe('template directory session report fixture', () => {
           section.overrides,
           section.replacements,
           section.allowed_families ?? undefined
+        )
+      ).toEqual(section.expected);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('conforms to the session-status fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-358-template-directory-session-status-report',
+      'template-directory-session-status-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      dry_run: SessionFixtureSection & { allowed_families: string[] | null };
+      apply_run: SessionFixtureSection & { allowed_families: string[] | null };
+      filtered_discovery: SessionFixtureSection & { allowed_families: string[] | null };
+    };
+
+    expect(
+      reportTemplateDirectorySessionStatus(
+        planTemplateDirectorySessionEnvelopeFromDirectories(
+          path.join(fixtureRoot, 'dry-run', 'template'),
+          path.join(fixtureRoot, 'dry-run', 'destination'),
+          normalizeContext(fixture.dry_run.context),
+          fixture.dry_run.default_strategy,
+          fixture.dry_run.overrides,
+          fixture.dry_run.replacements,
+          fixture.dry_run.allowed_families ?? undefined
+        )
+      )
+    ).toEqual(fixture.dry_run.expected);
+
+    for (const [label, section] of [
+      ['apply_run', fixture.apply_run] as const,
+      ['filtered_discovery', fixture.filtered_discovery] as const
+    ]) {
+      const tempRoot = path.resolve(
+        process.cwd(),
+        'packages',
+        'ast-template',
+        'tmp',
+        `status-${label}`
+      );
+      rmSync(tempRoot, { recursive: true, force: true });
+      mkdirSync(tempRoot, { recursive: true });
+      writeRelativeFileTree(
+        tempRoot,
+        readRelativeFileTree(path.join(fixtureRoot, 'apply-run', 'destination'))
+      );
+
+      expect(
+        reportTemplateDirectorySessionStatus(
+          applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory(
+            path.join(fixtureRoot, 'apply-run', 'template'),
+            tempRoot,
+            normalizeContext(section.context),
+            section.default_strategy,
+            section.overrides,
+            section.replacements,
+            section.allowed_families ?? undefined
+          )
         )
       ).toEqual(section.expected);
       rmSync(tempRoot, { recursive: true, force: true });
