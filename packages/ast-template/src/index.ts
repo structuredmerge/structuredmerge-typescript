@@ -137,6 +137,12 @@ export interface SessionEntrypointReport {
   runner_request: SessionRunnerRequest;
 }
 
+export interface SessionResolutionReport {
+  source_kind: '' | 'payload' | 'request';
+  runner_request: SessionRunnerRequest;
+  session_request: SessionRequestReport;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1189,6 +1195,37 @@ export function reportTemplateDirectorySessionEntrypoint(
     source_kind: '',
     runner_request: { request_kind: 'options' }
   };
+}
+
+export function reportTemplateDirectorySessionResolution(
+  entrypoint: SessionEntrypoint,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionResolutionReport {
+  const entrypointReport = reportTemplateDirectorySessionEntrypoint(entrypoint);
+  return {
+    source_kind: entrypointReport.source_kind,
+    runner_request: entrypointReport.runner_request,
+    session_request: reportSessionRequestFromRunnerRequest(
+      entrypointReport.runner_request,
+      profiles
+    )
+  };
+}
+
+function reportSessionRequestFromRunnerRequest(
+  request: SessionRunnerRequest,
+  profiles: Readonly<Record<string, DirectorySessionProfile>>
+): SessionRequestReport {
+  if (request.request_kind === 'profile') {
+    return reportTemplateDirectorySessionProfileRequest(
+      profiles,
+      String(request.profile_name ?? ''),
+      denormalizeRunnerOptions(request.overrides) as DirectorySessionOptions
+    );
+  }
+  return reportTemplateDirectorySessionOptionsRequest(
+    denormalizeRunnerOptions(request.options) as DirectorySessionOptions
+  );
 }
 
 export function resolveTemplateDirectorySessionOptions(
