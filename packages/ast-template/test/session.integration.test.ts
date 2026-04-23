@@ -17,6 +17,7 @@ import {
   applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionOutcomeWithDefaultRegistryToDirectory,
+  runTemplateDirectorySessionWithProfile,
   runTemplateDirectorySessionWithDefaultRegistryToDirectory,
   runTemplateDirectorySessionWithOptions,
   applyTemplateDirectorySessionWithDefaultRegistryToDirectory,
@@ -641,6 +642,61 @@ describe('template directory session report fixture', () => {
 
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  it('conforms to the session-profile fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-363-template-directory-session-profile-report',
+      'template-directory-session-profile-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Record<string, Record<string, unknown>>;
+      plan_run: { profile: string; overrides: Record<string, unknown>; expected: unknown };
+      apply_run: { profile: string; overrides: Record<string, unknown>; expected: unknown };
+      reapply_run: { profile: string; overrides: Record<string, unknown>; expected: unknown };
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    expect(
+      runTemplateDirectorySessionWithProfile(profiles, fixture.plan_run.profile, {
+        templateRoot: path.join(fixtureRoot, 'dry-run', 'template'),
+        destinationRoot: path.join(fixtureRoot, 'dry-run', 'destination')
+      } as any)
+    ).toEqual(fixture.plan_run.expected);
+
+    const tempRoot = path.resolve(process.cwd(), 'packages', 'ast-template', 'tmp', 'profiles');
+    rmSync(tempRoot, { recursive: true, force: true });
+    mkdirSync(tempRoot, { recursive: true });
+    writeRelativeFileTree(
+      tempRoot,
+      readRelativeFileTree(path.join(fixtureRoot, 'apply-run', 'destination'))
+    );
+
+    expect(
+      runTemplateDirectorySessionWithProfile(profiles, fixture.apply_run.profile, {
+        templateRoot: path.join(fixtureRoot, 'apply-run', 'template'),
+        destinationRoot: tempRoot
+      } as any)
+    ).toEqual(fixture.apply_run.expected);
+
+    expect(
+      runTemplateDirectorySessionWithProfile(
+        profiles,
+        fixture.reapply_run.profile,
+        normalizeOptions(
+          fixture.reapply_run.overrides,
+          path.join(fixtureRoot, 'apply-run', 'template'),
+          tempRoot
+        )
+      )
+    ).toEqual(fixture.reapply_run.expected);
+
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -693,4 +749,20 @@ function normalizeOptions(
     replacements: (options.replacements ?? {}) as Record<string, string>,
     allowedFamilies: (options.allowed_families ?? undefined) as string[] | undefined
   };
+}
+
+function normalizeProfiles(profiles: Record<string, Record<string, unknown>>) {
+  return Object.fromEntries(
+    Object.entries(profiles).map(([name, profile]) => [
+      name,
+      {
+        mode: profile.mode as 'plan' | 'apply' | 'reapply',
+        context: normalizeContext((profile.context ?? {}) as Record<string, unknown>),
+        defaultStrategy: profile.default_strategy as TemplateStrategy,
+        overrides: (profile.overrides ?? []) as TemplateStrategyOverride[],
+        replacements: (profile.replacements ?? {}) as Record<string, string>,
+        allowedFamilies: (profile.allowed_families ?? undefined) as string[] | undefined
+      }
+    ])
+  );
 }

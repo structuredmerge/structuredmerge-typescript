@@ -91,6 +91,16 @@ export interface DirectorySessionOptions {
   config?: TemplateTokenConfig;
 }
 
+export interface DirectorySessionProfile {
+  mode: DirectorySessionMode;
+  context: TemplateDestinationContext;
+  defaultStrategy: TemplateStrategy;
+  overrides: readonly TemplateStrategyOverride[];
+  replacements: Readonly<Record<string, string>>;
+  allowedFamilies?: readonly string[];
+  config?: TemplateTokenConfig;
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -784,6 +794,37 @@ export function runTemplateDirectorySessionWithOptions(
     options.allowedFamilies,
     options.config
   );
+}
+
+export function resolveTemplateDirectorySessionOptions(
+  profiles: Readonly<Record<string, DirectorySessionProfile>>,
+  profileName: string,
+  overrides: DirectorySessionOptions
+): DirectorySessionOptions | undefined {
+  const profile = profiles[profileName];
+  if (!profile) {
+    return undefined;
+  }
+  return {
+    mode: overrides.mode ?? profile.mode,
+    templateRoot: overrides.templateRoot,
+    destinationRoot: overrides.destinationRoot,
+    context: overrides.context ?? profile.context,
+    defaultStrategy: overrides.defaultStrategy ?? profile.defaultStrategy,
+    overrides: overrides.overrides ?? profile.overrides,
+    replacements: overrides.replacements ?? profile.replacements,
+    allowedFamilies: overrides.allowedFamilies ?? profile.allowedFamilies,
+    config: overrides.config ?? profile.config
+  };
+}
+
+export function runTemplateDirectorySessionWithProfile(
+  profiles: Readonly<Record<string, DirectorySessionProfile>>,
+  profileName: string,
+  overrides: DirectorySessionOptions
+): SessionOutcomeReport | undefined {
+  const options = resolveTemplateDirectorySessionOptions(profiles, profileName, overrides);
+  return options ? runTemplateDirectorySessionWithOptions(options) : undefined;
 }
 
 function snakeifyKeys(value: unknown): unknown {
