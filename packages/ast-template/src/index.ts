@@ -788,6 +788,10 @@ export function runTemplateDirectorySessionWithDefaultRegistryToDirectory(
 export function runTemplateDirectorySessionWithOptions(
   options: DirectorySessionOptions
 ): SessionOutcomeReport {
+  const configuration = reportTemplateDirectorySessionOptionsConfiguration(options);
+  if (!configuration.ready) {
+    return reportTemplateDirectorySessionConfigurationOutcome(configuration.mode, configuration);
+  }
   return runTemplateDirectorySessionWithDefaultRegistryToDirectory(
     options.mode,
     options.templateRoot,

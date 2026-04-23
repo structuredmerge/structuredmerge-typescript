@@ -804,6 +804,33 @@ describe('template directory session report fixture', () => {
       )
     ).toEqual(fixture.missing_roots.expected);
   });
+
+  it('conforms to the session-options-configuration-outcome fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-366-template-directory-session-options-configuration-outcome-report',
+      'template-directory-session-options-configuration-outcome-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      missing_both_roots: { options: Record<string, unknown>; expected: unknown };
+      missing_destination_root: { options: Record<string, unknown>; expected: unknown };
+    };
+
+    expect(
+      runTemplateDirectorySessionWithOptions(
+        normalizeOptionsDirect(fixture.missing_both_roots.options) as any
+      )
+    ).toEqual(fixture.missing_both_roots.expected);
+
+    expect(
+      runTemplateDirectorySessionWithOptions(
+        normalizeOptionsDirect(fixture.missing_destination_root.options) as any
+      )
+    ).toEqual(fixture.missing_destination_root.expected);
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
