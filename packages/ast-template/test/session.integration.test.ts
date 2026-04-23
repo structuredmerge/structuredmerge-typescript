@@ -33,6 +33,7 @@ import {
   reportTemplateDirectorySessionProfileConfiguration,
   reportTemplateDirectorySessionProfileRequest,
   reportTemplateDirectorySessionRunnerInput,
+  reportTemplateDirectorySessionRunnerPayload,
   runTemplateDirectorySessionRequest,
   runTemplateDirectorySessionRunnerRequest,
   reportAdapterCapabilitiesFromDirectories,
@@ -1004,6 +1005,36 @@ describe('template directory session report fixture', () => {
         fixture.profile_blocked.input as any
       )
     ).toEqual(fixture.profile_blocked.expected);
+  });
+
+  it('conforms to the session-runner-payload fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-371-template-directory-session-runner-payload-report',
+      'template-directory-session-runner-payload-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      options_explicit: { input: Record<string, unknown>; expected: unknown };
+      options_inferred: { input: Record<string, unknown>; expected: unknown };
+      profile_default_name: { input: Record<string, unknown>; expected: unknown };
+      profile_explicit_name: { input: Record<string, unknown>; expected: unknown };
+    };
+
+    expect(reportTemplateDirectorySessionRunnerPayload(fixture.options_explicit.input as any)).toEqual(
+      fixture.options_explicit.expected
+    );
+    expect(reportTemplateDirectorySessionRunnerPayload(fixture.options_inferred.input as any)).toEqual(
+      fixture.options_inferred.expected
+    );
+    expect(
+      reportTemplateDirectorySessionRunnerPayload(fixture.profile_default_name.input as any)
+    ).toEqual(fixture.profile_default_name.expected);
+    expect(
+      reportTemplateDirectorySessionRunnerPayload(fixture.profile_explicit_name.input as any)
+    ).toEqual(fixture.profile_explicit_name.expected);
   });
 });
 

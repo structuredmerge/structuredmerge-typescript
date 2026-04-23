@@ -113,6 +113,20 @@ export interface SessionRunnerInput {
   allowed_families?: readonly string[] | null;
 }
 
+export interface SessionRunnerPayload {
+  request_kind?: 'options' | 'profile';
+  default_profile_name?: string;
+  profile_name?: string;
+  mode: DirectorySessionMode;
+  template_root: string;
+  destination_root: string;
+  context?: { project_name?: string };
+  default_strategy?: TemplateStrategy;
+  overrides?: readonly TemplateStrategyOverride[];
+  replacements?: Readonly<Record<string, string>>;
+  allowed_families?: readonly string[] | null;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1057,6 +1071,28 @@ export function reportTemplateDirectorySessionRunnerInput(
   return {
     request_kind: 'options',
     options: normalizedOptions
+  };
+}
+
+export function reportTemplateDirectorySessionRunnerPayload(
+  payload: SessionRunnerPayload
+): SessionRunnerInput {
+  const requestKind =
+    payload.request_kind ??
+    (payload.profile_name !== undefined || payload.default_profile_name !== undefined
+      ? 'profile'
+      : 'options');
+  return {
+    request_kind: requestKind,
+    profile_name: payload.profile_name ?? payload.default_profile_name,
+    mode: payload.mode,
+    template_root: payload.template_root,
+    destination_root: payload.destination_root,
+    context: payload.context ?? {},
+    default_strategy: payload.default_strategy ?? 'merge',
+    overrides: payload.overrides ?? [],
+    replacements: payload.replacements ?? {},
+    allowed_families: payload.allowed_families ?? null
   };
 }
 
