@@ -157,6 +157,12 @@ export interface SessionDispatchReport {
   outcome: SessionOutcomeReport | null;
 }
 
+export interface SessionCommand {
+  operation: string;
+  payload?: SessionRunnerPayload;
+  request?: SessionRunnerRequest;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1336,6 +1342,20 @@ export function runTemplateDirectorySessionDispatch(
     inspection: null,
     outcome: runTemplateDirectorySessionEntrypoint(entrypoint, profiles)
   };
+}
+
+export function runTemplateDirectorySessionCommand(
+  command: SessionCommand,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionDispatchReport {
+  return runTemplateDirectorySessionDispatch(
+    command.operation,
+    {
+      payload: command.payload,
+      request: command.request
+    },
+    profiles
+  );
 }
 
 export function resolveTemplateDirectorySessionOptions(
