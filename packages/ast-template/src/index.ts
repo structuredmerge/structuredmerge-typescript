@@ -84,6 +84,24 @@ export interface SessionOutcomeReport {
   diagnostics: SessionDiagnosticsReport;
 }
 
+export interface SessionRequestReport {
+  request_kind: 'options' | 'profile';
+  profile_name?: string;
+  mode: DirectorySessionMode;
+  ready: boolean;
+  diagnostics: readonly SessionDiagnostic[];
+  resolved_options: unknown | null;
+}
+
+interface InternalSessionRequest {
+  requestKind: 'options' | 'profile';
+  profileName?: string;
+  mode: DirectorySessionMode;
+  ready: boolean;
+  diagnostics: readonly SessionDiagnostic[];
+  resolvedOptions: DirectorySessionOptions | null;
+}
+
 export interface DirectorySessionOptions {
   mode: DirectorySessionMode;
   templateRoot: string;
@@ -788,20 +806,25 @@ export function runTemplateDirectorySessionWithDefaultRegistryToDirectory(
 export function runTemplateDirectorySessionWithOptions(
   options: DirectorySessionOptions
 ): SessionOutcomeReport {
-  const configuration = reportTemplateDirectorySessionOptionsConfiguration(options);
-  if (!configuration.ready) {
-    return reportTemplateDirectorySessionConfigurationOutcome(configuration.mode, configuration);
+  const request = resolveTemplateDirectorySessionOptionsRequest(options);
+  if (!request.ready) {
+    return reportTemplateDirectorySessionConfigurationOutcome(request.mode, {
+      mode: request.mode,
+      ready: request.ready,
+      diagnostics: request.diagnostics
+    });
   }
+  const resolved = request.resolvedOptions as DirectorySessionOptions;
   return runTemplateDirectorySessionWithDefaultRegistryToDirectory(
-    options.mode,
-    options.templateRoot,
-    options.destinationRoot,
-    options.context,
-    options.defaultStrategy,
-    options.overrides,
-    options.replacements,
-    options.allowedFamilies,
-    options.config
+    resolved.mode,
+    resolved.templateRoot,
+    resolved.destinationRoot,
+    resolved.context,
+    resolved.defaultStrategy,
+    resolved.overrides,
+    resolved.replacements,
+    resolved.allowedFamilies,
+    resolved.config
   );
 }
 
@@ -863,6 +886,71 @@ export function reportTemplateDirectorySessionProfileConfiguration(
   };
 }
 
+export function reportTemplateDirectorySessionOptionsRequest(
+  options: DirectorySessionOptions
+): SessionRequestReport {
+  const request = resolveTemplateDirectorySessionOptionsRequest(options);
+  return {
+    request_kind: request.requestKind,
+    mode: request.mode,
+    ready: request.ready,
+    diagnostics: request.diagnostics,
+    resolved_options: normalizeResolvedSessionOptions(request.resolvedOptions)
+  };
+}
+
+function resolveTemplateDirectorySessionOptionsRequest(
+  options: DirectorySessionOptions
+): InternalSessionRequest {
+  const configuration = reportTemplateDirectorySessionOptionsConfiguration(options);
+  return {
+    requestKind: 'options',
+    mode: configuration.mode,
+    ready: configuration.ready,
+    diagnostics: configuration.diagnostics,
+    resolvedOptions: configuration.ready ? options : null
+  };
+}
+
+export function reportTemplateDirectorySessionProfileRequest(
+  profiles: Readonly<Record<string, DirectorySessionProfile>>,
+  profileName: string,
+  overrides: DirectorySessionOptions
+): SessionRequestReport {
+  const request = resolveTemplateDirectorySessionProfileRequest(profiles, profileName, overrides);
+  return {
+    request_kind: request.requestKind,
+    profile_name: request.profileName,
+    mode: request.mode,
+    ready: request.ready,
+    diagnostics: request.diagnostics,
+    resolved_options: normalizeResolvedSessionOptions(request.resolvedOptions)
+  };
+}
+
+function resolveTemplateDirectorySessionProfileRequest(
+  profiles: Readonly<Record<string, DirectorySessionProfile>>,
+  profileName: string,
+  overrides: DirectorySessionOptions
+): InternalSessionRequest {
+  const configuration = reportTemplateDirectorySessionProfileConfiguration(
+    profiles,
+    profileName,
+    overrides
+  );
+  const resolved = configuration.ready
+    ? (resolveTemplateDirectorySessionOptions(profiles, profileName, overrides) ?? null)
+    : null;
+  return {
+    requestKind: 'profile',
+    profileName,
+    mode: configuration.mode,
+    ready: configuration.ready,
+    diagnostics: configuration.diagnostics,
+    resolvedOptions: resolved
+  };
+}
+
 function reportTemplateDirectorySessionConfigurationOutcome(
   mode: DirectorySessionMode,
   diagnostics: SessionDiagnosticsReport
@@ -908,16 +996,15 @@ export function runTemplateDirectorySessionWithProfile(
   profileName: string,
   overrides: DirectorySessionOptions
 ): SessionOutcomeReport {
-  const configuration = reportTemplateDirectorySessionProfileConfiguration(
-    profiles,
-    profileName,
-    overrides
-  );
-  if (!configuration.ready) {
-    return reportTemplateDirectorySessionConfigurationOutcome(configuration.mode, configuration);
+  const request = resolveTemplateDirectorySessionProfileRequest(profiles, profileName, overrides);
+  if (!request.ready) {
+    return reportTemplateDirectorySessionConfigurationOutcome(request.mode, {
+      mode: request.mode,
+      ready: request.ready,
+      diagnostics: request.diagnostics
+    });
   }
-  const options = resolveTemplateDirectorySessionOptions(profiles, profileName, overrides);
-  return runTemplateDirectorySessionWithOptions(options as DirectorySessionOptions);
+  return runTemplateDirectorySessionWithOptions(request.resolvedOptions as DirectorySessionOptions);
 }
 
 function snakeifyKeys(value: unknown): unknown {
@@ -936,4 +1023,22 @@ function snakeifyKeys(value: unknown): unknown {
     );
   }
   return value;
+}
+
+function normalizeResolvedSessionOptions(options: DirectorySessionOptions | null): unknown {
+  if (!options) {
+    return null;
+  }
+  return {
+    mode: options.mode,
+    template_root: options.templateRoot,
+    destination_root: options.destinationRoot,
+    context: {
+      project_name: options.context?.projectName ?? undefined
+    },
+    default_strategy: options.defaultStrategy,
+    overrides: options.overrides ?? [],
+    replacements: options.replacements ?? {},
+    allowed_families: options.allowedFamilies ?? null
+  };
 }

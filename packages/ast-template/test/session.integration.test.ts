@@ -29,7 +29,9 @@ import {
   planTemplateDirectorySessionFromDirectories,
   planTemplateDirectorySessionOutcomeFromDirectories,
   reportTemplateDirectorySessionOptionsConfiguration,
+  reportTemplateDirectorySessionOptionsRequest,
   reportTemplateDirectorySessionProfileConfiguration,
+  reportTemplateDirectorySessionProfileRequest,
   reportAdapterCapabilitiesFromDirectories,
   reportDefaultAdapterCapabilitiesFromDirectories,
   reportTemplateDirectorySessionStatus,
@@ -831,6 +833,53 @@ describe('template directory session report fixture', () => {
       )
     ).toEqual(fixture.missing_destination_root.expected);
   });
+
+  it('conforms to the session-request fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-367-template-directory-session-request-report',
+      'template-directory-session-request-report.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Record<string, Record<string, unknown>>;
+      options_valid: { options: Record<string, unknown>; expected: unknown };
+      options_invalid: { options: Record<string, unknown>; expected: unknown };
+      profile_valid: { profile: string; overrides: Record<string, unknown>; expected: unknown };
+      profile_invalid: { profile: string; overrides: Record<string, unknown>; expected: unknown };
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    expect(
+      reportTemplateDirectorySessionOptionsRequest(
+        normalizeOptionsDirect(fixture.options_valid.options) as any
+      )
+    ).toEqual(fixture.options_valid.expected);
+
+    expect(
+      reportTemplateDirectorySessionOptionsRequest(
+        normalizeOptionsDirect(fixture.options_invalid.options) as any
+      )
+    ).toEqual(fixture.options_invalid.expected);
+
+    expect(
+      reportTemplateDirectorySessionProfileRequest(
+        profiles,
+        fixture.profile_valid.profile,
+        normalizeOptionsDirect(fixture.profile_valid.overrides) as any
+      )
+    ).toEqual(fixture.profile_valid.expected);
+
+    expect(
+      reportTemplateDirectorySessionProfileRequest(
+        profiles,
+        fixture.profile_invalid.profile,
+        normalizeOptionsDirect(fixture.profile_invalid.overrides) as any
+      )
+    ).toEqual(fixture.profile_invalid.expected);
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -906,10 +955,12 @@ function normalizeOptionsDirect(options: Record<string, unknown>) {
     mode: options.mode as 'plan' | 'apply' | 'reapply',
     templateRoot: (options.template_root ?? '') as string,
     destinationRoot: (options.destination_root ?? '') as string,
-    context: normalizeContext((options.context ?? {}) as Record<string, unknown>),
-    defaultStrategy: options.default_strategy as TemplateStrategy,
-    overrides: (options.overrides ?? []) as TemplateStrategyOverride[],
-    replacements: (options.replacements ?? {}) as Record<string, string>,
+    context: options.context
+      ? normalizeContext(options.context as Record<string, unknown>)
+      : undefined,
+    defaultStrategy: options.default_strategy as TemplateStrategy | undefined,
+    overrides: options.overrides as TemplateStrategyOverride[] | undefined,
+    replacements: options.replacements as Record<string, string> | undefined,
     allowedFamilies: (options.allowed_families ?? undefined) as string[] | undefined
   };
 }
