@@ -261,6 +261,29 @@ export interface TemplateDirectoryApplyReport {
   }>;
 }
 
+export type TemplateDirectoryPlanStatus = 'create' | 'update' | 'keep' | 'blocked' | 'omitted';
+
+export interface TemplateDirectoryPlanReportEntry {
+  readonly templateSourcePath: string;
+  readonly logicalDestinationPath: string;
+  readonly destinationPath?: string;
+  readonly executionAction: TemplateExecutionAction;
+  readonly writeAction: string;
+  readonly status: TemplateDirectoryPlanStatus;
+  readonly previewable: boolean;
+}
+
+export interface TemplateDirectoryPlanReport {
+  readonly entries: readonly TemplateDirectoryPlanReportEntry[];
+  readonly summary: Readonly<{
+    create: number;
+    update: number;
+    keep: number;
+    blocked: number;
+    omitted: number;
+  }>;
+}
+
 export type ConformanceOutcome = 'passed' | 'failed' | 'skipped';
 
 export interface ConformanceCaseRef {
@@ -1311,6 +1334,32 @@ export function runTemplateTreeExecutionFromDirectories(
   );
 }
 
+export function planTemplateTreeExecutionFromDirectories(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext = {},
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = [],
+  replacements: Readonly<Record<string, string>> = {},
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): readonly TemplateExecutionPlanEntry[] {
+  const templateContents = readRelativeFileTree(templateRoot);
+  const destinationContents = readRelativeFileTree(destinationRoot);
+  const templateSourcePaths = Object.keys(templateContents).sort();
+
+  return planTemplateTreeExecution(
+    templateSourcePaths,
+    templateContents,
+    Object.keys(destinationContents).sort(),
+    destinationContents,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    config
+  );
+}
+
 export function applyTemplateTreeExecutionToDirectory(
   templateRoot: string,
   destinationRoot: string,
@@ -1411,6 +1460,59 @@ export function reportTemplateDirectoryApply(
       blocked: entries.filter((entry) => entry.status === 'blocked').length,
       omitted: entries.filter((entry) => entry.status === 'omitted').length,
       written: entries.filter((entry) => entry.written).length
+    }
+  };
+}
+
+export function reportTemplateDirectoryPlan(
+  entries: readonly TemplateExecutionPlanEntry[]
+): TemplateDirectoryPlanReport {
+  const reportEntries = entries.map((entry) => {
+    let status: TemplateDirectoryPlanStatus = 'update';
+    let previewable = false;
+
+    switch (entry.executionAction) {
+      case 'blocked':
+        status = 'blocked';
+        break;
+      case 'omit':
+        status = 'omitted';
+        previewable = true;
+        break;
+      case 'keep':
+        status = 'keep';
+        previewable = true;
+        break;
+      case 'raw_copy':
+      case 'write_prepared_content':
+        status = entry.writeAction === 'create' ? 'create' : 'update';
+        previewable = true;
+        break;
+      case 'merge_prepared_content':
+        status = entry.writeAction === 'create' ? 'create' : 'update';
+        previewable = entry.writeAction === 'create';
+        break;
+    }
+
+    return {
+      templateSourcePath: entry.templateSourcePath,
+      logicalDestinationPath: entry.logicalDestinationPath,
+      destinationPath: entry.destinationPath,
+      executionAction: entry.executionAction,
+      writeAction: entry.writeAction,
+      status,
+      previewable
+    };
+  });
+
+  return {
+    entries: reportEntries,
+    summary: {
+      create: reportEntries.filter((entry) => entry.status === 'create').length,
+      update: reportEntries.filter((entry) => entry.status === 'update').length,
+      keep: reportEntries.filter((entry) => entry.status === 'keep').length,
+      blocked: reportEntries.filter((entry) => entry.status === 'blocked').length,
+      omitted: reportEntries.filter((entry) => entry.status === 'omitted').length
     }
   };
 }

@@ -56,6 +56,7 @@ import type {
   TemplateTokenConfig,
   TemplateExecutionPlanEntry,
   TemplateDirectoryApplyReport,
+  TemplateDirectoryPlanReport,
   SurfaceOwnerRef,
   SurfaceSpan,
   TemplateTreeRunReport,
@@ -93,8 +94,10 @@ import {
   previewTemplateExecution,
   reportTemplateTreeRun,
   reportTemplateDirectoryApply,
+  reportTemplateDirectoryPlan,
   runTemplateTreeExecution,
   runTemplateTreeExecutionFromDirectories,
+  planTemplateTreeExecutionFromDirectories,
   selectTemplateStrategy,
   planTemplateEntries,
   enrichTemplatePlanEntries,
@@ -157,6 +160,7 @@ import {
 // diagnosticsFixturePath('mini_template_tree_directory_run_report')
 // diagnosticsFixturePath('mini_template_tree_directory_apply_convergence')
 // diagnosticsFixturePath('mini_template_tree_directory_apply_report')
+// diagnosticsFixturePath('mini_template_tree_directory_plan_report')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_execution_application')
 // diagnosticsFixturePath('review_replay_bundle_envelope_reviewed_nested_manifest_application')
 
@@ -480,6 +484,28 @@ interface MiniTemplateTreeDirectoryApplyReportFixture {
       written: boolean;
     }>;
     summary: TemplateDirectoryApplyReport['summary'];
+  };
+}
+
+interface MiniTemplateTreeDirectoryPlanReportFixture {
+  context: Record<string, string>;
+  default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  overrides: Array<{
+    path: string;
+    strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  }>;
+  replacements: Record<string, string>;
+  expected: {
+    entries: Array<{
+      template_source_path: string;
+      logical_destination_path: string;
+      destination_path: string | null;
+      execution_action: string;
+      write_action: string;
+      status: string;
+      previewable: boolean;
+    }>;
+    summary: TemplateDirectoryPlanReport['summary'];
   };
 }
 
@@ -3161,6 +3187,43 @@ describe('ast-merge shared fixtures', () => {
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it('conforms to the mini template tree directory plan report fixture', () => {
+    const manifest = readFixture<ConformanceManifest>(
+      'conformance',
+      'slice-24-manifest',
+      'family-feature-profiles.json'
+    );
+    const fixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_directory_plan_report'
+    ) ?? []) as string[];
+    const fixture = readFixture<MiniTemplateTreeDirectoryPlanReportFixture>(...fixturePath);
+    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...fixturePath.slice(0, -1));
+
+    const executionPlan = planTemplateTreeExecutionFromDirectories(
+      path.join(fixtureDir, 'template'),
+      path.join(fixtureDir, 'destination'),
+      { projectName: fixture.context.project_name },
+      fixture.default_strategy,
+      fixture.overrides,
+      fixture.replacements
+    );
+    const actual = reportTemplateDirectoryPlan(executionPlan);
+    expect({
+      entries: actual.entries.map((entry) => ({
+        template_source_path: entry.templateSourcePath,
+        logical_destination_path: entry.logicalDestinationPath,
+        destination_path: entry.destinationPath ?? null,
+        execution_action: entry.executionAction,
+        write_action: entry.writeAction,
+        status: entry.status,
+        previewable: entry.previewable
+      })),
+      summary: actual.summary
+    }).toEqual(fixture.expected);
   });
 
   it('conforms to the template entry plan state fixture', () => {
