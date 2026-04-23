@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+
 export type DiagnosticSeverity = 'info' | 'warning' | 'error';
 
 export type DiagnosticCategory =
@@ -1021,7 +1024,13 @@ export function previewTemplateExecution(
       case 'write_prepared_content':
         if (destinationPath !== undefined && entry.preparedTemplateContent !== undefined) {
           resultFiles[destinationPath] = entry.preparedTemplateContent;
-          if (entry.destinationExists) {
+          if (
+            entry.destinationExists &&
+            entry.destinationContent !== undefined &&
+            entry.destinationContent === entry.preparedTemplateContent
+          ) {
+            keptPaths.push(destinationPath);
+          } else if (entry.destinationExists) {
             updatedPaths.push(destinationPath);
           } else {
             createdPaths.push(destinationPath);
@@ -1088,8 +1097,14 @@ export function applyTemplateExecution(
       case 'raw_copy':
       case 'write_prepared_content':
         if (destinationPath !== undefined && entry.preparedTemplateContent !== undefined) {
-          resultFiles[destinationPath] = entry.preparedTemplateContent;
-          (entry.destinationExists ? updatedPaths : createdPaths).push(destinationPath);
+          recordTemplateApplyOutput(
+            resultFiles,
+            createdPaths,
+            updatedPaths,
+            keptPaths,
+            entry,
+            entry.preparedTemplateContent
+          );
         }
         break;
       case 'merge_prepared_content':
@@ -1097,8 +1112,14 @@ export function applyTemplateExecution(
           break;
         }
         if (entry.destinationContent === undefined) {
-          resultFiles[destinationPath] = entry.preparedTemplateContent;
-          (entry.destinationExists ? updatedPaths : createdPaths).push(destinationPath);
+          recordTemplateApplyOutput(
+            resultFiles,
+            createdPaths,
+            updatedPaths,
+            keptPaths,
+            entry,
+            entry.preparedTemplateContent
+          );
           break;
         }
         {
@@ -1108,8 +1129,14 @@ export function applyTemplateExecution(
             blockedPaths.push(destinationPath);
             break;
           }
-          resultFiles[destinationPath] = mergeResult.output;
-          (entry.destinationExists ? updatedPaths : createdPaths).push(destinationPath);
+          recordTemplateApplyOutput(
+            resultFiles,
+            createdPaths,
+            updatedPaths,
+            keptPaths,
+            entry,
+            mergeResult.output
+          );
         }
         break;
     }
@@ -1200,6 +1227,102 @@ export function runTemplateTreeExecution(
   };
 }
 
+export function readRelativeFileTree(root: string): Readonly<Record<string, string>> {
+  const files: Record<string, string> = {};
+  if (!existsSync(root)) {
+    return files;
+  }
+  if (!statSync(root).isDirectory()) {
+    throw new Error(`${root} is not a directory`);
+  }
+
+  const walk = (currentPath: string): void => {
+    for (const entry of readdirSync(currentPath, { withFileTypes: true })) {
+      const entryPath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        walk(entryPath);
+        continue;
+      }
+
+      const relativePath = path.relative(root, entryPath).split(path.sep).join('/');
+      files[relativePath] = readFileSync(entryPath, 'utf8');
+    }
+  };
+
+  walk(root);
+  return files;
+}
+
+export function writeRelativeFileTree(root: string, files: Readonly<Record<string, string>>): void {
+  mkdirSync(root, { recursive: true });
+
+  for (const relativePath of Object.keys(files).sort()) {
+    const fullPath = path.join(root, ...relativePath.split('/'));
+    mkdirSync(path.dirname(fullPath), { recursive: true });
+    writeFileSync(fullPath, files[relativePath] ?? '', 'utf8');
+  }
+}
+
+export function runTemplateTreeExecutionFromDirectories(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext = {},
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = [],
+  replacements: Readonly<Record<string, string>> = {},
+  mergePreparedContent: (entry: TemplateExecutionPlanEntry) => MergeResult<string>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): TemplateTreeRunResult {
+  const templateContents = readRelativeFileTree(templateRoot);
+  const destinationContents = readRelativeFileTree(destinationRoot);
+  const templateSourcePaths = Object.keys(templateContents).sort();
+
+  return runTemplateTreeExecution(
+    templateSourcePaths,
+    templateContents,
+    destinationContents,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    mergePreparedContent,
+    config
+  );
+}
+
+export function applyTemplateTreeExecutionToDirectory(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext = {},
+  defaultStrategy: TemplateStrategy = 'merge',
+  overrides: readonly TemplateStrategyOverride[] = [],
+  replacements: Readonly<Record<string, string>> = {},
+  mergePreparedContent: (entry: TemplateExecutionPlanEntry) => MergeResult<string>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): TemplateTreeRunResult {
+  const runResult = runTemplateTreeExecutionFromDirectories(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    mergePreparedContent,
+    config
+  );
+
+  const filesToWrite: Record<string, string> = {};
+  for (const filePath of [...runResult.applyResult.createdPaths, ...runResult.applyResult.updatedPaths]) {
+    const content = runResult.applyResult.resultFiles[filePath];
+    if (content !== undefined) {
+      filesToWrite[filePath] = content;
+    }
+  }
+  writeRelativeFileTree(destinationRoot, filesToWrite);
+
+  return runResult;
+}
+
 export function reportTemplateTreeRun(result: TemplateTreeRunResult): TemplateTreeRunReport {
   const created = new Set(result.applyResult.createdPaths);
   const updated = new Set(result.applyResult.updatedPaths);
@@ -1238,6 +1361,28 @@ export function reportTemplateTreeRun(result: TemplateTreeRunResult): TemplateTr
       omitted: entries.filter((entry) => entry.status === 'omitted').length
     }
   };
+}
+
+function recordTemplateApplyOutput(
+  resultFiles: Record<string, string>,
+  createdPaths: string[],
+  updatedPaths: string[],
+  keptPaths: string[],
+  entry: TemplateExecutionPlanEntry,
+  output: string
+): void {
+  if (!entry.destinationPath) {
+    return;
+  }
+
+  resultFiles[entry.destinationPath] = output;
+  if (entry.destinationExists && entry.destinationContent !== undefined && entry.destinationContent === output) {
+    keptPaths.push(entry.destinationPath);
+  } else if (entry.destinationExists) {
+    updatedPaths.push(entry.destinationPath);
+  } else {
+    createdPaths.push(entry.destinationPath);
+  }
 }
 
 export function conformanceSuiteDefinition(
