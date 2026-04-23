@@ -143,6 +143,14 @@ export interface SessionResolutionReport {
   session_request: SessionRequestReport;
 }
 
+export interface SessionInspectionReport {
+  entrypoint_report: SessionEntrypointReport;
+  session_resolution: SessionResolutionReport;
+  adapter_capabilities: AdapterCapabilityReport;
+  status: SessionStatusReport;
+  diagnostics: SessionDiagnosticsReport;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1226,6 +1234,83 @@ function reportSessionRequestFromRunnerRequest(
   return reportTemplateDirectorySessionOptionsRequest(
     denormalizeRunnerOptions(request.options) as DirectorySessionOptions
   );
+}
+
+export function reportTemplateDirectorySessionInspection(
+  entrypoint: SessionEntrypoint,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionInspectionReport {
+  const entrypointReport = reportTemplateDirectorySessionEntrypoint(entrypoint);
+  const sessionResolution = reportTemplateDirectorySessionResolution(entrypoint, profiles);
+  if (!sessionResolution.session_request.ready || !sessionResolution.session_request.resolved_options) {
+    return {
+      entrypoint_report: entrypointReport,
+      session_resolution: sessionResolution,
+      adapter_capabilities: {
+        required_families: [],
+        adapter_families: [],
+        missing_families: [],
+        ready: false
+      },
+      status: {
+        mode: sessionResolution.session_request.mode,
+        ready: false,
+        missing_families: [],
+        blocked_paths: [],
+        planned_write_count: 0,
+        written_count: 0
+      },
+      diagnostics: {
+        mode: sessionResolution.session_request.mode,
+        ready: false,
+        diagnostics: sessionResolution.session_request.diagnostics
+      }
+    };
+  }
+
+  const resolved = denormalizeResolvedSessionOptions(
+    sessionResolution.session_request.resolved_options
+  ) as DirectorySessionOptions;
+  const adapterCapabilities = reportDefaultAdapterCapabilitiesFromDirectories(
+    resolved.templateRoot,
+    resolved.destinationRoot,
+    resolved.context,
+    resolved.defaultStrategy,
+    resolved.overrides,
+    resolved.replacements,
+    resolved.allowedFamilies,
+    resolved.config ?? DEFAULT_TEMPLATE_TOKEN_CONFIG
+  );
+  const sessionReport = planTemplateDirectorySessionFromDirectories(
+    resolved.templateRoot,
+    resolved.destinationRoot,
+    resolved.context,
+    resolved.defaultStrategy,
+    resolved.overrides,
+    resolved.replacements,
+    resolved.config ?? DEFAULT_TEMPLATE_TOKEN_CONFIG
+  );
+  const status = reportTemplateDirectorySessionStatus(
+    reportTemplateDirectorySessionEnvelope(sessionReport, adapterCapabilities)
+  );
+  const diagnostics = planTemplateDirectorySessionDiagnosticsFromDirectories(
+    resolved.templateRoot,
+    resolved.destinationRoot,
+    resolved.context,
+    resolved.defaultStrategy,
+    resolved.overrides,
+    resolved.replacements,
+    resolved.allowedFamilies,
+    resolved.config ?? DEFAULT_TEMPLATE_TOKEN_CONFIG
+  );
+
+  return {
+    entrypoint_report: entrypointReport,
+    session_resolution: sessionResolution,
+    adapter_capabilities: adapterCapabilities,
+    status,
+    diagnostics
+  };
 }
 
 export function resolveTemplateDirectorySessionOptions(
