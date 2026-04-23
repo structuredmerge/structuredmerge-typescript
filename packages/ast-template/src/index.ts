@@ -44,6 +44,11 @@ export interface AdapterCapabilityReport {
   ready: boolean;
 }
 
+export interface SessionEnvelopeReport {
+  session_report: unknown;
+  adapter_capabilities: AdapterCapabilityReport;
+}
+
 export function reportTemplateDirectorySession(
   mode: DirectorySessionMode,
   entries: readonly TemplateExecutionPlanEntry[],
@@ -310,6 +315,83 @@ export function reportDefaultAdapterCapabilitiesFromDirectories(
     replacements,
     defaultFamilyMergeAdapterRegistry(allowedFamilies),
     config
+  );
+}
+
+export function reportTemplateDirectorySessionEnvelope(
+  sessionReport: unknown,
+  adapterCapabilities: AdapterCapabilityReport
+): SessionEnvelopeReport {
+  return {
+    session_report: sessionReport,
+    adapter_capabilities: adapterCapabilities
+  };
+}
+
+export function planTemplateDirectorySessionEnvelopeFromDirectories(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionEnvelopeReport {
+  return reportTemplateDirectorySessionEnvelope(
+    planTemplateDirectorySessionFromDirectories(
+      templateRoot,
+      destinationRoot,
+      context,
+      defaultStrategy,
+      overrides,
+      replacements,
+      config
+    ),
+    reportDefaultAdapterCapabilitiesFromDirectories(
+      templateRoot,
+      destinationRoot,
+      context,
+      defaultStrategy,
+      overrides,
+      replacements,
+      allowedFamilies,
+      config
+    )
+  );
+}
+
+export function applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): SessionEnvelopeReport {
+  return reportTemplateDirectorySessionEnvelope(
+    applyTemplateDirectorySessionWithDefaultRegistryToDirectory(
+      templateRoot,
+      destinationRoot,
+      context,
+      defaultStrategy,
+      overrides,
+      replacements,
+      allowedFamilies,
+      config
+    ),
+    reportDefaultAdapterCapabilitiesFromDirectories(
+      templateRoot,
+      destinationRoot,
+      context,
+      defaultStrategy,
+      overrides,
+      replacements,
+      allowedFamilies,
+      config
+    )
   );
 }
 
