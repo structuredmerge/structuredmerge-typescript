@@ -14,7 +14,9 @@ import { mergeRuby } from '../../ruby-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import {
   applyTemplateDirectorySessionToDirectory,
+  applyTemplateDirectorySessionWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionWithRegistryToDirectory,
+  defaultFamilyMergeAdapterRegistry,
   mergePreparedContentFromRegistry,
   planTemplateDirectorySessionFromDirectories,
   reapplyTemplateDirectorySessionToDirectory
@@ -141,6 +143,56 @@ describe('template directory session report fixture', () => {
         registry
       );
       expect(actual).toEqual(section.expected);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('conforms to the default-adapter-discovery fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-355-template-directory-default-adapter-discovery-report',
+      'template-directory-default-adapter-discovery-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      default_discovery: SessionFixtureSection & { allowed_families: string[] | null };
+      filtered_discovery: SessionFixtureSection & { allowed_families: string[] | null };
+    };
+
+    for (const [label, section] of [
+      ['default_discovery', fixture.default_discovery] as const,
+      ['filtered_discovery', fixture.filtered_discovery] as const
+    ]) {
+      const tempRoot = path.resolve(
+        process.cwd(),
+        'packages',
+        'ast-template',
+        'tmp',
+        `discovery-${label}`
+      );
+      rmSync(tempRoot, { recursive: true, force: true });
+      mkdirSync(tempRoot, { recursive: true });
+      writeRelativeFileTree(
+        tempRoot,
+        readRelativeFileTree(path.join(fixtureRoot, 'apply-run', 'destination'))
+      );
+
+      const actual = applyTemplateDirectorySessionWithDefaultRegistryToDirectory(
+        path.join(fixtureRoot, 'apply-run', 'template'),
+        tempRoot,
+        normalizeContext(section.context),
+        section.default_strategy,
+        section.overrides,
+        section.replacements,
+        section.allowed_families ?? undefined
+      );
+      expect(actual).toEqual(section.expected);
+      expect(actual.adapter_families).toEqual(
+        Object.keys(defaultFamilyMergeAdapterRegistry(section.allowed_families ?? undefined)).sort()
+      );
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });

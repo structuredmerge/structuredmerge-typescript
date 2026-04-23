@@ -5,11 +5,9 @@
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
-    "@structuredmerge/ast-merge": "workspace:*"
-  },
-  "devDependencies": {
     "@structuredmerge/markdown-merge": "workspace:*",
     "@structuredmerge/ruby-merge": "workspace:*",
-    "@structuredmerge/toml-merge": "workspace:*"
+    "@structuredmerge/toml-merge": "workspace:*",
+    "@structuredmerge/ast-merge": "workspace:*"
   }
 }

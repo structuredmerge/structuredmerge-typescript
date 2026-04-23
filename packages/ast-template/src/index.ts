@@ -14,6 +14,9 @@ import {
   planTemplateTreeExecutionFromDirectories,
   reportTemplateDirectoryRunner
 } from '@structuredmerge/ast-merge';
+import { mergeMarkdown } from '../../markdown-merge/src/index';
+import { mergeRuby } from '../../ruby-merge/src/index';
+import { mergeToml } from '../../toml-merge/src/index';
 
 export const packageName = '@structuredmerge/ast-template';
 
@@ -182,6 +185,54 @@ export function applyTemplateDirectorySessionWithRegistryToDirectory(
     config
   );
   return reportTemplateDirectoryRegistrySession('apply', result.executionPlan, registry, result);
+}
+
+export function defaultFamilyMergeAdapterRegistry(
+  allowedFamilies?: readonly string[]
+): FamilyMergeAdapterRegistry {
+  const include = (family: string): boolean =>
+    !allowedFamilies || allowedFamilies.length === 0 || allowedFamilies.includes(family);
+
+  const registry: Record<string, FamilyMergeAdapter> = {};
+  if (include('markdown')) {
+    registry.markdown = (entry) =>
+      mergeMarkdown(
+        entry.preparedTemplateContent ?? '',
+        entry.destinationContent ?? '',
+        'markdown'
+      );
+  }
+  if (include('toml')) {
+    registry.toml = (entry) =>
+      mergeToml(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'toml');
+  }
+  if (include('ruby')) {
+    registry.ruby = (entry) =>
+      mergeRuby(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'ruby');
+  }
+  return registry;
+}
+
+export function applyTemplateDirectorySessionWithDefaultRegistryToDirectory(
+  templateRoot: string,
+  destinationRoot: string,
+  context: TemplateDestinationContext,
+  defaultStrategy: TemplateStrategy,
+  overrides: readonly TemplateStrategyOverride[],
+  replacements: Readonly<Record<string, string>>,
+  allowedFamilies?: readonly string[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): TemplateDirectoryRegistrySessionReport {
+  return applyTemplateDirectorySessionWithRegistryToDirectory(
+    templateRoot,
+    destinationRoot,
+    context,
+    defaultStrategy,
+    overrides,
+    replacements,
+    defaultFamilyMergeAdapterRegistry(allowedFamilies),
+    config
+  );
 }
 
 function snakeifyKeys(value: unknown): unknown {
