@@ -8,6 +8,7 @@ import type {
   TemplateStrategy,
   TemplateStrategyOverride
 } from '@structuredmerge/ast-merge';
+import type { SessionCommand, SessionEntrypoint } from '../src/index';
 import { readRelativeFileTree, writeRelativeFileTree } from '@structuredmerge/ast-merge';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
@@ -1379,10 +1380,36 @@ describe('template directory session report fixture', () => {
           resolveSessionEntrypointFixturePaths(
             input.entrypoint as Record<string, unknown>,
             fixtureRoot
-          ) as any,
+          ) as SessionEntrypoint,
           {}
         )
       ).toThrow(testCase.expected_error);
+    }
+  });
+
+  it('conforms to the session-command-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-381-template-directory-session-command-rejection',
+      'template-directory-session-command-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_error: string;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionCommandFixturePaths(testCase.input, fixtureRoot);
+      expect(() => runTemplateDirectorySessionCommand(input as SessionCommand, {})).toThrow(
+        testCase.expected_error
+      );
     }
   });
 });
