@@ -8,7 +8,7 @@ import type {
   TemplateStrategy,
   TemplateStrategyOverride
 } from '@structuredmerge/ast-merge';
-import type { SessionCommand, SessionEntrypoint } from '../src/index';
+import type { SessionCommand, SessionEntrypoint, SessionInvocation } from '../src/index';
 import { readRelativeFileTree, writeRelativeFileTree } from '@structuredmerge/ast-merge';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
@@ -40,6 +40,7 @@ import {
   reportTemplateDirectorySessionResolution,
   runTemplateDirectorySessionCommand,
   runTemplateDirectorySessionCommandPayload,
+  runTemplateDirectorySession,
   runTemplateDirectorySessionDispatch,
   runTemplateDirectorySessionEntrypoint,
   runTemplateDirectorySessionRequest,
@@ -1438,6 +1439,39 @@ describe('template directory session report fixture', () => {
       );
     }
   });
+
+  it('conforms to the session-invocation-report fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-383-template-directory-session-invocation-report',
+      'template-directory-session-invocation-report.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Record<string, Record<string, unknown>>;
+      inspect_nested_payload_ready: { input: Record<string, unknown>; expected: unknown };
+      run_nested_request_ready: { input: Record<string, unknown>; expected: unknown };
+      run_flat_profile_blocked: { input: Record<string, unknown>; expected: unknown };
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    for (const key of [
+      'inspect_nested_payload_ready',
+      'run_nested_request_ready',
+      'run_flat_profile_blocked'
+    ] as const) {
+      const input = resolveSessionInvocationFixturePaths(
+        fixture[key].input as Record<string, unknown>,
+        fixtureRoot
+      );
+      expect(runTemplateDirectorySession(input, profiles)).toEqual(
+        resolveSessionDispatchExpectedPaths(fixture[key].expected, fixtureRoot)
+      );
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -1647,6 +1681,32 @@ function resolveSessionCommandPayloadFixturePaths(
   fixtureRoot: string
 ) {
   return resolveSessionRunnerPayloadFixturePaths(command, fixtureRoot);
+}
+
+function resolveSessionInvocationFixturePaths(
+  invocation: Record<string, unknown>,
+  fixtureRoot: string
+): SessionInvocation {
+  const cloned = JSON.parse(JSON.stringify(invocation)) as Record<string, unknown>;
+  if (cloned.payload) {
+    cloned.payload = resolveSessionRunnerPayloadFixturePaths(
+      cloned.payload as Record<string, unknown>,
+      fixtureRoot
+    );
+  }
+  if (cloned.request) {
+    cloned.request = resolveRunnerRequestFixturePaths(
+      cloned.request as Record<string, unknown>,
+      fixtureRoot
+    );
+  }
+  if (typeof cloned.template_root === 'string' && cloned.template_root.length > 0) {
+    cloned.template_root = path.join(fixtureRoot, cloned.template_root);
+  }
+  if (typeof cloned.destination_root === 'string' && cloned.destination_root.length > 0) {
+    cloned.destination_root = path.join(fixtureRoot, cloned.destination_root);
+  }
+  return cloned as SessionInvocation;
 }
 
 function resolveSessionDispatchExpectedPaths(value: unknown, fixtureRoot: string): unknown {

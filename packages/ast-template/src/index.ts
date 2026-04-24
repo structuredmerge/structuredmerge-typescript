@@ -177,6 +177,23 @@ export interface SessionCommandPayload {
   allowed_families?: readonly string[] | null;
 }
 
+export interface SessionInvocation {
+  operation: string;
+  payload?: SessionRunnerPayload;
+  request?: SessionRunnerRequest;
+  request_kind?: 'options' | 'profile';
+  default_profile_name?: string;
+  profile_name?: string;
+  mode?: DirectorySessionMode;
+  template_root?: string;
+  destination_root?: string;
+  context?: { project_name?: string };
+  default_strategy?: TemplateStrategy;
+  overrides?: readonly TemplateStrategyOverride[];
+  replacements?: Readonly<Record<string, string>>;
+  allowed_families?: readonly string[] | null;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -1396,6 +1413,40 @@ export function runTemplateDirectorySessionCommandPayload(
         replacements: command.replacements,
         allowed_families: command.allowed_families
       }
+    },
+    profiles
+  );
+}
+
+export function runTemplateDirectorySession(
+  invocation: SessionInvocation,
+  profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
+): SessionDispatchReport {
+  if (invocation.payload || invocation.request) {
+    return runTemplateDirectorySessionCommand(
+      {
+        operation: invocation.operation,
+        payload: invocation.payload,
+        request: invocation.request
+      },
+      profiles
+    );
+  }
+
+  return runTemplateDirectorySessionCommandPayload(
+    {
+      operation: invocation.operation,
+      request_kind: invocation.request_kind,
+      default_profile_name: invocation.default_profile_name,
+      profile_name: invocation.profile_name,
+      mode: invocation.mode ?? 'plan',
+      template_root: invocation.template_root ?? '',
+      destination_root: invocation.destination_root ?? '',
+      context: invocation.context,
+      default_strategy: invocation.default_strategy,
+      overrides: invocation.overrides,
+      replacements: invocation.replacements,
+      allowed_families: invocation.allowed_families
     },
     profiles
   );
