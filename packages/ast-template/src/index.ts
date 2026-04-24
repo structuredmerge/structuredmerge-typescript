@@ -1,7 +1,6 @@
 import type {
   MergeResult,
   TemplateDestinationContext,
-  TemplateDirectoryRunnerReport,
   TemplateExecutionPlanEntry,
   TemplateStrategy,
   TemplateStrategyOverride,
@@ -1115,10 +1114,7 @@ export function reportTemplateDirectorySessionRunnerInput(
     if (input.overrides !== undefined && input.overrides.length > 0) {
       overrides.overrides = input.overrides;
     }
-    if (
-      input.replacements !== undefined &&
-      Object.keys(input.replacements).length > 0
-    ) {
+    if (input.replacements !== undefined && Object.keys(input.replacements).length > 0) {
       overrides.replacements = input.replacements;
     }
     if (input.allowed_families !== undefined && input.allowed_families !== null) {
@@ -1163,9 +1159,7 @@ export function runTemplateDirectorySessionRunnerPayload(
   profiles: Readonly<Record<string, DirectorySessionProfile>> = {}
 ): SessionOutcomeReport {
   return runTemplateDirectorySessionRunnerRequest(
-    reportTemplateDirectorySessionRunnerInput(
-      reportTemplateDirectorySessionRunnerPayload(payload)
-    ),
+    reportTemplateDirectorySessionRunnerInput(reportTemplateDirectorySessionRunnerPayload(payload)),
     profiles
   );
 }
@@ -1184,7 +1178,10 @@ export function runTemplateDirectorySessionEntrypoint(
     session_report: {
       mode: 'plan',
       runner_report: {
-        plan_report: { entries: [], summary: { create: 0, update: 0, keep: 0, blocked: 0, omitted: 0 } },
+        plan_report: {
+          entries: [],
+          summary: { create: 0, update: 0, keep: 0, blocked: 0, omitted: 0 }
+        },
         preview: {
           result_files: {},
           created_paths: [],
@@ -1269,7 +1266,10 @@ export function reportTemplateDirectorySessionInspection(
 ): SessionInspectionReport {
   const entrypointReport = reportTemplateDirectorySessionEntrypoint(entrypoint);
   const sessionResolution = reportTemplateDirectorySessionResolution(entrypoint, profiles);
-  if (!sessionResolution.session_request.ready || !sessionResolution.session_request.resolved_options) {
+  if (
+    !sessionResolution.session_request.ready ||
+    !sessionResolution.session_request.resolved_options
+  ) {
     return {
       entrypoint_report: entrypointReport,
       session_resolution: sessionResolution,
@@ -1351,6 +1351,9 @@ export function runTemplateDirectorySessionDispatch(
       inspection: reportTemplateDirectorySessionInspection(entrypoint, profiles),
       outcome: null
     };
+  }
+  if (operation !== 'run') {
+    throw new Error(`unsupported template directory session operation: ${operation}`);
   }
   return {
     operation,

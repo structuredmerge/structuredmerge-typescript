@@ -912,22 +912,34 @@ describe('template directory session report fixture', () => {
 
     expect(
       runTemplateDirectorySessionRequest(
-        resolveRequestFixturePaths(fixture.options_ready.request as Record<string, unknown>, fixtureRoot) as any
+        resolveRequestFixturePaths(
+          fixture.options_ready.request as Record<string, unknown>,
+          fixtureRoot
+        ) as any
       )
     ).toEqual(fixture.options_ready.expected);
     expect(
       runTemplateDirectorySessionRequest(
-        resolveRequestFixturePaths(fixture.options_blocked.request as Record<string, unknown>, fixtureRoot) as any
+        resolveRequestFixturePaths(
+          fixture.options_blocked.request as Record<string, unknown>,
+          fixtureRoot
+        ) as any
       )
     ).toEqual(fixture.options_blocked.expected);
     expect(
       runTemplateDirectorySessionRequest(
-        resolveRequestFixturePaths(fixture.profile_ready.request as Record<string, unknown>, fixtureRoot) as any
+        resolveRequestFixturePaths(
+          fixture.profile_ready.request as Record<string, unknown>,
+          fixtureRoot
+        ) as any
       )
     ).toEqual(fixture.profile_ready.expected);
     expect(
       runTemplateDirectorySessionRequest(
-        resolveRequestFixturePaths(fixture.profile_blocked.request as Record<string, unknown>, fixtureRoot) as any
+        resolveRequestFixturePaths(
+          fixture.profile_blocked.request as Record<string, unknown>,
+          fixtureRoot
+        ) as any
       )
     ).toEqual(fixture.profile_blocked.expected);
   });
@@ -993,26 +1005,18 @@ describe('template directory session report fixture', () => {
       profile_blocked: { input: Record<string, unknown>; expected: unknown };
     };
 
-    expect(
-      reportTemplateDirectorySessionRunnerInput(
-        fixture.options_ready.input as any
-      )
-    ).toEqual(fixture.options_ready.expected);
-    expect(
-      reportTemplateDirectorySessionRunnerInput(
-        fixture.options_blocked.input as any
-      )
-    ).toEqual(fixture.options_blocked.expected);
-    expect(
-      reportTemplateDirectorySessionRunnerInput(
-        fixture.profile_ready.input as any
-      )
-    ).toEqual(fixture.profile_ready.expected);
-    expect(
-      reportTemplateDirectorySessionRunnerInput(
-        fixture.profile_blocked.input as any
-      )
-    ).toEqual(fixture.profile_blocked.expected);
+    expect(reportTemplateDirectorySessionRunnerInput(fixture.options_ready.input as any)).toEqual(
+      fixture.options_ready.expected
+    );
+    expect(reportTemplateDirectorySessionRunnerInput(fixture.options_blocked.input as any)).toEqual(
+      fixture.options_blocked.expected
+    );
+    expect(reportTemplateDirectorySessionRunnerInput(fixture.profile_ready.input as any)).toEqual(
+      fixture.profile_ready.expected
+    );
+    expect(reportTemplateDirectorySessionRunnerInput(fixture.profile_blocked.input as any)).toEqual(
+      fixture.profile_blocked.expected
+    );
   });
 
   it('conforms to the session-runner-payload fixture', () => {
@@ -1031,12 +1035,12 @@ describe('template directory session report fixture', () => {
       profile_explicit_name: { input: Record<string, unknown>; expected: unknown };
     };
 
-    expect(reportTemplateDirectorySessionRunnerPayload(fixture.options_explicit.input as any)).toEqual(
-      fixture.options_explicit.expected
-    );
-    expect(reportTemplateDirectorySessionRunnerPayload(fixture.options_inferred.input as any)).toEqual(
-      fixture.options_inferred.expected
-    );
+    expect(
+      reportTemplateDirectorySessionRunnerPayload(fixture.options_explicit.input as any)
+    ).toEqual(fixture.options_explicit.expected);
+    expect(
+      reportTemplateDirectorySessionRunnerPayload(fixture.options_inferred.input as any)
+    ).toEqual(fixture.options_inferred.expected);
     expect(
       reportTemplateDirectorySessionRunnerPayload(fixture.profile_default_name.input as any)
     ).toEqual(fixture.profile_default_name.expected);
@@ -1072,7 +1076,10 @@ describe('template directory session report fixture', () => {
     ).toEqual(fixture.options_ready.expected);
     expect(
       runTemplateDirectorySessionRunnerPayload(
-        resolveSessionRunnerPayloadFixturePaths(fixture.options_blocked.payload, fixtureRoot) as any,
+        resolveSessionRunnerPayloadFixturePaths(
+          fixture.options_blocked.payload,
+          fixtureRoot
+        ) as any,
         profiles
       )
     ).toEqual(fixture.options_blocked.expected);
@@ -1084,7 +1091,10 @@ describe('template directory session report fixture', () => {
     ).toEqual(fixture.profile_ready.expected);
     expect(
       runTemplateDirectorySessionRunnerPayload(
-        resolveSessionRunnerPayloadFixturePaths(fixture.profile_blocked.payload, fixtureRoot) as any,
+        resolveSessionRunnerPayloadFixturePaths(
+          fixture.profile_blocked.payload,
+          fixtureRoot
+        ) as any,
         profiles
       )
     ).toEqual(fixture.profile_blocked.expected);
@@ -1227,9 +1237,7 @@ describe('template directory session report fixture', () => {
         resolveSessionEntrypointFixturePaths(fixture.request_blocked.input, fixtureRoot) as any,
         profiles
       )
-    ).toEqual(
-      resolveSessionInspectionExpectedPaths(fixture.request_blocked.expected, fixtureRoot)
-    );
+    ).toEqual(resolveSessionInspectionExpectedPaths(fixture.request_blocked.expected, fixtureRoot));
     expect(
       reportTemplateDirectorySessionInspection(
         resolveSessionEntrypointFixturePaths(fixture.request_ready.input, fixtureRoot) as any,
@@ -1241,9 +1249,7 @@ describe('template directory session report fixture', () => {
         resolveSessionEntrypointFixturePaths(fixture.payload_blocked.input, fixtureRoot) as any,
         profiles
       )
-    ).toEqual(
-      resolveSessionInspectionExpectedPaths(fixture.payload_blocked.expected, fixtureRoot)
-    );
+    ).toEqual(resolveSessionInspectionExpectedPaths(fixture.payload_blocked.expected, fixtureRoot));
   });
 
   it('conforms to the session-dispatch-report fixture', () => {
@@ -1275,7 +1281,10 @@ describe('template directory session report fixture', () => {
       expect(
         runTemplateDirectorySessionDispatch(
           String(input.operation),
-          resolveSessionEntrypointFixturePaths(input.entrypoint as Record<string, unknown>, fixtureRoot) as any,
+          resolveSessionEntrypointFixturePaths(
+            input.entrypoint as Record<string, unknown>,
+            fixtureRoot
+          ) as any,
           profiles
         )
       ).toEqual(resolveSessionDispatchExpectedPaths(fixture[key].expected, fixtureRoot));
@@ -1300,7 +1309,11 @@ describe('template directory session report fixture', () => {
     };
     const profiles = normalizeProfiles(fixture.profiles);
 
-    for (const key of ['inspect_payload_ready', 'run_request_ready', 'run_payload_blocked'] as const) {
+    for (const key of [
+      'inspect_payload_ready',
+      'run_request_ready',
+      'run_payload_blocked'
+    ] as const) {
       const input = resolveSessionCommandFixturePaths(
         fixture[key].input as Record<string, unknown>,
         fixtureRoot
@@ -1337,6 +1350,39 @@ describe('template directory session report fixture', () => {
       expect(runTemplateDirectorySessionCommandPayload(input as any, profiles)).toEqual(
         resolveSessionDispatchExpectedPaths(fixture[key].expected, fixtureRoot)
       );
+    }
+  });
+
+  it('conforms to the session-dispatch-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-380-template-directory-session-dispatch-rejection',
+      'template-directory-session-dispatch-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_error: string;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = testCase.input;
+      expect(() =>
+        runTemplateDirectorySessionDispatch(
+          String(input.operation),
+          resolveSessionEntrypointFixturePaths(
+            input.entrypoint as Record<string, unknown>,
+            fixtureRoot
+          ) as any,
+          {}
+        )
+      ).toThrow(testCase.expected_error);
     }
   });
 });
