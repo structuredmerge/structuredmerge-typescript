@@ -1412,6 +1412,32 @@ describe('template directory session report fixture', () => {
       );
     }
   });
+
+  it('conforms to the session-command-payload-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-382-template-directory-session-command-payload-rejection',
+      'template-directory-session-command-payload-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_error: string;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionCommandPayloadFixturePaths(testCase.input, fixtureRoot);
+      expect(() => runTemplateDirectorySessionCommandPayload(input, {})).toThrow(
+        testCase.expected_error
+      );
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
