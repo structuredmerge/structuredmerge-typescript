@@ -1472,6 +1472,32 @@ describe('template directory session report fixture', () => {
       );
     }
   });
+
+  it('conforms to the session-invocation-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-384-template-directory-session-invocation-rejection',
+      'template-directory-session-invocation-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_error: string;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionInvocationFixturePaths(testCase.input, fixtureRoot);
+      expect(() => runTemplateDirectorySession(input as SessionInvocation, {})).toThrow(
+        testCase.expected_error
+      );
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
