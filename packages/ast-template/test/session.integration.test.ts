@@ -17,6 +17,7 @@ import {
   importSessionCommandEnvelope,
   importSessionCommandPayloadEnvelope,
   importSessionEntrypointEnvelope,
+  importSessionRunnerRequestEnvelope,
   applyTemplateDirectorySessionToDirectory,
   applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory,
@@ -57,6 +58,7 @@ import {
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
   sessionEntrypointEnvelope,
+  sessionRunnerRequestEnvelope,
   sessionInvocationEnvelope
 } from '../src/index';
 
@@ -1593,6 +1595,36 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-runner-request transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-398-template-directory-session-runner-request-transport-envelope',
+      'template-directory-session-runner-request-envelope.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveRunnerRequestFixturePaths(testCase.input, fixtureRoot);
+      const expected = resolveSessionRunnerRequestEnvelopeFixturePaths(
+        testCase.expected_envelope,
+        fixtureRoot
+      );
+
+      expect(sessionRunnerRequestEnvelope(input as any)).toEqual(expected);
+      expect(importSessionRunnerRequestEnvelope(expected)).toEqual({ request: input });
+    }
+  });
+
   it('conforms to the session-entrypoint transport-rejection fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
@@ -2105,6 +2137,20 @@ function resolveSessionEntrypointEnvelopeFixturePaths(
   if (cloned.entrypoint && typeof cloned.entrypoint === 'object') {
     cloned.entrypoint = resolveSessionEntrypointFixturePaths(
       cloned.entrypoint as Record<string, unknown>,
+      fixtureRoot
+    );
+  }
+  return cloned;
+}
+
+function resolveSessionRunnerRequestEnvelopeFixturePaths(
+  envelope: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  const cloned = JSON.parse(JSON.stringify(envelope)) as Record<string, unknown>;
+  if (cloned.request && typeof cloned.request === 'object') {
+    cloned.request = resolveRunnerRequestFixturePaths(
+      cloned.request as Record<string, unknown>,
       fixtureRoot
     );
   }
