@@ -1625,6 +1625,83 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-runner-request transport-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-399-template-directory-session-runner-request-transport-rejection',
+      'template-directory-session-runner-request-envelope-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionRunnerRequestEnvelopeFixturePaths(
+        testCase.envelope,
+        fixtureRoot
+      );
+      expect(importSessionRunnerRequestEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the session-runner-request envelope-application fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-400-template-directory-session-runner-request-envelope-application',
+      'template-directory-session-runner-request-envelope-application.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Readonly<Record<string, Record<string, unknown>>>;
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected: unknown;
+      }>;
+      rejections: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionRunnerRequestEnvelopeFixturePaths(
+        testCase.envelope,
+        fixtureRoot
+      );
+      const imported = importSessionRunnerRequestEnvelope(envelope);
+      expect(imported.error).toBeUndefined();
+      expect(
+        runTemplateDirectorySessionRunnerRequest(imported.request as SessionRunnerRequest, profiles)
+      ).toEqual(resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot));
+    }
+
+    for (const testCase of fixture.rejections) {
+      const envelope = resolveSessionRunnerRequestEnvelopeFixturePaths(
+        testCase.envelope,
+        fixtureRoot
+      );
+      expect(importSessionRunnerRequestEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the session-entrypoint transport-rejection fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
