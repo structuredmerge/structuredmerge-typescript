@@ -588,6 +588,65 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-outcome transport-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-408-template-directory-session-outcome-transport-rejection',
+      'template-directory-session-outcome-envelope-rejection.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      expect(importSessionOutcomeEnvelope(testCase.envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the session-outcome envelope-application fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-409-template-directory-session-outcome-envelope-application',
+      'template-directory-session-outcome-envelope-application.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected: unknown;
+      }>;
+      rejections: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      expect(importSessionOutcomeEnvelope(testCase.envelope)).toEqual({
+        outcome: testCase.expected as SessionOutcomeReport
+      });
+    }
+
+    for (const testCase of fixture.rejections) {
+      expect(importSessionOutcomeEnvelope(testCase.envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the session-runner fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
