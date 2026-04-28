@@ -187,6 +187,67 @@ export interface SessionRunnerPayload {
   allowed_families?: readonly string[] | null;
 }
 
+export const SESSION_RUNNER_PAYLOAD_TRANSPORT_VERSION = 1;
+
+export type SessionRunnerPayloadTransportImportErrorCategory =
+  | 'kind_mismatch'
+  | 'unsupported_version';
+
+export interface SessionRunnerPayloadTransportImportError {
+  readonly category: SessionRunnerPayloadTransportImportErrorCategory;
+  readonly message: string;
+}
+
+export interface SessionRunnerPayloadEnvelope {
+  readonly kind: 'template_directory_session_runner_payload';
+  readonly version: typeof SESSION_RUNNER_PAYLOAD_TRANSPORT_VERSION;
+  readonly payload: SessionRunnerPayload;
+}
+
+export function sessionRunnerPayloadEnvelope(
+  payload: SessionRunnerPayload
+): SessionRunnerPayloadEnvelope {
+  return {
+    kind: 'template_directory_session_runner_payload',
+    version: SESSION_RUNNER_PAYLOAD_TRANSPORT_VERSION,
+    payload
+  };
+}
+
+export function importSessionRunnerPayloadEnvelope(value: unknown): {
+  payload?: SessionRunnerPayload;
+  error?: SessionRunnerPayloadTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'template_directory_session_runner_payload'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected template_directory_session_runner_payload envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    payload: SessionRunnerPayload;
+  };
+
+  if (envelope.version !== SESSION_RUNNER_PAYLOAD_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported template_directory_session_runner_payload envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { payload: envelope.payload };
+}
+
 export interface SessionEntrypoint {
   payload?: SessionRunnerPayload;
   request?: SessionRunnerRequest;

@@ -8,7 +8,12 @@ import type {
   TemplateStrategy,
   TemplateStrategyOverride
 } from '@structuredmerge/ast-merge';
-import type { SessionCommand, SessionEntrypoint, SessionInvocation } from '../src/index';
+import type {
+  SessionCommand,
+  SessionEntrypoint,
+  SessionInvocation,
+  SessionRunnerPayload
+} from '../src/index';
 import { readRelativeFileTree, writeRelativeFileTree } from '@structuredmerge/ast-merge';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
@@ -17,6 +22,7 @@ import {
   importSessionCommandEnvelope,
   importSessionCommandPayloadEnvelope,
   importSessionEntrypointEnvelope,
+  importSessionRunnerPayloadEnvelope,
   importSessionRunnerRequestEnvelope,
   applyTemplateDirectorySessionToDirectory,
   applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory,
@@ -58,6 +64,7 @@ import {
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
   sessionEntrypointEnvelope,
+  sessionRunnerPayloadEnvelope,
   sessionRunnerRequestEnvelope,
   sessionInvocationEnvelope
 } from '../src/index';
@@ -1110,6 +1117,36 @@ describe('template directory session report fixture', () => {
         profiles
       )
     ).toEqual(fixture.profile_blocked.expected);
+  });
+
+  it('conforms to the session-runner-payload transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-401-template-directory-session-runner-payload-transport-envelope',
+      'template-directory-session-runner-payload-envelope.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionRunnerPayloadFixturePaths(testCase.input, fixtureRoot);
+      const expected = resolveSessionRunnerPayloadEnvelopeFixturePaths(
+        testCase.expected_envelope,
+        fixtureRoot
+      );
+
+      expect(sessionRunnerPayloadEnvelope(input as SessionRunnerPayload)).toEqual(expected);
+      expect(importSessionRunnerPayloadEnvelope(expected)).toEqual({ payload: input });
+    }
   });
 
   it('conforms to the session-entrypoint-outcome fixture', () => {
@@ -2182,6 +2219,20 @@ function resolveSessionRunnerPayloadFixturePaths(
   }
   if (typeof cloned.destination_root === 'string' && cloned.destination_root.length > 0) {
     cloned.destination_root = path.join(fixtureRoot, cloned.destination_root);
+  }
+  return cloned;
+}
+
+function resolveSessionRunnerPayloadEnvelopeFixturePaths(
+  envelope: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  const cloned = JSON.parse(JSON.stringify(envelope)) as Record<string, unknown>;
+  if (cloned.payload && typeof cloned.payload === 'object') {
+    cloned.payload = resolveSessionRunnerPayloadFixturePaths(
+      cloned.payload as Record<string, unknown>,
+      fixtureRoot
+    );
   }
   return cloned;
 }
