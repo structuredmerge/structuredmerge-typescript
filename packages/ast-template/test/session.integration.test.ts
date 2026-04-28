@@ -14,6 +14,7 @@ import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import {
+  importSessionCommandEnvelope,
   applyTemplateDirectorySessionToDirectory,
   applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory,
@@ -51,6 +52,7 @@ import {
   importSessionInvocationEnvelope,
   reportTemplateDirectorySessionStatus,
   reapplyTemplateDirectorySessionToDirectory,
+  sessionCommandEnvelope,
   sessionInvocationEnvelope
 } from '../src/index';
 
@@ -1442,6 +1444,36 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-command transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-389-template-directory-session-command-transport-envelope',
+      'template-directory-session-command-envelope.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionCommandFixturePaths(testCase.input, fixtureRoot);
+      const expected = resolveSessionCommandEnvelopeFixturePaths(
+        testCase.expected_envelope,
+        fixtureRoot
+      );
+
+      expect(sessionCommandEnvelope(input as SessionCommand)).toEqual(expected);
+      expect(importSessionCommandEnvelope(expected)).toEqual({ command: input });
+    }
+  });
+
   it('conforms to the session-invocation-report fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
@@ -1833,6 +1865,20 @@ function resolveSessionCommandPayloadFixturePaths(
   fixtureRoot: string
 ) {
   return resolveSessionRunnerPayloadFixturePaths(command, fixtureRoot);
+}
+
+function resolveSessionCommandEnvelopeFixturePaths(
+  envelope: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  const cloned = JSON.parse(JSON.stringify(envelope)) as Record<string, unknown>;
+  if (cloned.command && typeof cloned.command === 'object') {
+    cloned.command = resolveSessionCommandFixturePaths(
+      cloned.command as Record<string, unknown>,
+      fixtureRoot
+    );
+  }
+  return cloned;
 }
 
 function resolveSessionInvocationFixturePaths(
