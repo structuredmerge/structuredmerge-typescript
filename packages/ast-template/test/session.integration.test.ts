@@ -1532,6 +1532,35 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-command-payload transport-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-393-template-directory-session-command-payload-transport-rejection',
+      'template-directory-session-command-payload-envelope-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionCommandPayloadEnvelopeFixturePaths(
+        testCase.envelope,
+        fixtureRoot
+      );
+      expect(importSessionCommandPayloadEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the session-command envelope-application fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
