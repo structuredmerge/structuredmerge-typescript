@@ -11,6 +11,7 @@ import type {
 import type {
   SessionCommand,
   SessionEntrypoint,
+  SessionInspectionReport,
   SessionInvocation,
   SessionOutcomeReport,
   SessionRequestReport,
@@ -24,6 +25,7 @@ import {
   importSessionCommandEnvelope,
   importSessionCommandPayloadEnvelope,
   importSessionEntrypointEnvelope,
+  importSessionInspectionEnvelope,
   importSessionOutcomeEnvelope,
   importSessionRequestEnvelope,
   importSessionRunnerPayloadEnvelope,
@@ -68,6 +70,7 @@ import {
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
   sessionEntrypointEnvelope,
+  sessionInspectionEnvelope,
   sessionOutcomeEnvelope,
   sessionRequestEnvelope,
   sessionRunnerPayloadEnvelope,
@@ -584,6 +587,38 @@ describe('template directory session report fixture', () => {
       );
       expect(importSessionOutcomeEnvelope(testCase.expected_envelope)).toEqual({
         outcome: testCase.input
+      });
+    }
+  });
+
+  it('conforms to the session-inspection transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-410-template-directory-session-inspection-transport-envelope',
+      'template-directory-session-inspection-envelope.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionInspectionExpectedPaths(testCase.input, fixtureRoot);
+      const expected = resolveSessionInspectionEnvelopeFixturePaths(
+        testCase.expected_envelope,
+        fixtureRoot
+      );
+
+      expect(sessionInspectionEnvelope(input as SessionInspectionReport)).toEqual(expected);
+      expect(importSessionInspectionEnvelope(expected)).toEqual({
+        inspection: input as SessionInspectionReport
       });
     }
   });
@@ -2590,6 +2625,20 @@ function resolveSessionInspectionExpectedPaths(value: unknown, fixtureRoot: stri
       sessionRequest.resolved_options as Record<string, unknown>,
       fixtureRoot
     );
+  }
+  return cloned;
+}
+
+function resolveSessionInspectionEnvelopeFixturePaths(
+  envelope: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  const cloned = JSON.parse(JSON.stringify(envelope)) as Record<string, unknown>;
+  if (cloned.inspection && typeof cloned.inspection === 'object') {
+    cloned.inspection = resolveSessionInspectionExpectedPaths(
+      cloned.inspection,
+      fixtureRoot
+    ) as Record<string, unknown>;
   }
   return cloned;
 }
