@@ -1554,6 +1554,32 @@ describe('template directory session report fixture', () => {
       expect(importSessionInvocationEnvelope(expected)).toEqual({ invocation: input });
     }
   });
+
+  it('conforms to the session-invocation transport-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-387-template-directory-session-invocation-transport-rejection',
+      'template-directory-session-invocation-envelope-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionInvocationEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionInvocationEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
