@@ -13,6 +13,7 @@ import type {
   SessionEntrypoint,
   SessionInspectionReport,
   SessionInvocation,
+  SessionDiagnosticsReport,
   SessionOutcomeReport,
   SessionRequestReport,
   SessionStatusReport,
@@ -25,6 +26,7 @@ import { mergeToml } from '../../toml-merge/src/index';
 import {
   importSessionCommandEnvelope,
   importSessionCommandPayloadEnvelope,
+  importSessionDiagnosticsEnvelope,
   importSessionEntrypointEnvelope,
   importSessionInspectionEnvelope,
   importSessionOutcomeEnvelope,
@@ -71,6 +73,7 @@ import {
   reapplyTemplateDirectorySessionToDirectory,
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
+  sessionDiagnosticsEnvelope,
   sessionEntrypointEnvelope,
   sessionInspectionEnvelope,
   sessionOutcomeEnvelope,
@@ -649,6 +652,33 @@ describe('template directory session report fixture', () => {
     for (const testCase of fixture.rejections) {
       expect(importSessionStatusEnvelope(testCase.envelope)).toEqual({
         error: testCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the session-diagnostics transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-416-template-directory-session-diagnostics-transport-envelope',
+      'template-directory-session-diagnostics-envelope.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      expect(sessionDiagnosticsEnvelope(testCase.input as SessionDiagnosticsReport)).toEqual(
+        testCase.expected_envelope
+      );
+      expect(importSessionDiagnosticsEnvelope(testCase.expected_envelope)).toEqual({
+        diagnostics: testCase.input as SessionDiagnosticsReport
       });
     }
   });
