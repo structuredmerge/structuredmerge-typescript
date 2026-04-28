@@ -194,6 +194,21 @@ export interface SessionInvocation {
   allowed_families?: readonly string[] | null;
 }
 
+export const SESSION_INVOCATION_TRANSPORT_VERSION = 1;
+
+export type SessionInvocationTransportImportErrorCategory = 'kind_mismatch' | 'unsupported_version';
+
+export interface SessionInvocationTransportImportError {
+  readonly category: SessionInvocationTransportImportErrorCategory;
+  readonly message: string;
+}
+
+export interface SessionInvocationEnvelope {
+  readonly kind: 'template_directory_session_invocation';
+  readonly version: typeof SESSION_INVOCATION_TRANSPORT_VERSION;
+  readonly invocation: SessionInvocation;
+}
+
 interface InternalSessionRequest {
   requestKind: 'options' | 'profile';
   profileName?: string;
@@ -201,6 +216,50 @@ interface InternalSessionRequest {
   ready: boolean;
   diagnostics: readonly SessionDiagnostic[];
   resolvedOptions: DirectorySessionOptions | null;
+}
+
+export function sessionInvocationEnvelope(
+  invocation: SessionInvocation
+): SessionInvocationEnvelope {
+  return {
+    kind: 'template_directory_session_invocation',
+    version: SESSION_INVOCATION_TRANSPORT_VERSION,
+    invocation
+  };
+}
+
+export function importSessionInvocationEnvelope(value: unknown): {
+  invocation?: SessionInvocation;
+  error?: SessionInvocationTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'template_directory_session_invocation'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected template_directory_session_invocation envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    invocation: SessionInvocation;
+  };
+
+  if (envelope.version !== SESSION_INVOCATION_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported template_directory_session_invocation envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { invocation: envelope.invocation };
 }
 
 export interface DirectorySessionOptions {

@@ -48,8 +48,10 @@ import {
   runTemplateDirectorySessionRunnerRequest,
   reportAdapterCapabilitiesFromDirectories,
   reportDefaultAdapterCapabilitiesFromDirectories,
+  importSessionInvocationEnvelope,
   reportTemplateDirectorySessionStatus,
-  reapplyTemplateDirectorySessionToDirectory
+  reapplyTemplateDirectorySessionToDirectory,
+  sessionInvocationEnvelope
 } from '../src/index';
 
 interface SessionFixtureSection {
@@ -1522,6 +1524,36 @@ describe('template directory session report fixture', () => {
       expect(roundTripped).toEqual(input);
     }
   });
+
+  it('conforms to the session-invocation transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-386-template-directory-session-invocation-transport-envelope',
+      'template-directory-session-invocation-envelope.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionInvocationFixturePaths(testCase.input, fixtureRoot);
+      const expected = resolveSessionInvocationEnvelopeFixturePaths(
+        testCase.expected_envelope,
+        fixtureRoot
+      );
+
+      expect(sessionInvocationEnvelope(input)).toEqual(expected);
+      expect(importSessionInvocationEnvelope(expected)).toEqual({ invocation: input });
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
@@ -1757,6 +1789,20 @@ function resolveSessionInvocationFixturePaths(
     cloned.destination_root = path.join(fixtureRoot, cloned.destination_root);
   }
   return cloned as SessionInvocation;
+}
+
+function resolveSessionInvocationEnvelopeFixturePaths(
+  envelope: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  const cloned = JSON.parse(JSON.stringify(envelope)) as Record<string, unknown>;
+  if (cloned.invocation && typeof cloned.invocation === 'object') {
+    cloned.invocation = resolveSessionInvocationFixturePaths(
+      cloned.invocation as Record<string, unknown>,
+      fixtureRoot
+    );
+  }
+  return cloned;
 }
 
 function resolveSessionDispatchExpectedPaths(value: unknown, fixtureRoot: string): unknown {
