@@ -1580,6 +1580,50 @@ describe('template directory session report fixture', () => {
       });
     }
   });
+
+  it('conforms to the session-invocation envelope-application fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-388-template-directory-session-invocation-envelope-application',
+      'template-directory-session-invocation-envelope-application.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Readonly<Record<string, unknown>>;
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected: unknown;
+      }>;
+      rejections: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+    const profiles = normalizeProfiles(
+      fixture.profiles as Readonly<Record<string, Record<string, unknown>>>
+    );
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionInvocationEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      const imported = importSessionInvocationEnvelope(envelope);
+      expect(imported.error).toBeUndefined();
+      expect(
+        runTemplateDirectorySession(imported.invocation as SessionInvocation, profiles)
+      ).toEqual(resolveSessionDispatchExpectedPaths(testCase.expected, fixtureRoot));
+    }
+
+    for (const testCase of fixture.rejections) {
+      const envelope = resolveSessionInvocationEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionInvocationEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
