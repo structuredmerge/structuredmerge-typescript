@@ -57,6 +57,63 @@ export interface SessionStatusReport {
   written_count: number;
 }
 
+export const SESSION_STATUS_TRANSPORT_VERSION = 1;
+
+export type SessionStatusTransportImportErrorCategory = 'kind_mismatch' | 'unsupported_version';
+
+export interface SessionStatusTransportImportError {
+  readonly category: SessionStatusTransportImportErrorCategory;
+  readonly message: string;
+}
+
+export interface SessionStatusEnvelope {
+  readonly kind: 'template_directory_session_status';
+  readonly version: typeof SESSION_STATUS_TRANSPORT_VERSION;
+  readonly status: SessionStatusReport;
+}
+
+export function sessionStatusEnvelope(status: SessionStatusReport): SessionStatusEnvelope {
+  return {
+    kind: 'template_directory_session_status',
+    version: SESSION_STATUS_TRANSPORT_VERSION,
+    status
+  };
+}
+
+export function importSessionStatusEnvelope(value: unknown): {
+  status?: SessionStatusReport;
+  error?: SessionStatusTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'template_directory_session_status'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected template_directory_session_status envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    status: SessionStatusReport;
+  };
+
+  if (envelope.version !== SESSION_STATUS_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported template_directory_session_status envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { status: envelope.status };
+}
+
 export interface SessionDiagnostic {
   severity: 'error' | 'warning' | 'info';
   category: 'configuration_error';

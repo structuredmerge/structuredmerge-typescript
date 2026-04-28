@@ -15,6 +15,7 @@ import type {
   SessionInvocation,
   SessionOutcomeReport,
   SessionRequestReport,
+  SessionStatusReport,
   SessionRunnerPayload
 } from '../src/index';
 import { readRelativeFileTree, writeRelativeFileTree } from '@structuredmerge/ast-merge';
@@ -30,6 +31,7 @@ import {
   importSessionRequestEnvelope,
   importSessionRunnerPayloadEnvelope,
   importSessionRunnerRequestEnvelope,
+  importSessionStatusEnvelope,
   applyTemplateDirectorySessionToDirectory,
   applyTemplateDirectorySessionDiagnosticsWithDefaultRegistryToDirectory,
   applyTemplateDirectorySessionEnvelopeWithDefaultRegistryToDirectory,
@@ -75,6 +77,7 @@ import {
   sessionRequestEnvelope,
   sessionRunnerPayloadEnvelope,
   sessionRunnerRequestEnvelope,
+  sessionStatusEnvelope,
   sessionInvocationEnvelope
 } from '../src/index';
 
@@ -561,6 +564,33 @@ describe('template directory session report fixture', () => {
         )
       ).toEqual(section.expected);
       rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('conforms to the session-status transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-413-template-directory-session-status-transport-envelope',
+      'template-directory-session-status-envelope.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      expect(sessionStatusEnvelope(testCase.input as SessionStatusReport)).toEqual(
+        testCase.expected_envelope
+      );
+      expect(importSessionStatusEnvelope(testCase.expected_envelope)).toEqual({
+        status: testCase.input as SessionStatusReport
+      });
     }
   });
 
