@@ -623,6 +623,73 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-inspection transport-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-411-template-directory-session-inspection-transport-rejection',
+      'template-directory-session-inspection-envelope-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionInspectionEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionInspectionEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the session-inspection envelope-application fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-412-template-directory-session-inspection-envelope-application',
+      'template-directory-session-inspection-envelope-application.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected: unknown;
+      }>;
+      rejections: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionInspectionEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionInspectionEnvelope(envelope)).toEqual({
+        inspection: resolveSessionInspectionExpectedPaths(
+          testCase.expected,
+          fixtureRoot
+        ) as SessionInspectionReport
+      });
+    }
+
+    for (const testCase of fixture.rejections) {
+      const envelope = resolveSessionInspectionEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionInspectionEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the session-outcome transport-rejection fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
