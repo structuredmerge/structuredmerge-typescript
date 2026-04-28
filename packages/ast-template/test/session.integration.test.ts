@@ -1041,6 +1041,72 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-request transport-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-405-template-directory-session-request-transport-rejection',
+      'template-directory-session-request-envelope-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionRequestEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionRequestEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the session-request envelope-application fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-406-template-directory-session-request-envelope-application',
+      'template-directory-session-request-envelope-application.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected: unknown;
+      }>;
+      rejections: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionRequestEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      const imported = importSessionRequestEnvelope(envelope);
+      expect(imported.error).toBeUndefined();
+      expect(runTemplateDirectorySessionRequest(imported.request as SessionRequestReport)).toEqual(
+        resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot)
+      );
+    }
+
+    for (const testCase of fixture.rejections) {
+      const envelope = resolveSessionRequestEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionRequestEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the session-runner-input fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
