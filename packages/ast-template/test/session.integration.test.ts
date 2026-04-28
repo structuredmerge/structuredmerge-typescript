@@ -12,6 +12,7 @@ import type {
   SessionCommand,
   SessionEntrypoint,
   SessionInvocation,
+  SessionOutcomeReport,
   SessionRequestReport,
   SessionRunnerPayload
 } from '../src/index';
@@ -23,6 +24,7 @@ import {
   importSessionCommandEnvelope,
   importSessionCommandPayloadEnvelope,
   importSessionEntrypointEnvelope,
+  importSessionOutcomeEnvelope,
   importSessionRequestEnvelope,
   importSessionRunnerPayloadEnvelope,
   importSessionRunnerRequestEnvelope,
@@ -66,6 +68,7 @@ import {
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
   sessionEntrypointEnvelope,
+  sessionOutcomeEnvelope,
   sessionRequestEnvelope,
   sessionRunnerPayloadEnvelope,
   sessionRunnerRequestEnvelope,
@@ -555,6 +558,33 @@ describe('template directory session report fixture', () => {
         )
       ).toEqual(section.expected);
       rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('conforms to the session-outcome transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-407-template-directory-session-outcome-transport-envelope',
+      'template-directory-session-outcome-envelope.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      expect(sessionOutcomeEnvelope(testCase.input as SessionOutcomeReport)).toEqual(
+        testCase.expected_envelope
+      );
+      expect(importSessionOutcomeEnvelope(testCase.expected_envelope)).toEqual({
+        outcome: testCase.input
+      });
     }
   });
 
