@@ -1498,6 +1498,30 @@ describe('template directory session report fixture', () => {
       );
     }
   });
+
+  it('conforms to the session-invocation-json-roundtrip fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-385-template-directory-session-invocation-json-roundtrip',
+      'template-directory-session-invocation-json-roundtrip.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionInvocationFixturePaths(testCase.input, fixtureRoot);
+      const roundTripped = JSON.parse(JSON.stringify(input)) as SessionInvocation;
+      expect(roundTripped).toEqual(input);
+    }
+  });
 });
 
 function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
