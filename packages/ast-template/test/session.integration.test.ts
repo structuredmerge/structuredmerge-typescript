@@ -1593,6 +1593,32 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-entrypoint transport-rejection fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-396-template-directory-session-entrypoint-transport-rejection',
+      'template-directory-session-entrypoint-envelope-rejection.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionEntrypointEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionEntrypointEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the session-command envelope-application fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
@@ -1630,6 +1656,48 @@ describe('template directory session report fixture', () => {
     for (const testCase of fixture.rejections) {
       const envelope = resolveSessionCommandEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
       expect(importSessionCommandEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the session-entrypoint envelope-application fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-397-template-directory-session-entrypoint-envelope-application',
+      'template-directory-session-entrypoint-envelope-application.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Readonly<Record<string, Record<string, unknown>>>;
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected: unknown;
+      }>;
+      rejections: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionEntrypointEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      const imported = importSessionEntrypointEnvelope(envelope);
+      expect(imported.error).toBeUndefined();
+      expect(
+        runTemplateDirectorySessionEntrypoint(imported.entrypoint as SessionEntrypoint, profiles)
+      ).toEqual(resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot));
+    }
+
+    for (const testCase of fixture.rejections) {
+      const envelope = resolveSessionEntrypointEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
+      expect(importSessionEntrypointEnvelope(envelope)).toEqual({
         error: testCase.expected_error
       });
     }
@@ -2066,6 +2134,12 @@ function resolveSessionInspectionExpectedPaths(value: unknown, fixtureRoot: stri
       fixtureRoot
     );
   }
+  return cloned;
+}
+
+function resolveSessionOutcomeExpectedPaths(value: unknown, fixtureRoot: string): unknown {
+  const cloned = JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  void fixtureRoot;
   return cloned;
 }
 
