@@ -92,6 +92,63 @@ export interface SessionRequestReport {
   resolved_options: unknown | null;
 }
 
+export const SESSION_REQUEST_TRANSPORT_VERSION = 1;
+
+export type SessionRequestTransportImportErrorCategory = 'kind_mismatch' | 'unsupported_version';
+
+export interface SessionRequestTransportImportError {
+  readonly category: SessionRequestTransportImportErrorCategory;
+  readonly message: string;
+}
+
+export interface SessionRequestEnvelope {
+  readonly kind: 'template_directory_session_request';
+  readonly version: typeof SESSION_REQUEST_TRANSPORT_VERSION;
+  readonly request: SessionRequestReport;
+}
+
+export function sessionRequestEnvelope(request: SessionRequestReport): SessionRequestEnvelope {
+  return {
+    kind: 'template_directory_session_request',
+    version: SESSION_REQUEST_TRANSPORT_VERSION,
+    request
+  };
+}
+
+export function importSessionRequestEnvelope(value: unknown): {
+  request?: SessionRequestReport;
+  error?: SessionRequestTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'template_directory_session_request'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected template_directory_session_request envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    request: SessionRequestReport;
+  };
+
+  if (envelope.version !== SESSION_REQUEST_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported template_directory_session_request envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { request: envelope.request };
+}
+
 export interface SessionRunnerRequest {
   request_kind: 'options' | 'profile';
   profile_name?: string;

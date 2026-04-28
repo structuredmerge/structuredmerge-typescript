@@ -12,6 +12,7 @@ import type {
   SessionCommand,
   SessionEntrypoint,
   SessionInvocation,
+  SessionRequestReport,
   SessionRunnerPayload
 } from '../src/index';
 import { readRelativeFileTree, writeRelativeFileTree } from '@structuredmerge/ast-merge';
@@ -22,6 +23,7 @@ import {
   importSessionCommandEnvelope,
   importSessionCommandPayloadEnvelope,
   importSessionEntrypointEnvelope,
+  importSessionRequestEnvelope,
   importSessionRunnerPayloadEnvelope,
   importSessionRunnerRequestEnvelope,
   applyTemplateDirectorySessionToDirectory,
@@ -64,6 +66,7 @@ import {
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
   sessionEntrypointEnvelope,
+  sessionRequestEnvelope,
   sessionRunnerPayloadEnvelope,
   sessionRunnerRequestEnvelope,
   sessionInvocationEnvelope
@@ -1006,6 +1009,36 @@ describe('template directory session report fixture', () => {
         profiles
       )
     ).toEqual(fixture.profile_blocked.expected);
+  });
+
+  it('conforms to the session-request transport-envelope fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-404-template-directory-session-request-transport-envelope',
+      'template-directory-session-request-envelope.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      cases: Array<{
+        label: string;
+        input: Record<string, unknown>;
+        expected_envelope: Record<string, unknown>;
+      }>;
+    };
+
+    for (const testCase of fixture.cases) {
+      const input = resolveSessionRequestFixturePaths(testCase.input, fixtureRoot);
+      const expected = resolveSessionRequestEnvelopeFixturePaths(
+        testCase.expected_envelope,
+        fixtureRoot
+      );
+
+      expect(sessionRequestEnvelope(input as SessionRequestReport)).toEqual(expected);
+      expect(importSessionRequestEnvelope(expected)).toEqual({ request: input });
+    }
   });
 
   it('conforms to the session-runner-input fixture', () => {
@@ -2249,6 +2282,24 @@ function resolveRequestFixturePaths(request: Record<string, unknown>, fixtureRoo
   const resolved = cloned.resolved_options as Record<string, unknown> | null | undefined;
   if (resolved) {
     resolveOptionsFixturePaths(resolved, fixtureRoot);
+  }
+  return cloned;
+}
+
+function resolveSessionRequestFixturePaths(request: Record<string, unknown>, fixtureRoot: string) {
+  return resolveRequestFixturePaths(request, fixtureRoot);
+}
+
+function resolveSessionRequestEnvelopeFixturePaths(
+  envelope: Record<string, unknown>,
+  fixtureRoot: string
+) {
+  const cloned = JSON.parse(JSON.stringify(envelope)) as Record<string, unknown>;
+  if (cloned.request && typeof cloned.request === 'object') {
+    cloned.request = resolveSessionRequestFixturePaths(
+      cloned.request as Record<string, unknown>,
+      fixtureRoot
+    );
   }
   return cloned;
 }
