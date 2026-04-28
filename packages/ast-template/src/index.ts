@@ -131,6 +131,65 @@ export interface SessionEntrypoint {
   request?: SessionRunnerRequest;
 }
 
+export const SESSION_ENTRYPOINT_TRANSPORT_VERSION = 1;
+
+export type SessionEntrypointTransportImportErrorCategory = 'kind_mismatch' | 'unsupported_version';
+
+export interface SessionEntrypointTransportImportError {
+  readonly category: SessionEntrypointTransportImportErrorCategory;
+  readonly message: string;
+}
+
+export interface SessionEntrypointEnvelope {
+  readonly kind: 'template_directory_session_entrypoint';
+  readonly version: typeof SESSION_ENTRYPOINT_TRANSPORT_VERSION;
+  readonly entrypoint: SessionEntrypoint;
+}
+
+export function sessionEntrypointEnvelope(
+  entrypoint: SessionEntrypoint
+): SessionEntrypointEnvelope {
+  return {
+    kind: 'template_directory_session_entrypoint',
+    version: SESSION_ENTRYPOINT_TRANSPORT_VERSION,
+    entrypoint
+  };
+}
+
+export function importSessionEntrypointEnvelope(value: unknown): {
+  entrypoint?: SessionEntrypoint;
+  error?: SessionEntrypointTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'template_directory_session_entrypoint'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected template_directory_session_entrypoint envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    entrypoint: SessionEntrypoint;
+  };
+
+  if (envelope.version !== SESSION_ENTRYPOINT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported template_directory_session_entrypoint envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { entrypoint: envelope.entrypoint };
+}
+
 export interface SessionEntrypointReport {
   source_kind: '' | 'payload' | 'request';
   runner_request: SessionRunnerRequest;
