@@ -1603,6 +1603,57 @@ describe('template directory session report fixture', () => {
     }
   });
 
+  it('conforms to the session-command-payload envelope-application fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-394-template-directory-session-command-payload-envelope-application',
+      'template-directory-session-command-payload-envelope-application.json'
+    );
+    const fixtureRoot = path.dirname(fixturePath);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+      profiles: Readonly<Record<string, Record<string, unknown>>>;
+      cases: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected: unknown;
+      }>;
+      rejections: Array<{
+        label: string;
+        envelope: Record<string, unknown>;
+        expected_error: Record<string, unknown>;
+      }>;
+    };
+    const profiles = normalizeProfiles(fixture.profiles);
+
+    for (const testCase of fixture.cases) {
+      const envelope = resolveSessionCommandPayloadEnvelopeFixturePaths(
+        testCase.envelope,
+        fixtureRoot
+      );
+      const imported = importSessionCommandPayloadEnvelope(envelope);
+      expect(imported.error).toBeUndefined();
+      expect(
+        runTemplateDirectorySessionCommandPayload(
+          imported.payload as SessionCommandPayload,
+          profiles
+        )
+      ).toEqual(resolveSessionDispatchExpectedPaths(testCase.expected, fixtureRoot));
+    }
+
+    for (const testCase of fixture.rejections) {
+      const envelope = resolveSessionCommandPayloadEnvelopeFixturePaths(
+        testCase.envelope,
+        fixtureRoot
+      );
+      expect(importSessionCommandPayloadEnvelope(envelope)).toEqual({
+        error: testCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the session-invocation-report fixture', () => {
     const fixturePath = path.resolve(
       process.cwd(),
