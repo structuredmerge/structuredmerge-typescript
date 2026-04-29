@@ -240,6 +240,12 @@ export interface StructuredEditExecutionReport {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditExecutionReportEnvelope {
+  readonly kind: 'structured_edit_execution_report';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly report: StructuredEditExecutionReport;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;
@@ -806,6 +812,50 @@ export function importStructuredEditApplicationEnvelope(value: unknown): {
   }
 
   return { application: envelope.application };
+}
+
+export function structuredEditExecutionReportEnvelope(
+  report: StructuredEditExecutionReport
+): StructuredEditExecutionReportEnvelope {
+  return {
+    kind: 'structured_edit_execution_report',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    report
+  };
+}
+
+export function importStructuredEditExecutionReportEnvelope(value: unknown): {
+  report?: StructuredEditExecutionReport;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_execution_report'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_execution_report envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    report: StructuredEditExecutionReport;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_execution_report envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { report: envelope.report };
 }
 
 export function classifyTemplateTargetPath(path: string): TemplateTargetClassification {
