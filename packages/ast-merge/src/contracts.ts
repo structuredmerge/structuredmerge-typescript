@@ -246,6 +246,11 @@ export interface StructuredEditExecutionReportEnvelope {
   readonly report: StructuredEditExecutionReport;
 }
 
+export interface StructuredEditBatchRequest {
+  readonly requests: readonly StructuredEditRequest[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;

@@ -45,6 +45,7 @@ import type {
   StructuredEditResult,
   StructuredEditApplication,
   StructuredEditApplicationEnvelope,
+  StructuredEditBatchRequest,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
   PolicyReference,
@@ -942,6 +943,16 @@ interface StructuredEditExecutionReportEnvelopeApplicationFixture {
     label: string;
     envelope: StructuredEditExecutionReportEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditBatchRequestFixture {
+  cases: Array<{
+    label: string;
+    batch_request: {
+      requests: StructuredEditRequestFixture['cases'][number]['request'][];
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -2387,6 +2398,15 @@ function normalizeStructuredEditExecutionReportEnvelope(
     kind: raw.kind,
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     report: normalizeStructuredEditExecutionReport(raw.report)
+  };
+}
+
+function normalizeStructuredEditBatchRequest(
+  raw: StructuredEditBatchRequestFixture['cases'][number]['batch_request']
+): StructuredEditBatchRequest {
+  return {
+    requests: raw.requests.map((request) => normalizeStructuredEditRequest(request)),
+    metadata: raw.metadata
   };
 }
 
@@ -6343,6 +6363,28 @@ describe('ast-merge shared fixtures', () => {
         error: rejectionCase.expected_error
       });
     }
+  });
+
+  it('conforms to the slice-442 structured-edit batch request fixture', () => {
+    const fixture = readFixture<StructuredEditBatchRequestFixture>(
+      ...diagnosticsFixturePath('structured_edit_batch_request')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            batchRequest: normalizeStructuredEditBatchRequest(entry.batch_request)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        batchRequest: normalizeStructuredEditBatchRequest(entry.batch_request)
+      }))
+    );
   });
 
   it('conforms to the slice-211 projected child-review cases fixture', () => {
