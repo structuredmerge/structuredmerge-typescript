@@ -173,6 +173,20 @@ export interface StructuredEditOperationProfile {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditDestinationProfile {
+  readonly resolutionKind: string;
+  readonly resolutionSource: string;
+  readonly anchorBoundary: string;
+  readonly resolutionFamily: string;
+  readonly resolutionSourceFamily: string;
+  readonly anchorBoundaryFamily: string;
+  readonly knownResolutionKind: boolean;
+  readonly knownResolutionSource: boolean;
+  readonly knownAnchorBoundary: boolean;
+  readonly usedIfMissing: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;
