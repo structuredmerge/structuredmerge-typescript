@@ -253,6 +253,18 @@ export interface StructuredEditProviderExecutionRequestEnvelope {
   readonly executionRequest: StructuredEditProviderExecutionRequest;
 }
 
+export interface StructuredEditProviderExecutionApplication {
+  readonly executionRequest: StructuredEditProviderExecutionRequest;
+  readonly report: StructuredEditExecutionReport;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderExecutionApplicationEnvelope {
+  readonly kind: 'structured_edit_provider_execution_application';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly providerExecutionApplication: StructuredEditProviderExecutionApplication;
+}
+
 export interface StructuredEditExecutionReportEnvelope {
   readonly kind: 'structured_edit_execution_report';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -273,6 +285,18 @@ export interface StructuredEditProviderBatchExecutionRequestEnvelope {
   readonly kind: 'structured_edit_provider_batch_execution_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
   readonly batchExecutionRequest: StructuredEditProviderBatchExecutionRequest;
+}
+
+export interface StructuredEditProviderBatchExecutionReport {
+  readonly applications: readonly StructuredEditProviderExecutionApplication[];
+  readonly diagnostics: readonly Diagnostic[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderBatchExecutionReportEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_report';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchReport: StructuredEditProviderBatchExecutionReport;
 }
 
 export interface StructuredEditBatchReport {
@@ -900,6 +924,54 @@ export function importStructuredEditProviderExecutionRequestEnvelope(value: unkn
   return { executionRequest: envelope.executionRequest ?? envelope.execution_request };
 }
 
+export function structuredEditProviderExecutionApplicationEnvelope(
+  providerExecutionApplication: StructuredEditProviderExecutionApplication
+): StructuredEditProviderExecutionApplicationEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_application',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    providerExecutionApplication
+  };
+}
+
+export function importStructuredEditProviderExecutionApplicationEnvelope(value: unknown): {
+  providerExecutionApplication?: StructuredEditProviderExecutionApplication;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_application'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_application envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    providerExecutionApplication?: StructuredEditProviderExecutionApplication;
+    provider_execution_application?: StructuredEditProviderExecutionApplication;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_application envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    providerExecutionApplication:
+      envelope.providerExecutionApplication ?? envelope.provider_execution_application
+  };
+}
+
 export function structuredEditExecutionReportEnvelope(
   report: StructuredEditExecutionReport
 ): StructuredEditExecutionReportEnvelope {
@@ -988,6 +1060,53 @@ export function importStructuredEditProviderBatchExecutionRequestEnvelope(value:
 
   return {
     batchExecutionRequest: envelope.batchExecutionRequest ?? envelope.batch_execution_request
+  };
+}
+
+export function structuredEditProviderBatchExecutionReportEnvelope(
+  batchReport: StructuredEditProviderBatchExecutionReport
+): StructuredEditProviderBatchExecutionReportEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_report',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReport
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionReportEnvelope(value: unknown): {
+  batchReport?: StructuredEditProviderBatchExecutionReport;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_batch_execution_report'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_batch_execution_report envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchReport?: StructuredEditProviderBatchExecutionReport;
+    batch_report?: StructuredEditProviderBatchExecutionReport;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_report envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchReport: envelope.batchReport ?? envelope.batch_report
   };
 }
 

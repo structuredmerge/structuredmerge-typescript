@@ -50,6 +50,10 @@ import type {
   StructuredEditBatchRequest,
   StructuredEditProviderBatchExecutionRequest,
   StructuredEditProviderBatchExecutionRequestEnvelope,
+  StructuredEditProviderBatchExecutionReport,
+  StructuredEditProviderBatchExecutionReportEnvelope,
+  StructuredEditProviderExecutionApplication,
+  StructuredEditProviderExecutionApplicationEnvelope,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -105,6 +109,8 @@ import {
   structuredEditApplicationEnvelope,
   structuredEditBatchReportEnvelope,
   structuredEditProviderBatchExecutionRequestEnvelope,
+  structuredEditProviderBatchExecutionReportEnvelope,
+  structuredEditProviderExecutionApplicationEnvelope,
   structuredEditProviderExecutionRequestEnvelope,
   structuredEditExecutionReportEnvelope,
   summarizeProjectedChildReviewGroupProgress,
@@ -159,6 +165,8 @@ import {
   importStructuredEditApplicationEnvelope,
   importStructuredEditBatchReportEnvelope,
   importStructuredEditProviderBatchExecutionRequestEnvelope,
+  importStructuredEditProviderBatchExecutionReportEnvelope,
+  importStructuredEditProviderExecutionApplicationEnvelope,
   importStructuredEditProviderExecutionRequestEnvelope,
   importStructuredEditExecutionReportEnvelope,
   reviewReplayBundleInputs,
@@ -970,6 +978,48 @@ interface StructuredEditProviderExecutionRequestEnvelopeApplicationFixture {
   }>;
 }
 
+interface StructuredEditProviderExecutionApplicationFixture {
+  cases: Array<{
+    label: string;
+    application: {
+      execution_request: StructuredEditProviderExecutionRequestFixture['cases'][number]['execution_request'];
+      report: StructuredEditExecutionReportFixture['cases'][number]['report'];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderExecutionApplicationEnvelopeFixture {
+  structured_edit_provider_execution_application: StructuredEditProviderExecutionApplicationFixture['cases'][number]['application'];
+  expected_envelope: {
+    kind: StructuredEditProviderExecutionApplicationEnvelope['kind'];
+    version: number;
+    provider_execution_application: StructuredEditProviderExecutionApplicationFixture['cases'][number]['application'];
+  };
+}
+
+interface StructuredEditProviderExecutionApplicationEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      provider_execution_application: StructuredEditProviderExecutionApplicationFixture['cases'][number]['application'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionApplicationEnvelopeApplicationFixture {
+  structured_edit_provider_execution_application_envelope: StructuredEditProviderExecutionApplicationEnvelopeFixture['expected_envelope'];
+  expected_application: StructuredEditProviderExecutionApplicationFixture['cases'][number]['application'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderExecutionApplicationEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
 interface StructuredEditExecutionReportEnvelopeFixture {
   structured_edit_execution_report: StructuredEditExecutionReportFixture['cases'][number]['report'];
   expected_envelope: {
@@ -1048,6 +1098,48 @@ interface StructuredEditProviderBatchExecutionRequestEnvelopeApplicationFixture 
   cases: Array<{
     label: string;
     envelope: StructuredEditProviderBatchExecutionRequestEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionReportFixture {
+  cases: Array<{
+    label: string;
+    batch_report: {
+      applications: StructuredEditProviderExecutionApplicationFixture['cases'][number]['application'][];
+      diagnostics: DiagnosticFixture['diagnostics'];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionReportEnvelopeFixture {
+  structured_edit_provider_batch_execution_report: StructuredEditProviderBatchExecutionReportFixture['cases'][number]['batch_report'];
+  expected_envelope: {
+    kind: StructuredEditProviderBatchExecutionReportEnvelope['kind'];
+    version: number;
+    batch_report: StructuredEditProviderBatchExecutionReportFixture['cases'][number]['batch_report'];
+  };
+}
+
+interface StructuredEditProviderBatchExecutionReportEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      batch_report: StructuredEditProviderBatchExecutionReportFixture['cases'][number]['batch_report'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionReportEnvelopeApplicationFixture {
+  structured_edit_provider_batch_execution_report_envelope: StructuredEditProviderBatchExecutionReportEnvelopeFixture['expected_envelope'];
+  expected_batch_report: StructuredEditProviderBatchExecutionReportFixture['cases'][number]['batch_report'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderBatchExecutionReportEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
   }>;
 }
@@ -2540,6 +2632,28 @@ function normalizeStructuredEditProviderExecutionRequest(
   };
 }
 
+function normalizeStructuredEditProviderExecutionApplication(
+  raw: StructuredEditProviderExecutionApplicationFixture['cases'][number]['application']
+): StructuredEditProviderExecutionApplication {
+  return {
+    executionRequest: normalizeStructuredEditProviderExecutionRequest(raw.execution_request),
+    report: normalizeStructuredEditExecutionReport(raw.report),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionApplicationEnvelope(
+  raw: StructuredEditProviderExecutionApplicationEnvelopeFixture['expected_envelope']
+): StructuredEditProviderExecutionApplicationEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    providerExecutionApplication: normalizeStructuredEditProviderExecutionApplication(
+      raw.provider_execution_application
+    )
+  };
+}
+
 function normalizeStructuredEditProviderExecutionRequestEnvelope(
   raw: StructuredEditProviderExecutionRequestEnvelopeFixture['expected_envelope']
 ): StructuredEditProviderExecutionRequestEnvelope {
@@ -2577,6 +2691,28 @@ function normalizeStructuredEditProviderBatchExecutionRequest(
       normalizeStructuredEditProviderExecutionRequest(request)
     ),
     metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionReport(
+  raw: StructuredEditProviderBatchExecutionReportFixture['cases'][number]['batch_report']
+): StructuredEditProviderBatchExecutionReport {
+  return {
+    applications: raw.applications.map((application) =>
+      normalizeStructuredEditProviderExecutionApplication(application)
+    ),
+    diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionReportEnvelope(
+  raw: StructuredEditProviderBatchExecutionReportEnvelopeFixture['expected_envelope']
+): StructuredEditProviderBatchExecutionReportEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReport: normalizeStructuredEditProviderBatchExecutionReport(raw.batch_report)
   };
 }
 
@@ -6599,6 +6735,88 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-461 structured-edit provider execution application fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionApplicationFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_application')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            application: normalizeStructuredEditProviderExecutionApplication(entry.application)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        application: normalizeStructuredEditProviderExecutionApplication(entry.application)
+      }))
+    );
+  });
+
+  it('conforms to the slice-462 structured-edit provider execution application transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionApplicationEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_application_envelope')
+    );
+    const application = normalizeStructuredEditProviderExecutionApplication(
+      fixture.structured_edit_provider_execution_application
+    );
+    const expected = normalizeStructuredEditProviderExecutionApplicationEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(structuredEditProviderExecutionApplicationEnvelope(application)).toEqual(expected);
+    expect(importStructuredEditProviderExecutionApplicationEnvelope(expected)).toEqual({
+      providerExecutionApplication: application
+    });
+  });
+
+  it('conforms to the slice-463 structured-edit provider execution application transport rejection fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionApplicationEnvelopeRejectionFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_application_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutionApplicationEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-464 structured-edit provider execution application envelope application fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderExecutionApplicationEnvelopeApplicationFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_execution_application_envelope_application'
+        )
+      );
+
+    expect(
+      importStructuredEditProviderExecutionApplicationEnvelope(
+        normalizeStructuredEditProviderExecutionApplicationEnvelope(
+          fixture.structured_edit_provider_execution_application_envelope
+        )
+      )
+    ).toEqual({
+      providerExecutionApplication: normalizeStructuredEditProviderExecutionApplication(
+        fixture.expected_application
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutionApplicationEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
   it('conforms to the slice-439 structured-edit execution report transport envelope fixture', () => {
     const fixture = readFixture<StructuredEditExecutionReportEnvelopeFixture>(
       ...diagnosticsFixturePath('structured_edit_execution_report_envelope')
@@ -6751,6 +6969,90 @@ describe('ast-merge shared fixtures', () => {
     for (const rejectionCase of fixture.cases) {
       expect(
         importStructuredEditProviderBatchExecutionRequestEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-465 structured-edit provider batch execution report fixture', () => {
+    const fixture = readFixture<StructuredEditProviderBatchExecutionReportFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_batch_execution_report')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            batchReport: normalizeStructuredEditProviderBatchExecutionReport(entry.batch_report)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        batchReport: normalizeStructuredEditProviderBatchExecutionReport(entry.batch_report)
+      }))
+    );
+  });
+
+  it('conforms to the slice-466 structured-edit provider batch execution report transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProviderBatchExecutionReportEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_batch_execution_report_envelope')
+    );
+    const batchReport = normalizeStructuredEditProviderBatchExecutionReport(
+      fixture.structured_edit_provider_batch_execution_report
+    );
+    const expected = normalizeStructuredEditProviderBatchExecutionReportEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(structuredEditProviderBatchExecutionReportEnvelope(batchReport)).toEqual(expected);
+    expect(importStructuredEditProviderBatchExecutionReportEnvelope(expected)).toEqual({
+      batchReport
+    });
+  });
+
+  it('conforms to the slice-467 structured-edit provider batch execution report transport rejection fixture', () => {
+    const fixture = readFixture<StructuredEditProviderBatchExecutionReportEnvelopeRejectionFixture>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_report_envelope_rejection'
+      )
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReportEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-468 structured-edit provider batch execution report envelope application fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderBatchExecutionReportEnvelopeApplicationFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_batch_execution_report_envelope_application'
+        )
+      );
+
+    expect(
+      importStructuredEditProviderBatchExecutionReportEnvelope(
+        normalizeStructuredEditProviderBatchExecutionReportEnvelope(
+          fixture.structured_edit_provider_batch_execution_report_envelope
+        )
+      )
+    ).toEqual({
+      batchReport: normalizeStructuredEditProviderBatchExecutionReport(
+        fixture.expected_batch_report
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReportEnvelope(rejectionCase.envelope)
       ).toEqual({
         error: rejectionCase.expected_error
       });
