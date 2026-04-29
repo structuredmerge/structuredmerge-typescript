@@ -36,6 +36,7 @@ import type {
   DiagnosticSeverity,
   DiscoveredSurface,
   FamilyFeatureProfile,
+  StructuredEditStructureProfile,
   PolicyReference,
   PolicySurface,
   Diagnostic,
@@ -440,8 +441,7 @@ interface MiniTemplateTreeFamilyMergeCallbackFixture {
   };
 }
 
-interface MiniTemplateTreeMultiFamilyMergeCallbackFixture
-  extends MiniTemplateTreeFamilyMergeCallbackFixture {}
+interface MiniTemplateTreeMultiFamilyMergeCallbackFixture extends MiniTemplateTreeFamilyMergeCallbackFixture {}
 
 interface MiniTemplateTreeMultiFamilyRunReportFixture extends MiniTemplateTreeRunReportFixture {}
 
@@ -716,6 +716,20 @@ interface DelegatedChildOperationFixture {
     language_chain: string[];
     surface: SurfaceOwnershipFixture['surface'];
   };
+}
+
+interface StructuredEditStructureProfileFixture {
+  cases: Array<{
+    label: string;
+    profile: {
+      owner_scope: string;
+      owner_selector: string;
+      owner_selector_family?: string;
+      known_owner_selector: boolean;
+      supported_comment_regions: string[];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
 }
 
 interface ProjectedChildReviewCasesFixture {
@@ -2003,6 +2017,19 @@ function normalizeDelegatedChildOperation(
   };
 }
 
+function normalizeStructuredEditStructureProfile(
+  raw: StructuredEditStructureProfileFixture['cases'][number]['profile']
+): StructuredEditStructureProfile {
+  return {
+    ownerScope: raw.owner_scope,
+    ownerSelector: raw.owner_selector,
+    ownerSelectorFamily: raw.owner_selector_family,
+    knownOwnerSelector: raw.known_owner_selector,
+    supportedCommentRegions: raw.supported_comment_regions,
+    metadata: raw.metadata
+  };
+}
+
 function normalizeProjectedChildReviewCase(
   raw: ProjectedChildReviewCasesFixture['cases'][number]
 ): ProjectedChildReviewCase {
@@ -2578,13 +2605,24 @@ describe('ast-merge shared fixtures', () => {
       'slice-24-manifest',
       'family-feature-profiles.json'
     );
-    const planFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_plan') ??
-      []) as string[];
-    const applyFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_apply') ??
-      []) as string[];
+    const planFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_plan'
+    ) ?? []) as string[];
+    const applyFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_apply'
+    ) ?? []) as string[];
     const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
     const applyFixture = readFixture<MiniTemplateTreeApplyFixture>(...applyFixturePath);
-    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...planFixturePath.slice(0, -1));
+    const fixtureDir = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      ...planFixturePath.slice(0, -1)
+    );
     const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
     const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
     const templateSourcePaths = Object.keys(templateContents).sort();
@@ -2638,10 +2676,16 @@ describe('ast-merge shared fixtures', () => {
       'slice-24-manifest',
       'family-feature-profiles.json'
     );
-    const planFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_plan') ??
-      []) as string[];
-    const applyFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_apply') ??
-      []) as string[];
+    const planFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_plan'
+    ) ?? []) as string[];
+    const applyFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_apply'
+    ) ?? []) as string[];
     const convergenceFixturePath = (conformanceFixturePath(
       manifest,
       'diagnostics',
@@ -2649,8 +2693,15 @@ describe('ast-merge shared fixtures', () => {
     ) ?? []) as string[];
     const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
     const applyFixture = readFixture<MiniTemplateTreeApplyFixture>(...applyFixturePath);
-    const convergenceFixture = readFixture<MiniTemplateTreeConvergenceFixture>(...convergenceFixturePath);
-    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...planFixturePath.slice(0, -1));
+    const convergenceFixture = readFixture<MiniTemplateTreeConvergenceFixture>(
+      ...convergenceFixturePath
+    );
+    const fixtureDir = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      ...planFixturePath.slice(0, -1)
+    );
     const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
     const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
     const templateSourcePaths = Object.keys(templateContents).sort();
@@ -2698,13 +2749,24 @@ describe('ast-merge shared fixtures', () => {
       'slice-24-manifest',
       'family-feature-profiles.json'
     );
-    const planFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_plan') ??
-      []) as string[];
-    const runFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_run') ??
-      []) as string[];
+    const planFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_plan'
+    ) ?? []) as string[];
+    const runFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_run'
+    ) ?? []) as string[];
     const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
     const runFixture = readFixture<MiniTemplateTreeRunFixture>(...runFixturePath);
-    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...planFixturePath.slice(0, -1));
+    const fixtureDir = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      ...planFixturePath.slice(0, -1)
+    );
     const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
     const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
     const templateSourcePaths = Object.keys(templateContents).sort();
@@ -2721,7 +2783,9 @@ describe('ast-merge shared fixtures', () => {
         const fixtureResult = runFixture.merge_results[entry.destinationPath ?? ''];
         return {
           ok: fixtureResult.ok,
-          diagnostics: fixtureResult.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          diagnostics: fixtureResult.diagnostics.map((diagnostic) =>
+            normalizeDiagnostic(diagnostic)
+          ),
           output: fixtureResult.output ?? undefined,
           policies: fixtureResult.policies
         };
@@ -2781,10 +2845,16 @@ describe('ast-merge shared fixtures', () => {
       'slice-24-manifest',
       'family-feature-profiles.json'
     );
-    const planFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_plan') ??
-      []) as string[];
-    const runFixturePath = (conformanceFixturePath(manifest, 'diagnostics', 'mini_template_tree_run') ??
-      []) as string[];
+    const planFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_plan'
+    ) ?? []) as string[];
+    const runFixturePath = (conformanceFixturePath(
+      manifest,
+      'diagnostics',
+      'mini_template_tree_run'
+    ) ?? []) as string[];
     const reportFixturePath = (conformanceFixturePath(
       manifest,
       'diagnostics',
@@ -2793,7 +2863,12 @@ describe('ast-merge shared fixtures', () => {
     const planFixture = readFixture<MiniTemplateTreePlanFixture>(...planFixturePath);
     const runFixture = readFixture<MiniTemplateTreeRunFixture>(...runFixturePath);
     const reportFixture = readFixture<MiniTemplateTreeRunReportFixture>(...reportFixturePath);
-    const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...planFixturePath.slice(0, -1));
+    const fixtureDir = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      ...planFixturePath.slice(0, -1)
+    );
     const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
     const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
     const templateSourcePaths = Object.keys(templateContents).sort();
@@ -2810,7 +2885,9 @@ describe('ast-merge shared fixtures', () => {
         const fixtureResult = runFixture.merge_results[entry.destinationPath ?? ''];
         return {
           ok: fixtureResult.ok,
-          diagnostics: fixtureResult.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+          diagnostics: fixtureResult.diagnostics.map((diagnostic) =>
+            normalizeDiagnostic(diagnostic)
+          ),
           output: fixtureResult.output ?? undefined,
           policies: fixtureResult.policies
         };
@@ -2953,11 +3030,23 @@ describe('ast-merge shared fixtures', () => {
       (entry) => {
         switch (entry.classification.family) {
           case 'markdown':
-            return mergeMarkdown(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'markdown');
+            return mergeMarkdown(
+              entry.preparedTemplateContent ?? '',
+              entry.destinationContent ?? '',
+              'markdown'
+            );
           case 'toml':
-            return mergeToml(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'toml');
+            return mergeToml(
+              entry.preparedTemplateContent ?? '',
+              entry.destinationContent ?? '',
+              'toml'
+            );
           case 'ruby':
-            return mergeRuby(entry.preparedTemplateContent ?? '', entry.destinationContent ?? '', 'ruby');
+            return mergeRuby(
+              entry.preparedTemplateContent ?? '',
+              entry.destinationContent ?? '',
+              'ruby'
+            );
           default:
             return {
               ok: false,
@@ -3038,7 +3127,9 @@ describe('ast-merge shared fixtures', () => {
       'mini_template_tree_multi_family_run_report'
     ) ?? []) as string[];
     const fixture = readFixture<MiniTemplateTreeMultiFamilyMergeCallbackFixture>(...fixturePath);
-    const reportFixture = readFixture<MiniTemplateTreeMultiFamilyRunReportFixture>(...reportFixturePath);
+    const reportFixture = readFixture<MiniTemplateTreeMultiFamilyRunReportFixture>(
+      ...reportFixturePath
+    );
     const fixtureDir = path.resolve(process.cwd(), '..', 'fixtures', ...fixturePath.slice(0, -1));
     const templateContents = readRelativeFileTree(path.join(fixtureDir, 'template'));
     const destinationContents = readRelativeFileTree(path.join(fixtureDir, 'destination'));
@@ -3122,7 +3213,10 @@ describe('ast-merge shared fixtures', () => {
     const destinationRoot = path.join(tempRoot, 'destination');
 
     try {
-      writeRelativeFileTreeFromLibrary(destinationRoot, readRelativeFileTree(path.join(fixtureDir, 'destination')));
+      writeRelativeFileTreeFromLibrary(
+        destinationRoot,
+        readRelativeFileTree(path.join(fixtureDir, 'destination'))
+      );
 
       const firstRun = applyTemplateTreeExecutionToDirectory(
         path.join(fixtureDir, 'template'),
@@ -3145,7 +3239,9 @@ describe('ast-merge shared fixtures', () => {
         summary: firstActual.summary
       }).toEqual(fixture.expected_first_report);
 
-      expect(readRelativeFileTreeFromLibrary(destinationRoot)).toEqual(fixture.expected_destination_files);
+      expect(readRelativeFileTreeFromLibrary(destinationRoot)).toEqual(
+        fixture.expected_destination_files
+      );
 
       const secondRun = applyTemplateTreeExecutionToDirectory(
         path.join(fixtureDir, 'template'),
@@ -3189,7 +3285,10 @@ describe('ast-merge shared fixtures', () => {
     const destinationRoot = path.join(tempRoot, 'destination');
 
     try {
-      writeRelativeFileTreeFromLibrary(destinationRoot, readRelativeFileTree(path.join(fixtureDir, 'destination')));
+      writeRelativeFileTreeFromLibrary(
+        destinationRoot,
+        readRelativeFileTree(path.join(fixtureDir, 'destination'))
+      );
 
       const firstRun = applyTemplateTreeExecutionToDirectory(
         path.join(fixtureDir, 'template'),
@@ -3371,24 +3470,26 @@ describe('ast-merge shared fixtures', () => {
           omitted_paths: [...(applyActual.preview?.omittedPaths ?? [])]
         },
         run_report: {
-          entries: applyActual.runReport?.entries.map((entry) => ({
-            template_source_path: entry.templateSourcePath,
-            logical_destination_path: entry.logicalDestinationPath,
-            destination_path: entry.destinationPath ?? null,
-            execution_action: entry.executionAction,
-            status: entry.status
-          })) ?? [],
+          entries:
+            applyActual.runReport?.entries.map((entry) => ({
+              template_source_path: entry.templateSourcePath,
+              logical_destination_path: entry.logicalDestinationPath,
+              destination_path: entry.destinationPath ?? null,
+              execution_action: entry.executionAction,
+              status: entry.status
+            })) ?? [],
           summary: applyActual.runReport?.summary
         },
         apply_report: {
-          entries: applyActual.applyReport?.entries.map((entry) => ({
-            template_source_path: entry.templateSourcePath,
-            logical_destination_path: entry.logicalDestinationPath,
-            destination_path: entry.destinationPath ?? null,
-            execution_action: entry.executionAction,
-            status: entry.status,
-            written: entry.written
-          })) ?? [],
+          entries:
+            applyActual.applyReport?.entries.map((entry) => ({
+              template_source_path: entry.templateSourcePath,
+              logical_destination_path: entry.logicalDestinationPath,
+              destination_path: entry.destinationPath ?? null,
+              execution_action: entry.executionAction,
+              status: entry.status,
+              written: entry.written
+            })) ?? [],
           summary: applyActual.applyReport?.summary
         }
       }).toEqual(fixture.apply_run.expected);
@@ -5596,6 +5697,28 @@ describe('ast-merge shared fixtures', () => {
     expect(
       JSON.parse(JSON.stringify(normalizeDelegatedChildOperation(childOperationFixture.operation)))
     ).toEqual(normalizeDelegatedChildOperation(childOperationFixture.operation));
+  });
+
+  it('conforms to the slice-419 structured-edit structure-profile fixture', () => {
+    const fixture = readFixture<StructuredEditStructureProfileFixture>(
+      ...diagnosticsFixturePath('structured_edit_structure_profile')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            profile: normalizeStructuredEditStructureProfile(entry.profile)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        profile: normalizeStructuredEditStructureProfile(entry.profile)
+      }))
+    );
   });
 
   it('conforms to the slice-211 projected child-review cases fixture', () => {

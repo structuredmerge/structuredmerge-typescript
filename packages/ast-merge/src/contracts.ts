@@ -123,6 +123,15 @@ export interface FamilyFeatureProfile {
   readonly supportedPolicies: readonly PolicyReference[];
 }
 
+export interface StructuredEditStructureProfile {
+  readonly ownerScope: string;
+  readonly ownerSelector: string;
+  readonly ownerSelectorFamily?: string;
+  readonly knownOwnerSelector: boolean;
+  readonly supportedCommentRegions: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;
@@ -1389,7 +1398,10 @@ export function applyTemplateTreeExecutionToDirectory(
   );
 
   const filesToWrite: Record<string, string> = {};
-  for (const filePath of [...runResult.applyResult.createdPaths, ...runResult.applyResult.updatedPaths]) {
+  for (const filePath of [
+    ...runResult.applyResult.createdPaths,
+    ...runResult.applyResult.updatedPaths
+  ]) {
     const content = runResult.applyResult.resultFiles[filePath];
     if (content !== undefined) {
       filesToWrite[filePath] = content;
@@ -1549,7 +1561,11 @@ function recordTemplateApplyOutput(
   }
 
   resultFiles[entry.destinationPath] = output;
-  if (entry.destinationExists && entry.destinationContent !== undefined && entry.destinationContent === output) {
+  if (
+    entry.destinationExists &&
+    entry.destinationContent !== undefined &&
+    entry.destinationContent === output
+  ) {
     keptPaths.push(entry.destinationPath);
   } else if (entry.destinationExists) {
     updatedPaths.push(entry.destinationPath);

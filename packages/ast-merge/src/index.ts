@@ -39,6 +39,7 @@ export type {
   ReviewDiagnosticReason,
   MergeResult,
   FamilyFeatureProfile,
+  StructuredEditStructureProfile,
   TemplateTargetClassification,
   TemplateDestinationContext,
   TemplateTokenConfig,
