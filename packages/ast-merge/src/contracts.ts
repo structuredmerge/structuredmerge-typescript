@@ -146,6 +146,21 @@ export interface StructuredEditSelectionProfile {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditMatchProfile {
+  readonly startBoundary: string;
+  readonly startBoundaryFamily?: string;
+  readonly knownStartBoundary: boolean;
+  readonly endBoundary: string;
+  readonly endBoundaryFamily?: string;
+  readonly knownEndBoundary: boolean;
+  readonly payloadKind: string;
+  readonly payloadFamily?: string;
+  readonly knownPayloadKind: boolean;
+  readonly commentAnchored: boolean;
+  readonly trailingGapExtended: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;

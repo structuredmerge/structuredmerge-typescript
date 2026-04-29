@@ -41,6 +41,7 @@ export type {
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
+  StructuredEditMatchProfile,
   TemplateTargetClassification,
   TemplateDestinationContext,
   TemplateTokenConfig,
