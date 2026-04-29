@@ -39,6 +39,7 @@ import type {
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditMatchProfile,
+  StructuredEditOperationProfile,
   PolicyReference,
   PolicySurface,
   Diagnostic,
@@ -768,6 +769,23 @@ interface StructuredEditMatchProfileFixture {
       known_payload_kind: boolean;
       comment_anchored: boolean;
       trailing_gap_extended: boolean;
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditOperationProfileFixture {
+  cases: Array<{
+    label: string;
+    profile: {
+      operation_kind: string;
+      operation_family?: string;
+      known_operation_kind: boolean;
+      source_requirement: string;
+      destination_requirement: string;
+      replacement_source: string;
+      captures_source_text: boolean;
+      supports_if_missing: boolean;
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -2104,6 +2122,22 @@ function normalizeStructuredEditMatchProfile(
     knownPayloadKind: raw.known_payload_kind,
     commentAnchored: raw.comment_anchored,
     trailingGapExtended: raw.trailing_gap_extended,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditOperationProfile(
+  raw: StructuredEditOperationProfileFixture['cases'][number]['profile']
+): StructuredEditOperationProfile {
+  return {
+    operationKind: raw.operation_kind,
+    operationFamily: raw.operation_family,
+    knownOperationKind: raw.known_operation_kind,
+    sourceRequirement: raw.source_requirement,
+    destinationRequirement: raw.destination_requirement,
+    replacementSource: raw.replacement_source,
+    capturesSourceText: raw.captures_source_text,
+    supportsIfMissing: raw.supports_if_missing,
     metadata: raw.metadata
   };
 }
@@ -5839,6 +5873,28 @@ describe('ast-merge shared fixtures', () => {
       fixture.cases.map((entry) => ({
         label: entry.label,
         profile: normalizeStructuredEditMatchProfile(entry.profile)
+      }))
+    );
+  });
+
+  it('conforms to the slice-422 structured-edit operation-profile fixture', () => {
+    const fixture = readFixture<StructuredEditOperationProfileFixture>(
+      ...diagnosticsFixturePath('structured_edit_operation_profile')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            profile: normalizeStructuredEditOperationProfile(entry.profile)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        profile: normalizeStructuredEditOperationProfile(entry.profile)
       }))
     );
   });

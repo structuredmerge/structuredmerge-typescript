@@ -161,6 +161,18 @@ export interface StructuredEditMatchProfile {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditOperationProfile {
+  readonly operationKind: string;
+  readonly operationFamily?: string;
+  readonly knownOperationKind: boolean;
+  readonly sourceRequirement: string;
+  readonly destinationRequirement: string;
+  readonly replacementSource: string;
+  readonly capturesSourceText: boolean;
+  readonly supportsIfMissing: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;

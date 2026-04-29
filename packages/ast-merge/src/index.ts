@@ -42,6 +42,7 @@ export type {
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditMatchProfile,
+  StructuredEditOperationProfile,
   TemplateTargetClassification,
   TemplateDestinationContext,
   TemplateTokenConfig,
