@@ -187,6 +187,19 @@ export interface StructuredEditDestinationProfile {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditRequest {
+  readonly operationKind: string;
+  readonly content: string;
+  readonly sourceLabel: string;
+  readonly targetSelector?: string;
+  readonly targetSelectorFamily?: string;
+  readonly destinationSelector?: string;
+  readonly destinationSelectorFamily?: string;
+  readonly payloadText?: string;
+  readonly ifMissing?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;
