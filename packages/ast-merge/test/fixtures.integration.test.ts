@@ -45,6 +45,7 @@ import type {
   StructuredEditResult,
   StructuredEditApplication,
   StructuredEditApplicationEnvelope,
+  StructuredEditExecutionReport,
   PolicyReference,
   PolicySurface,
   Diagnostic,
@@ -894,6 +895,19 @@ interface StructuredEditApplicationEnvelopeApplicationFixture {
     label: string;
     envelope: StructuredEditApplicationEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditExecutionReportFixture {
+  cases: Array<{
+    label: string;
+    report: {
+      application: StructuredEditApplicationFixture['cases'][number]['application'];
+      provider_family: string;
+      provider_backend?: string | null;
+      diagnostics: DiagnosticFixture['diagnostics'];
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -2317,6 +2331,18 @@ function normalizeStructuredEditApplicationEnvelope(
     kind: raw.kind,
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     application: normalizeStructuredEditApplication(raw.application)
+  };
+}
+
+function normalizeStructuredEditExecutionReport(
+  raw: StructuredEditExecutionReportFixture['cases'][number]['report']
+): StructuredEditExecutionReport {
+  return {
+    application: normalizeStructuredEditApplication(raw.application),
+    providerFamily: raw.provider_family,
+    providerBackend: raw.provider_backend ?? undefined,
+    diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
+    metadata: raw.metadata
   };
 }
 
@@ -6206,6 +6232,28 @@ describe('ast-merge shared fixtures', () => {
         error: rejectionCase.expected_error
       });
     }
+  });
+
+  it('conforms to the slice-438 structured-edit execution report fixture', () => {
+    const fixture = readFixture<StructuredEditExecutionReportFixture>(
+      ...diagnosticsFixturePath('structured_edit_execution_report')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            report: normalizeStructuredEditExecutionReport(entry.report)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        report: normalizeStructuredEditExecutionReport(entry.report)
+      }))
+    );
   });
 
   it('conforms to the slice-211 projected child-review cases fixture', () => {

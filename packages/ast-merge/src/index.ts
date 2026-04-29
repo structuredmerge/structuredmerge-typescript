@@ -48,6 +48,7 @@ export type {
   StructuredEditResult,
   StructuredEditApplication,
   StructuredEditApplicationEnvelope,
+  StructuredEditExecutionReport,
   StructuredEditTransportImportError,
   StructuredEditTransportImportErrorCategory,
   TemplateTargetClassification,

@@ -232,6 +232,14 @@ export interface StructuredEditApplicationEnvelope {
   readonly application: StructuredEditApplication;
 }
 
+export interface StructuredEditExecutionReport {
+  readonly application: StructuredEditApplication;
+  readonly providerFamily: string;
+  readonly providerBackend?: string;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;
