@@ -37,6 +37,7 @@ import type {
   DiscoveredSurface,
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
+  StructuredEditSelectionProfile,
   PolicyReference,
   PolicySurface,
   Diagnostic,
@@ -727,6 +728,25 @@ interface StructuredEditStructureProfileFixture {
       owner_selector_family?: string;
       known_owner_selector: boolean;
       supported_comment_regions: string[];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditSelectionProfileFixture {
+  cases: Array<{
+    label: string;
+    profile: {
+      owner_scope: string;
+      owner_selector: string;
+      owner_selector_family?: string;
+      selector_kind: string;
+      selection_intent: string;
+      selection_intent_family?: string;
+      known_selection_intent: boolean;
+      comment_region?: string | null;
+      include_trailing_gap: boolean;
+      comment_anchored: boolean;
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -2026,6 +2046,24 @@ function normalizeStructuredEditStructureProfile(
     ownerSelectorFamily: raw.owner_selector_family,
     knownOwnerSelector: raw.known_owner_selector,
     supportedCommentRegions: raw.supported_comment_regions,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditSelectionProfile(
+  raw: StructuredEditSelectionProfileFixture['cases'][number]['profile']
+): StructuredEditSelectionProfile {
+  return {
+    ownerScope: raw.owner_scope,
+    ownerSelector: raw.owner_selector,
+    ownerSelectorFamily: raw.owner_selector_family,
+    selectorKind: raw.selector_kind,
+    selectionIntent: raw.selection_intent,
+    selectionIntentFamily: raw.selection_intent_family,
+    knownSelectionIntent: raw.known_selection_intent,
+    commentRegion: raw.comment_region ?? undefined,
+    includeTrailingGap: raw.include_trailing_gap,
+    commentAnchored: raw.comment_anchored,
     metadata: raw.metadata
   };
 }
@@ -5717,6 +5755,28 @@ describe('ast-merge shared fixtures', () => {
       fixture.cases.map((entry) => ({
         label: entry.label,
         profile: normalizeStructuredEditStructureProfile(entry.profile)
+      }))
+    );
+  });
+
+  it('conforms to the slice-420 structured-edit selection-profile fixture', () => {
+    const fixture = readFixture<StructuredEditSelectionProfileFixture>(
+      ...diagnosticsFixturePath('structured_edit_selection_profile')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            profile: normalizeStructuredEditSelectionProfile(entry.profile)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        profile: normalizeStructuredEditSelectionProfile(entry.profile)
       }))
     );
   });

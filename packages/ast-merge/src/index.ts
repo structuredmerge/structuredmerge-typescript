@@ -40,6 +40,7 @@ export type {
   MergeResult,
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
+  StructuredEditSelectionProfile,
   TemplateTargetClassification,
   TemplateDestinationContext,
   TemplateTokenConfig,

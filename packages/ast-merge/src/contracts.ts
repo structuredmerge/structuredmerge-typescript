@@ -132,6 +132,20 @@ export interface StructuredEditStructureProfile {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditSelectionProfile {
+  readonly ownerScope: string;
+  readonly ownerSelector: string;
+  readonly ownerSelectorFamily?: string;
+  readonly selectorKind: string;
+  readonly selectionIntent: string;
+  readonly selectionIntentFamily?: string;
+  readonly knownSelectionIntent: boolean;
+  readonly commentRegion?: string;
+  readonly includeTrailingGap: boolean;
+  readonly commentAnchored: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;
