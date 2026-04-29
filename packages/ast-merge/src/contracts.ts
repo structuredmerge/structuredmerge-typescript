@@ -217,6 +217,21 @@ export interface StructuredEditApplication {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export const STRUCTURED_EDIT_TRANSPORT_VERSION = 1;
+
+export type StructuredEditTransportImportErrorCategory = 'kind_mismatch' | 'unsupported_version';
+
+export interface StructuredEditTransportImportError {
+  readonly category: StructuredEditTransportImportErrorCategory;
+  readonly message: string;
+}
+
+export interface StructuredEditApplicationEnvelope {
+  readonly kind: 'structured_edit_application';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly application: StructuredEditApplication;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;
@@ -739,6 +754,50 @@ export function normalizeTemplateSourcePath(path: string): string {
   }
 
   return path;
+}
+
+export function structuredEditApplicationEnvelope(
+  application: StructuredEditApplication
+): StructuredEditApplicationEnvelope {
+  return {
+    kind: 'structured_edit_application',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    application
+  };
+}
+
+export function importStructuredEditApplicationEnvelope(value: unknown): {
+  application?: StructuredEditApplication;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_application'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_application envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    application: StructuredEditApplication;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_application envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { application: envelope.application };
 }
 
 export function classifyTemplateTargetPath(path: string): TemplateTargetClassification {

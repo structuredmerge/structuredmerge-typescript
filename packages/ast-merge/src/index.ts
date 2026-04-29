@@ -47,6 +47,9 @@ export type {
   StructuredEditRequest,
   StructuredEditResult,
   StructuredEditApplication,
+  StructuredEditApplicationEnvelope,
+  StructuredEditTransportImportError,
+  StructuredEditTransportImportErrorCategory,
   TemplateTargetClassification,
   TemplateDestinationContext,
   TemplateTokenConfig,
@@ -107,6 +110,7 @@ export type {
 } from './contracts';
 
 export {
+  STRUCTURED_EDIT_TRANSPORT_VERSION,
   REVIEW_TRANSPORT_VERSION,
   conformanceManifestReplayContext,
   conformanceManifestReviewStateEnvelope,
@@ -117,6 +121,7 @@ export {
   reviewProjectedChildGroups,
   delegatedChildApplyPlan,
   resolveDelegatedChildOutputs,
+  structuredEditApplicationEnvelope,
   executeNestedMerge,
   executeDelegatedChildApplyPlan,
   executeReviewedNestedMerge,
@@ -183,6 +188,7 @@ export {
   importConformanceManifestReviewStateEnvelope,
   importReviewedNestedExecutionEnvelope,
   importReviewReplayBundleEnvelope,
+  importStructuredEditApplicationEnvelope,
   reviewReplayBundleInputs,
   reviewReplayBundleEnvelope,
   reviewedNestedExecution,
