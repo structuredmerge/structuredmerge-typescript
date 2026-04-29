@@ -251,6 +251,12 @@ export interface StructuredEditBatchRequest {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditBatchReport {
+  readonly reports: readonly StructuredEditExecutionReport[];
+  readonly diagnostics: readonly Diagnostic[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;

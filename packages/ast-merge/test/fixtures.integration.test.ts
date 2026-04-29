@@ -45,6 +45,7 @@ import type {
   StructuredEditResult,
   StructuredEditApplication,
   StructuredEditApplicationEnvelope,
+  StructuredEditBatchReport,
   StructuredEditBatchRequest,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
@@ -951,6 +952,17 @@ interface StructuredEditBatchRequestFixture {
     label: string;
     batch_request: {
       requests: StructuredEditRequestFixture['cases'][number]['request'][];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditBatchReportFixture {
+  cases: Array<{
+    label: string;
+    batch_report: {
+      reports: StructuredEditExecutionReportFixture['cases'][number]['report'][];
+      diagnostics: DiagnosticFixture['diagnostics'];
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -2406,6 +2418,16 @@ function normalizeStructuredEditBatchRequest(
 ): StructuredEditBatchRequest {
   return {
     requests: raw.requests.map((request) => normalizeStructuredEditRequest(request)),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditBatchReport(
+  raw: StructuredEditBatchReportFixture['cases'][number]['batch_report']
+): StructuredEditBatchReport {
+  return {
+    reports: raw.reports.map((report) => normalizeStructuredEditExecutionReport(report)),
+    diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
     metadata: raw.metadata
   };
 }
@@ -6383,6 +6405,28 @@ describe('ast-merge shared fixtures', () => {
       fixture.cases.map((entry) => ({
         label: entry.label,
         batchRequest: normalizeStructuredEditBatchRequest(entry.batch_request)
+      }))
+    );
+  });
+
+  it('conforms to the slice-443 structured-edit batch report fixture', () => {
+    const fixture = readFixture<StructuredEditBatchReportFixture>(
+      ...diagnosticsFixturePath('structured_edit_batch_report')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            batchReport: normalizeStructuredEditBatchReport(entry.batch_report)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        batchReport: normalizeStructuredEditBatchReport(entry.batch_report)
       }))
     );
   });

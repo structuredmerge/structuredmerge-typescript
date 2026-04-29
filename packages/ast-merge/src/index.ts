@@ -48,6 +48,7 @@ export type {
   StructuredEditResult,
   StructuredEditApplication,
   StructuredEditApplicationEnvelope,
+  StructuredEditBatchReport,
   StructuredEditBatchRequest,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
