@@ -43,6 +43,7 @@ import type {
   StructuredEditDestinationProfile,
   StructuredEditRequest,
   StructuredEditResult,
+  StructuredEditApplication,
   PolicyReference,
   PolicySurface,
   Diagnostic,
@@ -844,6 +845,17 @@ interface StructuredEditResultFixture {
       destination_profile?:
         | StructuredEditDestinationProfileFixture['cases'][number]['profile']
         | null;
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditApplicationFixture {
+  cases: Array<{
+    label: string;
+    application: {
+      request: StructuredEditRequestFixture['cases'][number]['request'];
+      result: StructuredEditResultFixture['cases'][number]['result'];
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -2248,6 +2260,16 @@ function normalizeStructuredEditResult(
     destinationProfile: raw.destination_profile
       ? normalizeStructuredEditDestinationProfile(raw.destination_profile)
       : undefined,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditApplication(
+  raw: StructuredEditApplicationFixture['cases'][number]['application']
+): StructuredEditApplication {
+  return {
+    request: normalizeStructuredEditRequest(raw.request),
+    result: normalizeStructuredEditResult(raw.result),
     metadata: raw.metadata
   };
 }
@@ -6071,6 +6093,28 @@ describe('ast-merge shared fixtures', () => {
       fixture.cases.map((entry) => ({
         label: entry.label,
         result: normalizeStructuredEditResult(entry.result)
+      }))
+    );
+  });
+
+  it('conforms to the slice-432 structured-edit application fixture', () => {
+    const fixture = readFixture<StructuredEditApplicationFixture>(
+      ...diagnosticsFixturePath('structured_edit_application')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            application: normalizeStructuredEditApplication(entry.application)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        application: normalizeStructuredEditApplication(entry.application)
       }))
     );
   });

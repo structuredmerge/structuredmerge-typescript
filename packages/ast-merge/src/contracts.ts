@@ -211,6 +211,12 @@ export interface StructuredEditResult {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditApplication {
+  readonly request: StructuredEditRequest;
+  readonly result: StructuredEditResult;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;

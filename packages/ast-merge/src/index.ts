@@ -46,6 +46,7 @@ export type {
   StructuredEditDestinationProfile,
   StructuredEditRequest,
   StructuredEditResult,
+  StructuredEditApplication,
   TemplateTargetClassification,
   TemplateDestinationContext,
   TemplateTokenConfig,
