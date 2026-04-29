@@ -45,6 +45,7 @@ import type {
   StructuredEditResult,
   StructuredEditApplication,
   StructuredEditApplicationEnvelope,
+  StructuredEditBatchReportEnvelope,
   StructuredEditBatchReport,
   StructuredEditBatchRequest,
   StructuredEditExecutionReport,
@@ -98,6 +99,7 @@ import {
   selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
   structuredEditApplicationEnvelope,
+  structuredEditBatchReportEnvelope,
   structuredEditExecutionReportEnvelope,
   summarizeProjectedChildReviewGroupProgress,
   conformanceFamilyFeatureProfilePath,
@@ -149,6 +151,7 @@ import {
   importReviewedNestedExecutionEnvelope,
   importReviewReplayBundleEnvelope,
   importStructuredEditApplicationEnvelope,
+  importStructuredEditBatchReportEnvelope,
   importStructuredEditExecutionReportEnvelope,
   reviewReplayBundleInputs,
   reviewReplayBundleEnvelope,
@@ -965,6 +968,37 @@ interface StructuredEditBatchReportFixture {
       diagnostics: DiagnosticFixture['diagnostics'];
       metadata?: Record<string, unknown>;
     };
+  }>;
+}
+
+interface StructuredEditBatchReportEnvelopeFixture {
+  structured_edit_batch_report: StructuredEditBatchReportFixture['cases'][number]['batch_report'];
+  expected_envelope: {
+    kind: StructuredEditBatchReportEnvelope['kind'];
+    version: number;
+    batch_report: StructuredEditBatchReportFixture['cases'][number]['batch_report'];
+  };
+}
+
+interface StructuredEditBatchReportEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      batch_report: StructuredEditBatchReportFixture['cases'][number]['batch_report'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditBatchReportEnvelopeApplicationFixture {
+  structured_edit_batch_report_envelope: StructuredEditBatchReportEnvelopeFixture['expected_envelope'];
+  expected_batch_report: StructuredEditBatchReportFixture['cases'][number]['batch_report'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditBatchReportEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
   }>;
 }
 
@@ -2429,6 +2463,16 @@ function normalizeStructuredEditBatchReport(
     reports: raw.reports.map((report) => normalizeStructuredEditExecutionReport(report)),
     diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
     metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditBatchReportEnvelope(
+  raw: StructuredEditBatchReportEnvelopeFixture['expected_envelope']
+): StructuredEditBatchReportEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReport: normalizeStructuredEditBatchReport(raw.batch_report)
   };
 }
 
@@ -6429,6 +6473,49 @@ describe('ast-merge shared fixtures', () => {
         batchReport: normalizeStructuredEditBatchReport(entry.batch_report)
       }))
     );
+  });
+
+  it('conforms to the slice-444 structured-edit batch report transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditBatchReportEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_batch_report_envelope')
+    );
+    const batchReport = normalizeStructuredEditBatchReport(fixture.structured_edit_batch_report);
+    const expected = normalizeStructuredEditBatchReportEnvelope(fixture.expected_envelope);
+
+    expect(structuredEditBatchReportEnvelope(batchReport)).toEqual(expected);
+    expect(importStructuredEditBatchReportEnvelope(expected)).toEqual({ batchReport });
+  });
+
+  it('conforms to the slice-445 structured-edit batch report transport rejection fixture', () => {
+    const fixture = readFixture<StructuredEditBatchReportEnvelopeRejectionFixture>(
+      ...diagnosticsFixturePath('structured_edit_batch_report_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditBatchReportEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-446 structured-edit batch report envelope application fixture', () => {
+    const fixture = readFixture<StructuredEditBatchReportEnvelopeApplicationFixture>(
+      ...diagnosticsFixturePath('structured_edit_batch_report_envelope_application')
+    );
+
+    expect(
+      importStructuredEditBatchReportEnvelope(
+        normalizeStructuredEditBatchReportEnvelope(fixture.structured_edit_batch_report_envelope)
+      )
+    ).toEqual({
+      batchReport: normalizeStructuredEditBatchReport(fixture.expected_batch_report)
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditBatchReportEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
   });
 
   it('conforms to the slice-211 projected child-review cases fixture', () => {
