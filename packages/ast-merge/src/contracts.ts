@@ -200,6 +200,17 @@ export interface StructuredEditRequest {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditResult {
+  readonly operationKind: string;
+  readonly updatedContent: string;
+  readonly changed: boolean;
+  readonly capturedText?: string;
+  readonly matchCount?: number;
+  readonly operationProfile: StructuredEditOperationProfile;
+  readonly destinationProfile?: StructuredEditDestinationProfile;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface TemplateTargetClassification {
   readonly destinationPath: string;
   readonly fileType: string;

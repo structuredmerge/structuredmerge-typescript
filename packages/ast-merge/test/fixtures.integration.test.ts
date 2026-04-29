@@ -42,6 +42,7 @@ import type {
   StructuredEditOperationProfile,
   StructuredEditDestinationProfile,
   StructuredEditRequest,
+  StructuredEditResult,
   PolicyReference,
   PolicySurface,
   Diagnostic,
@@ -825,6 +826,24 @@ interface StructuredEditRequestFixture {
       destination_selector_family?: string | null;
       payload_text?: string | null;
       if_missing?: string | null;
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditResultFixture {
+  cases: Array<{
+    label: string;
+    result: {
+      operation_kind: string;
+      updated_content: string;
+      changed: boolean;
+      captured_text?: string | null;
+      match_count?: number | null;
+      operation_profile: StructuredEditOperationProfileFixture['cases'][number]['profile'];
+      destination_profile?:
+        | StructuredEditDestinationProfileFixture['cases'][number]['profile']
+        | null;
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -2212,6 +2231,23 @@ function normalizeStructuredEditRequest(
     destinationSelectorFamily: raw.destination_selector_family ?? undefined,
     payloadText: raw.payload_text ?? undefined,
     ifMissing: raw.if_missing ?? undefined,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditResult(
+  raw: StructuredEditResultFixture['cases'][number]['result']
+): StructuredEditResult {
+  return {
+    operationKind: raw.operation_kind,
+    updatedContent: raw.updated_content,
+    changed: raw.changed,
+    capturedText: raw.captured_text ?? undefined,
+    matchCount: raw.match_count ?? undefined,
+    operationProfile: normalizeStructuredEditOperationProfile(raw.operation_profile),
+    destinationProfile: raw.destination_profile
+      ? normalizeStructuredEditDestinationProfile(raw.destination_profile)
+      : undefined,
     metadata: raw.metadata
   };
 }
@@ -6013,6 +6049,28 @@ describe('ast-merge shared fixtures', () => {
       fixture.cases.map((entry) => ({
         label: entry.label,
         request: normalizeStructuredEditRequest(entry.request)
+      }))
+    );
+  });
+
+  it('conforms to the slice-427 structured-edit result fixture', () => {
+    const fixture = readFixture<StructuredEditResultFixture>(
+      ...diagnosticsFixturePath('structured_edit_result')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            result: normalizeStructuredEditResult(entry.result)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        result: normalizeStructuredEditResult(entry.result)
       }))
     );
   });
