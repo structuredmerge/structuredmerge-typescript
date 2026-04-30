@@ -58,6 +58,7 @@ import type {
   StructuredEditProviderExecutionApplicationEnvelope,
   StructuredEditProviderExecutionDispatch,
   StructuredEditProviderExecutionDispatchEnvelope,
+  StructuredEditProviderExecutionOutcome,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -1038,6 +1039,17 @@ interface StructuredEditProviderExecutionDispatchEnvelopeApplicationFixture {
     label: string;
     envelope: StructuredEditProviderExecutionDispatchEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionOutcomeFixture {
+  cases: Array<{
+    label: string;
+    outcome: {
+      dispatch: StructuredEditProviderExecutionDispatchFixture['cases'][number]['dispatch'];
+      application: StructuredEditProviderExecutionApplicationFixture['cases'][number]['application'];
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -2756,6 +2768,16 @@ function normalizeStructuredEditProviderExecutionDispatchEnvelope(
     providerExecutionDispatch: normalizeStructuredEditProviderExecutionDispatch(
       raw.provider_execution_dispatch
     )
+  };
+}
+
+function normalizeStructuredEditProviderExecutionOutcome(
+  raw: StructuredEditProviderExecutionOutcomeFixture['cases'][number]['outcome']
+): StructuredEditProviderExecutionOutcome {
+  return {
+    dispatch: normalizeStructuredEditProviderExecutionDispatch(raw.dispatch),
+    application: normalizeStructuredEditProviderExecutionApplication(raw.application),
+    metadata: raw.metadata
   };
 }
 
@@ -6972,6 +6994,28 @@ describe('ast-merge shared fixtures', () => {
         }
       );
     }
+  });
+
+  it('conforms to the slice-477 structured-edit provider execution outcome fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionOutcomeFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_outcome')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            outcome: normalizeStructuredEditProviderExecutionOutcome(entry.outcome)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        outcome: normalizeStructuredEditProviderExecutionOutcome(entry.outcome)
+      }))
+    );
   });
 
   it('conforms to the slice-462 structured-edit provider execution application transport envelope fixture', () => {

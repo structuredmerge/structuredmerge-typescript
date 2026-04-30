@@ -61,6 +61,7 @@ export type {
   StructuredEditProviderExecutionApplicationEnvelope,
   StructuredEditProviderExecutionDispatch,
   StructuredEditProviderExecutionDispatchEnvelope,
+  StructuredEditProviderExecutionOutcome,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
