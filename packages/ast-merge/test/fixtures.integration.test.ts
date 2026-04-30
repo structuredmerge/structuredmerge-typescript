@@ -54,6 +54,7 @@ import type {
   StructuredEditProviderBatchExecutionReportEnvelope,
   StructuredEditProviderExecutionApplication,
   StructuredEditProviderExecutionApplicationEnvelope,
+  StructuredEditProviderExecutionDispatch,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -984,6 +985,19 @@ interface StructuredEditProviderExecutionApplicationFixture {
     application: {
       execution_request: StructuredEditProviderExecutionRequestFixture['cases'][number]['execution_request'];
       report: StructuredEditExecutionReportFixture['cases'][number]['report'];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderExecutionDispatchFixture {
+  cases: Array<{
+    label: string;
+    dispatch: {
+      execution_request: StructuredEditProviderExecutionRequestFixture['cases'][number]['execution_request'];
+      resolved_provider_family: string;
+      resolved_provider_backend: string;
+      executor_label?: string;
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -2638,6 +2652,18 @@ function normalizeStructuredEditProviderExecutionApplication(
   return {
     executionRequest: normalizeStructuredEditProviderExecutionRequest(raw.execution_request),
     report: normalizeStructuredEditExecutionReport(raw.report),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionDispatch(
+  raw: StructuredEditProviderExecutionDispatchFixture['cases'][number]['dispatch']
+): StructuredEditProviderExecutionDispatch {
+  return {
+    executionRequest: normalizeStructuredEditProviderExecutionRequest(raw.execution_request),
+    resolvedProviderFamily: raw.resolved_provider_family,
+    resolvedProviderBackend: raw.resolved_provider_backend,
+    executorLabel: raw.executor_label,
     metadata: raw.metadata
   };
 }
@@ -6753,6 +6779,28 @@ describe('ast-merge shared fixtures', () => {
       fixture.cases.map((entry) => ({
         label: entry.label,
         application: normalizeStructuredEditProviderExecutionApplication(entry.application)
+      }))
+    );
+  });
+
+  it('conforms to the slice-469 structured-edit provider execution dispatch fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionDispatchFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_dispatch')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            dispatch: normalizeStructuredEditProviderExecutionDispatch(entry.dispatch)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        dispatch: normalizeStructuredEditProviderExecutionDispatch(entry.dispatch)
       }))
     );
   });

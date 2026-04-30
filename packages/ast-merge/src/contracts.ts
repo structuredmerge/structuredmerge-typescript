@@ -259,6 +259,14 @@ export interface StructuredEditProviderExecutionApplication {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionDispatch {
+  readonly executionRequest: StructuredEditProviderExecutionRequest;
+  readonly resolvedProviderFamily: string;
+  readonly resolvedProviderBackend: string;
+  readonly executorLabel?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
