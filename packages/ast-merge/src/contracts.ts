@@ -267,6 +267,12 @@ export interface StructuredEditProviderExecutionDispatch {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionDispatchEnvelope {
+  readonly kind: 'structured_edit_provider_execution_dispatch';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly providerExecutionDispatch: StructuredEditProviderExecutionDispatch;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -977,6 +983,54 @@ export function importStructuredEditProviderExecutionApplicationEnvelope(value: 
   return {
     providerExecutionApplication:
       envelope.providerExecutionApplication ?? envelope.provider_execution_application
+  };
+}
+
+export function structuredEditProviderExecutionDispatchEnvelope(
+  providerExecutionDispatch: StructuredEditProviderExecutionDispatch
+): StructuredEditProviderExecutionDispatchEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_dispatch',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    providerExecutionDispatch
+  };
+}
+
+export function importStructuredEditProviderExecutionDispatchEnvelope(value: unknown): {
+  providerExecutionDispatch?: StructuredEditProviderExecutionDispatch;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_dispatch'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_dispatch envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    providerExecutionDispatch?: StructuredEditProviderExecutionDispatch;
+    provider_execution_dispatch?: StructuredEditProviderExecutionDispatch;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_dispatch envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    providerExecutionDispatch:
+      envelope.providerExecutionDispatch ?? envelope.provider_execution_dispatch
   };
 }
 

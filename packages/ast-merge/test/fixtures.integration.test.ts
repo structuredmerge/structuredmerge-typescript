@@ -55,6 +55,7 @@ import type {
   StructuredEditProviderExecutionApplication,
   StructuredEditProviderExecutionApplicationEnvelope,
   StructuredEditProviderExecutionDispatch,
+  StructuredEditProviderExecutionDispatchEnvelope,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -112,6 +113,7 @@ import {
   structuredEditProviderBatchExecutionRequestEnvelope,
   structuredEditProviderBatchExecutionReportEnvelope,
   structuredEditProviderExecutionApplicationEnvelope,
+  structuredEditProviderExecutionDispatchEnvelope,
   structuredEditProviderExecutionRequestEnvelope,
   structuredEditExecutionReportEnvelope,
   summarizeProjectedChildReviewGroupProgress,
@@ -168,6 +170,7 @@ import {
   importStructuredEditProviderBatchExecutionRequestEnvelope,
   importStructuredEditProviderBatchExecutionReportEnvelope,
   importStructuredEditProviderExecutionApplicationEnvelope,
+  importStructuredEditProviderExecutionDispatchEnvelope,
   importStructuredEditProviderExecutionRequestEnvelope,
   importStructuredEditExecutionReportEnvelope,
   reviewReplayBundleInputs,
@@ -1000,6 +1003,37 @@ interface StructuredEditProviderExecutionDispatchFixture {
       executor_label?: string;
       metadata?: Record<string, unknown>;
     };
+  }>;
+}
+
+interface StructuredEditProviderExecutionDispatchEnvelopeFixture {
+  structured_edit_provider_execution_dispatch: StructuredEditProviderExecutionDispatchFixture['cases'][number]['dispatch'];
+  expected_envelope: {
+    kind: StructuredEditProviderExecutionDispatchEnvelope['kind'];
+    version: number;
+    provider_execution_dispatch: StructuredEditProviderExecutionDispatchFixture['cases'][number]['dispatch'];
+  };
+}
+
+interface StructuredEditProviderExecutionDispatchEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      provider_execution_dispatch: StructuredEditProviderExecutionDispatchFixture['cases'][number]['dispatch'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionDispatchEnvelopeApplicationFixture {
+  structured_edit_provider_execution_dispatch_envelope: StructuredEditProviderExecutionDispatchEnvelopeFixture['expected_envelope'];
+  expected_dispatch: StructuredEditProviderExecutionDispatchFixture['cases'][number]['dispatch'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderExecutionDispatchEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
   }>;
 }
 
@@ -2665,6 +2699,18 @@ function normalizeStructuredEditProviderExecutionDispatch(
     resolvedProviderBackend: raw.resolved_provider_backend,
     executorLabel: raw.executor_label,
     metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionDispatchEnvelope(
+  raw: StructuredEditProviderExecutionDispatchEnvelopeFixture['expected_envelope']
+): StructuredEditProviderExecutionDispatchEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    providerExecutionDispatch: normalizeStructuredEditProviderExecutionDispatch(
+      raw.provider_execution_dispatch
+    )
   };
 }
 
@@ -6803,6 +6849,63 @@ describe('ast-merge shared fixtures', () => {
         dispatch: normalizeStructuredEditProviderExecutionDispatch(entry.dispatch)
       }))
     );
+  });
+
+  it('conforms to the slice-470 structured-edit provider execution dispatch transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionDispatchEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_dispatch_envelope')
+    );
+    const dispatch = normalizeStructuredEditProviderExecutionDispatch(
+      fixture.structured_edit_provider_execution_dispatch
+    );
+    const expected = normalizeStructuredEditProviderExecutionDispatchEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(structuredEditProviderExecutionDispatchEnvelope(dispatch)).toEqual(expected);
+    expect(importStructuredEditProviderExecutionDispatchEnvelope(expected)).toEqual({
+      providerExecutionDispatch: dispatch
+    });
+  });
+
+  it('conforms to the slice-471 structured-edit provider execution dispatch transport rejection fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionDispatchEnvelopeRejectionFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_dispatch_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditProviderExecutionDispatchEnvelope(rejectionCase.envelope)).toEqual(
+        {
+          error: rejectionCase.expected_error
+        }
+      );
+    }
+  });
+
+  it('conforms to the slice-472 structured-edit provider execution dispatch envelope application fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionDispatchEnvelopeApplicationFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_dispatch_envelope_application')
+    );
+
+    expect(
+      importStructuredEditProviderExecutionDispatchEnvelope(
+        normalizeStructuredEditProviderExecutionDispatchEnvelope(
+          fixture.structured_edit_provider_execution_dispatch_envelope
+        )
+      )
+    ).toEqual({
+      providerExecutionDispatch: normalizeStructuredEditProviderExecutionDispatch(
+        fixture.expected_dispatch
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditProviderExecutionDispatchEnvelope(rejectionCase.envelope)).toEqual(
+        {
+          error: rejectionCase.expected_error
+        }
+      );
+    }
   });
 
   it('conforms to the slice-462 structured-edit provider execution application transport envelope fixture', () => {
