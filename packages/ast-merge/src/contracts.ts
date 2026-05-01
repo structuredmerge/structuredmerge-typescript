@@ -296,6 +296,30 @@ export interface StructuredEditProviderBatchExecutionOutcomeEnvelope {
   readonly batchOutcome: StructuredEditProviderBatchExecutionOutcome;
 }
 
+export interface StructuredEditProviderExecutionProvenance {
+  readonly dispatch: StructuredEditProviderExecutionDispatch;
+  readonly outcome: StructuredEditProviderExecutionOutcome;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderExecutionProvenanceEnvelope {
+  readonly kind: 'structured_edit_provider_execution_provenance';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly provenance: StructuredEditProviderExecutionProvenance;
+}
+
+export interface StructuredEditProviderBatchExecutionProvenance {
+  readonly provenances: readonly StructuredEditProviderExecutionProvenance[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderBatchExecutionProvenanceEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_provenance';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchProvenance: StructuredEditProviderBatchExecutionProvenance;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1160,6 +1184,97 @@ export function importStructuredEditProviderBatchExecutionOutcomeEnvelope(value:
 
   return {
     batchOutcome: envelope.batchOutcome ?? envelope.batch_outcome
+  };
+}
+
+export function structuredEditProviderExecutionProvenanceEnvelope(
+  provenance: StructuredEditProviderExecutionProvenance
+): StructuredEditProviderExecutionProvenanceEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_provenance',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    provenance
+  };
+}
+
+export function importStructuredEditProviderExecutionProvenanceEnvelope(value: unknown): {
+  provenance?: StructuredEditProviderExecutionProvenance;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_provenance'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_provenance envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    provenance?: StructuredEditProviderExecutionProvenance;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_provenance envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { provenance: envelope.provenance };
+}
+
+export function structuredEditProviderBatchExecutionProvenanceEnvelope(
+  batchProvenance: StructuredEditProviderBatchExecutionProvenance
+): StructuredEditProviderBatchExecutionProvenanceEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_provenance',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchProvenance
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionProvenanceEnvelope(value: unknown): {
+  batchProvenance?: StructuredEditProviderBatchExecutionProvenance;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_batch_execution_provenance'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_batch_execution_provenance envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchProvenance?: StructuredEditProviderBatchExecutionProvenance;
+    batch_provenance?: StructuredEditProviderBatchExecutionProvenance;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_provenance envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchProvenance: envelope.batchProvenance ?? envelope.batch_provenance
   };
 }
 
