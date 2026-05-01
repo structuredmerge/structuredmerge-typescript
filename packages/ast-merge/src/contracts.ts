@@ -361,6 +361,17 @@ export interface StructuredEditProviderExecutorProfileEnvelope {
   readonly executorProfile: StructuredEditProviderExecutorProfile;
 }
 
+export interface StructuredEditProviderExecutorRegistry {
+  readonly executorProfiles: readonly StructuredEditProviderExecutorProfile[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderExecutorRegistryEnvelope {
+  readonly kind: 'structured_edit_provider_executor_registry';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly executorRegistry: StructuredEditProviderExecutorRegistry;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1457,6 +1468,53 @@ export function importStructuredEditProviderExecutorProfileEnvelope(value: unkno
 
   return {
     executorProfile: envelope.executorProfile ?? envelope.executor_profile
+  };
+}
+
+export function structuredEditProviderExecutorRegistryEnvelope(
+  executorRegistry: StructuredEditProviderExecutorRegistry
+): StructuredEditProviderExecutorRegistryEnvelope {
+  return {
+    kind: 'structured_edit_provider_executor_registry',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executorRegistry
+  };
+}
+
+export function importStructuredEditProviderExecutorRegistryEnvelope(value: unknown): {
+  executorRegistry?: StructuredEditProviderExecutorRegistry;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_executor_registry'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_executor_registry envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    executorRegistry?: StructuredEditProviderExecutorRegistry;
+    executor_registry?: StructuredEditProviderExecutorRegistry;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_executor_registry envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    executorRegistry: envelope.executorRegistry ?? envelope.executor_registry
   };
 }
 
