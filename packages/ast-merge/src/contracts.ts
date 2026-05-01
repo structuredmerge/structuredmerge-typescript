@@ -320,6 +320,29 @@ export interface StructuredEditProviderBatchExecutionProvenanceEnvelope {
   readonly batchProvenance: StructuredEditProviderBatchExecutionProvenance;
 }
 
+export interface StructuredEditProviderExecutionReplayBundle {
+  readonly executionRequest: StructuredEditProviderExecutionRequest;
+  readonly provenance: StructuredEditProviderExecutionProvenance;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderExecutionReplayBundleEnvelope {
+  readonly kind: 'structured_edit_provider_execution_replay_bundle';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly replayBundle: StructuredEditProviderExecutionReplayBundle;
+}
+
+export interface StructuredEditProviderBatchExecutionReplayBundle {
+  readonly replayBundles: readonly StructuredEditProviderExecutionReplayBundle[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderBatchExecutionReplayBundleEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_replay_bundle';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchReplayBundle: StructuredEditProviderBatchExecutionReplayBundle;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1275,6 +1298,100 @@ export function importStructuredEditProviderBatchExecutionProvenanceEnvelope(val
 
   return {
     batchProvenance: envelope.batchProvenance ?? envelope.batch_provenance
+  };
+}
+
+export function structuredEditProviderExecutionReplayBundleEnvelope(
+  replayBundle: StructuredEditProviderExecutionReplayBundle
+): StructuredEditProviderExecutionReplayBundleEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_replay_bundle',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    replayBundle
+  };
+}
+
+export function importStructuredEditProviderExecutionReplayBundleEnvelope(value: unknown): {
+  replayBundle?: StructuredEditProviderExecutionReplayBundle;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_replay_bundle'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_replay_bundle envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    replayBundle?: StructuredEditProviderExecutionReplayBundle;
+    replay_bundle?: StructuredEditProviderExecutionReplayBundle;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_replay_bundle envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    replayBundle: envelope.replayBundle ?? envelope.replay_bundle
+  };
+}
+
+export function structuredEditProviderBatchExecutionReplayBundleEnvelope(
+  batchReplayBundle: StructuredEditProviderBatchExecutionReplayBundle
+): StructuredEditProviderBatchExecutionReplayBundleEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_replay_bundle',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReplayBundle
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionReplayBundleEnvelope(value: unknown): {
+  batchReplayBundle?: StructuredEditProviderBatchExecutionReplayBundle;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_batch_execution_replay_bundle'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_batch_execution_replay_bundle envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchReplayBundle?: StructuredEditProviderBatchExecutionReplayBundle;
+    batch_replay_bundle?: StructuredEditProviderBatchExecutionReplayBundle;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_replay_bundle envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchReplayBundle: envelope.batchReplayBundle ?? envelope.batch_replay_bundle
   };
 }
 
