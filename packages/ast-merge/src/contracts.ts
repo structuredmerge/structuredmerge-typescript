@@ -381,6 +381,12 @@ export interface StructuredEditProviderExecutorSelectionPolicy {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutorSelectionPolicyEnvelope {
+  readonly kind: 'structured_edit_provider_executor_selection_policy';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly selectionPolicy: StructuredEditProviderExecutorSelectionPolicy;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1524,6 +1530,53 @@ export function importStructuredEditProviderExecutorRegistryEnvelope(value: unkn
 
   return {
     executorRegistry: envelope.executorRegistry ?? envelope.executor_registry
+  };
+}
+
+export function structuredEditProviderExecutorSelectionPolicyEnvelope(
+  selectionPolicy: StructuredEditProviderExecutorSelectionPolicy
+): StructuredEditProviderExecutorSelectionPolicyEnvelope {
+  return {
+    kind: 'structured_edit_provider_executor_selection_policy',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    selectionPolicy
+  };
+}
+
+export function importStructuredEditProviderExecutorSelectionPolicyEnvelope(value: unknown): {
+  selectionPolicy?: StructuredEditProviderExecutorSelectionPolicy;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_executor_selection_policy'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_executor_selection_policy envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    selectionPolicy?: StructuredEditProviderExecutorSelectionPolicy;
+    selection_policy?: StructuredEditProviderExecutorSelectionPolicy;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_executor_selection_policy envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    selectionPolicy: envelope.selectionPolicy ?? envelope.selection_policy
   };
 }
 

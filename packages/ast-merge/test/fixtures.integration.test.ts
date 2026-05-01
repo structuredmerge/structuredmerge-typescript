@@ -75,6 +75,7 @@ import type {
   StructuredEditProviderExecutorRegistry,
   StructuredEditProviderExecutorRegistryEnvelope,
   StructuredEditProviderExecutorSelectionPolicy,
+  StructuredEditProviderExecutorSelectionPolicyEnvelope,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -142,6 +143,7 @@ import {
   structuredEditProviderBatchExecutionReplayBundleEnvelope,
   structuredEditProviderExecutorProfileEnvelope,
   structuredEditProviderExecutorRegistryEnvelope,
+  structuredEditProviderExecutorSelectionPolicyEnvelope,
   structuredEditProviderExecutionRequestEnvelope,
   structuredEditExecutionReportEnvelope,
   summarizeProjectedChildReviewGroupProgress,
@@ -208,6 +210,7 @@ import {
   importStructuredEditProviderBatchExecutionReplayBundleEnvelope,
   importStructuredEditProviderExecutorProfileEnvelope,
   importStructuredEditProviderExecutorRegistryEnvelope,
+  importStructuredEditProviderExecutorSelectionPolicyEnvelope,
   importStructuredEditProviderExecutionRequestEnvelope,
   importStructuredEditExecutionReportEnvelope,
   reviewReplayBundleInputs,
@@ -1424,6 +1427,37 @@ interface StructuredEditProviderExecutorSelectionPolicyFixture {
       allow_registry_fallback: boolean;
       metadata?: Record<string, unknown>;
     };
+  }>;
+}
+
+interface StructuredEditProviderExecutorSelectionPolicyEnvelopeFixture {
+  structured_edit_provider_executor_selection_policy: StructuredEditProviderExecutorSelectionPolicyFixture['cases'][number]['selection_policy'];
+  expected_envelope: {
+    kind: StructuredEditProviderExecutorSelectionPolicyEnvelope['kind'];
+    version: number;
+    selection_policy: StructuredEditProviderExecutorSelectionPolicyFixture['cases'][number]['selection_policy'];
+  };
+}
+
+interface StructuredEditProviderExecutorSelectionPolicyEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      selection_policy: StructuredEditProviderExecutorSelectionPolicyFixture['cases'][number]['selection_policy'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutorSelectionPolicyEnvelopeApplicationFixture {
+  structured_edit_provider_executor_selection_policy_envelope: StructuredEditProviderExecutorSelectionPolicyEnvelopeFixture['expected_envelope'];
+  expected_selection_policy: StructuredEditProviderExecutorSelectionPolicyFixture['cases'][number]['selection_policy'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderExecutorSelectionPolicyEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
   }>;
 }
 
@@ -3342,6 +3376,16 @@ function normalizeStructuredEditProviderExecutorSelectionPolicy(
   }
 
   return selectionPolicy;
+}
+
+function normalizeStructuredEditProviderExecutorSelectionPolicyEnvelope(
+  raw: StructuredEditProviderExecutorSelectionPolicyEnvelopeFixture['expected_envelope']
+): StructuredEditProviderExecutorSelectionPolicyEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    selectionPolicy: normalizeStructuredEditProviderExecutorSelectionPolicy(raw.selection_policy)
+  };
 }
 
 function normalizeStructuredEditProviderExecutionApplicationEnvelope(
@@ -8232,6 +8276,71 @@ describe('ast-merge shared fixtures', () => {
         selectionPolicy: normalizeStructuredEditProviderExecutorSelectionPolicy(
           entry.selection_policy
         )
+      });
+    }
+  });
+
+  it('conforms to the slice-510 structured-edit provider executor selection policy transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorSelectionPolicyEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_selection_policy_envelope')
+    );
+    const selectionPolicy = normalizeStructuredEditProviderExecutorSelectionPolicy(
+      fixture.structured_edit_provider_executor_selection_policy
+    );
+    const expected = normalizeStructuredEditProviderExecutorSelectionPolicyEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(structuredEditProviderExecutorSelectionPolicyEnvelope(selectionPolicy)).toEqual(
+      expected
+    );
+    expect(importStructuredEditProviderExecutorSelectionPolicyEnvelope(expected)).toEqual({
+      selectionPolicy
+    });
+  });
+
+  it('conforms to the slice-511 structured-edit provider executor selection policy transport rejection fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderExecutorSelectionPolicyEnvelopeRejectionFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_executor_selection_policy_envelope_rejection'
+        )
+      );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutorSelectionPolicyEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-512 structured-edit provider executor selection policy envelope application fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderExecutorSelectionPolicyEnvelopeApplicationFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_executor_selection_policy_envelope_application'
+        )
+      );
+
+    expect(
+      importStructuredEditProviderExecutorSelectionPolicyEnvelope(
+        normalizeStructuredEditProviderExecutorSelectionPolicyEnvelope(
+          fixture.structured_edit_provider_executor_selection_policy_envelope
+        )
+      )
+    ).toEqual({
+      selectionPolicy: normalizeStructuredEditProviderExecutorSelectionPolicy(
+        fixture.expected_selection_policy
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutorSelectionPolicyEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
       });
     }
   });
