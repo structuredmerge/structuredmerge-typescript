@@ -77,6 +77,7 @@ export type {
   StructuredEditProviderExecutorProfileEnvelope,
   StructuredEditProviderExecutorRegistry,
   StructuredEditProviderExecutorRegistryEnvelope,
+  StructuredEditProviderExecutorSelectionPolicy,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,

@@ -74,6 +74,7 @@ import type {
   StructuredEditProviderExecutorProfileEnvelope,
   StructuredEditProviderExecutorRegistry,
   StructuredEditProviderExecutorRegistryEnvelope,
+  StructuredEditProviderExecutorSelectionPolicy,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -1409,6 +1410,20 @@ interface StructuredEditProviderExecutorRegistryEnvelopeApplicationFixture {
     label: string;
     envelope: StructuredEditProviderExecutorRegistryEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutorSelectionPolicyFixture {
+  cases: Array<{
+    label: string;
+    selection_policy: {
+      provider_family: string;
+      provider_backend?: string;
+      executor_label?: string;
+      selection_mode: string;
+      allow_registry_fallback: boolean;
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -3303,6 +3318,30 @@ function normalizeStructuredEditProviderExecutorRegistryEnvelope(
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     executorRegistry: normalizeStructuredEditProviderExecutorRegistry(raw.executor_registry)
   };
+}
+
+function normalizeStructuredEditProviderExecutorSelectionPolicy(
+  raw: StructuredEditProviderExecutorSelectionPolicyFixture['cases'][number]['selection_policy']
+): StructuredEditProviderExecutorSelectionPolicy {
+  const selectionPolicy: StructuredEditProviderExecutorSelectionPolicy = {
+    providerFamily: raw.provider_family,
+    selectionMode: raw.selection_mode,
+    allowRegistryFallback: raw.allow_registry_fallback
+  };
+
+  if (raw.provider_backend !== undefined) {
+    selectionPolicy.providerBackend = raw.provider_backend;
+  }
+
+  if (raw.executor_label !== undefined) {
+    selectionPolicy.executorLabel = raw.executor_label;
+  }
+
+  if (raw.metadata !== undefined) {
+    selectionPolicy.metadata = raw.metadata;
+  }
+
+  return selectionPolicy;
 }
 
 function normalizeStructuredEditProviderExecutionApplicationEnvelope(
@@ -8171,6 +8210,28 @@ describe('ast-merge shared fixtures', () => {
     for (const rejectionCase of fixture.cases) {
       expect(importStructuredEditProviderExecutorRegistryEnvelope(rejectionCase.envelope)).toEqual({
         error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-509 structured-edit provider executor selection policy fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorSelectionPolicyFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_selection_policy')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            selectionPolicy: normalizeStructuredEditProviderExecutorSelectionPolicy(
+              entry.selection_policy
+            )
+          })
+        )
+      ).toEqual({
+        selectionPolicy: normalizeStructuredEditProviderExecutorSelectionPolicy(
+          entry.selection_policy
+        )
       });
     }
   });

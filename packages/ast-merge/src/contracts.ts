@@ -372,6 +372,15 @@ export interface StructuredEditProviderExecutorRegistryEnvelope {
   readonly executorRegistry: StructuredEditProviderExecutorRegistry;
 }
 
+export interface StructuredEditProviderExecutorSelectionPolicy {
+  readonly providerFamily: string;
+  readonly providerBackend?: string;
+  readonly executorLabel?: string;
+  readonly selectionMode: string;
+  readonly allowRegistryFallback: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
