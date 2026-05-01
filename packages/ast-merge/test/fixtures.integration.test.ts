@@ -70,6 +70,8 @@ import type {
   StructuredEditProviderExecutionReplayBundleEnvelope,
   StructuredEditProviderBatchExecutionReplayBundle,
   StructuredEditProviderBatchExecutionReplayBundleEnvelope,
+  StructuredEditProviderExecutorProfile,
+  StructuredEditProviderExecutorProfileEnvelope,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -135,6 +137,7 @@ import {
   structuredEditProviderBatchExecutionProvenanceEnvelope,
   structuredEditProviderExecutionReplayBundleEnvelope,
   structuredEditProviderBatchExecutionReplayBundleEnvelope,
+  structuredEditProviderExecutorProfileEnvelope,
   structuredEditProviderExecutionRequestEnvelope,
   structuredEditExecutionReportEnvelope,
   summarizeProjectedChildReviewGroupProgress,
@@ -199,6 +202,7 @@ import {
   importStructuredEditProviderBatchExecutionProvenanceEnvelope,
   importStructuredEditProviderExecutionReplayBundleEnvelope,
   importStructuredEditProviderBatchExecutionReplayBundleEnvelope,
+  importStructuredEditProviderExecutorProfileEnvelope,
   importStructuredEditProviderExecutionRequestEnvelope,
   importStructuredEditExecutionReportEnvelope,
   reviewReplayBundleInputs,
@@ -1311,6 +1315,54 @@ interface StructuredEditProviderBatchExecutionReplayBundleEnvelopeApplicationFix
   cases: Array<{
     label: string;
     envelope: StructuredEditProviderBatchExecutionReplayBundleEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutorProfileFixture {
+  cases: Array<{
+    label: string;
+    executor_profile: {
+      provider_family: string;
+      provider_backend: string;
+      executor_label: string;
+      structure_profile: StructuredEditStructureProfileFixture['cases'][number]['profile'];
+      selection_profile: StructuredEditSelectionProfileFixture['cases'][number]['profile'];
+      match_profile: StructuredEditMatchProfileFixture['cases'][number]['profile'];
+      operation_profiles: StructuredEditOperationProfileFixture['cases'][number]['profile'][];
+      destination_profile: StructuredEditDestinationProfileFixture['cases'][number]['profile'];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderExecutorProfileEnvelopeFixture {
+  structured_edit_provider_executor_profile: StructuredEditProviderExecutorProfileFixture['cases'][number]['executor_profile'];
+  expected_envelope: {
+    kind: StructuredEditProviderExecutorProfileEnvelope['kind'];
+    version: number;
+    executor_profile: StructuredEditProviderExecutorProfileFixture['cases'][number]['executor_profile'];
+  };
+}
+
+interface StructuredEditProviderExecutorProfileEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      executor_profile: StructuredEditProviderExecutorProfileFixture['cases'][number]['executor_profile'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutorProfileEnvelopeApplicationFixture {
+  structured_edit_provider_executor_profile_envelope: StructuredEditProviderExecutorProfileEnvelopeFixture['expected_envelope'];
+  expected_executor_profile: StructuredEditProviderExecutorProfileFixture['cases'][number]['executor_profile'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderExecutorProfileEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
   }>;
 }
@@ -3156,6 +3208,34 @@ function normalizeStructuredEditProviderBatchExecutionReplayBundleEnvelope(
     batchReplayBundle: normalizeStructuredEditProviderBatchExecutionReplayBundle(
       raw.batch_replay_bundle
     )
+  };
+}
+
+function normalizeStructuredEditProviderExecutorProfile(
+  raw: StructuredEditProviderExecutorProfileFixture['cases'][number]['executor_profile']
+): StructuredEditProviderExecutorProfile {
+  return {
+    providerFamily: raw.provider_family,
+    providerBackend: raw.provider_backend,
+    executorLabel: raw.executor_label,
+    structureProfile: normalizeStructuredEditStructureProfile(raw.structure_profile),
+    selectionProfile: normalizeStructuredEditSelectionProfile(raw.selection_profile),
+    matchProfile: normalizeStructuredEditMatchProfile(raw.match_profile),
+    operationProfiles: raw.operation_profiles.map((entry) =>
+      normalizeStructuredEditOperationProfile(entry)
+    ),
+    destinationProfile: normalizeStructuredEditDestinationProfile(raw.destination_profile),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutorProfileEnvelope(
+  raw: StructuredEditProviderExecutorProfileEnvelopeFixture['expected_envelope']
+): StructuredEditProviderExecutorProfileEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executorProfile: normalizeStructuredEditProviderExecutorProfile(raw.executor_profile)
   };
 }
 
@@ -7876,6 +7956,81 @@ describe('ast-merge shared fixtures', () => {
       expect(
         importStructuredEditProviderBatchExecutionReplayBundleEnvelope(rejectionCase.envelope)
       ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-501 structured-edit provider executor profile fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorProfileFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_profile')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            executorProfile: normalizeStructuredEditProviderExecutorProfile(entry.executor_profile)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        executorProfile: normalizeStructuredEditProviderExecutorProfile(entry.executor_profile)
+      }))
+    );
+  });
+
+  it('conforms to the slice-502 structured-edit provider executor profile transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorProfileEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_profile_envelope')
+    );
+    const executorProfile = normalizeStructuredEditProviderExecutorProfile(
+      fixture.structured_edit_provider_executor_profile
+    );
+    const expected = normalizeStructuredEditProviderExecutorProfileEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(structuredEditProviderExecutorProfileEnvelope(executorProfile)).toEqual(expected);
+    expect(importStructuredEditProviderExecutorProfileEnvelope(expected)).toEqual({
+      executorProfile
+    });
+  });
+
+  it('conforms to the slice-503 structured-edit provider executor profile transport rejection fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorProfileEnvelopeRejectionFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_profile_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditProviderExecutorProfileEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-504 structured-edit provider executor profile envelope application fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorProfileEnvelopeApplicationFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_profile_envelope_application')
+    );
+
+    expect(
+      importStructuredEditProviderExecutorProfileEnvelope(
+        normalizeStructuredEditProviderExecutorProfileEnvelope(
+          fixture.structured_edit_provider_executor_profile_envelope
+        )
+      )
+    ).toEqual({
+      executorProfile: normalizeStructuredEditProviderExecutorProfile(
+        fixture.expected_executor_profile
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditProviderExecutorProfileEnvelope(rejectionCase.envelope)).toEqual({
         error: rejectionCase.expected_error
       });
     }

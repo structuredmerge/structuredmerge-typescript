@@ -343,6 +343,24 @@ export interface StructuredEditProviderBatchExecutionReplayBundleEnvelope {
   readonly batchReplayBundle: StructuredEditProviderBatchExecutionReplayBundle;
 }
 
+export interface StructuredEditProviderExecutorProfile {
+  readonly providerFamily: string;
+  readonly providerBackend: string;
+  readonly executorLabel: string;
+  readonly structureProfile: StructuredEditStructureProfile;
+  readonly selectionProfile: StructuredEditSelectionProfile;
+  readonly matchProfile: StructuredEditMatchProfile;
+  readonly operationProfiles: readonly StructuredEditOperationProfile[];
+  readonly destinationProfile: StructuredEditDestinationProfile;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderExecutorProfileEnvelope {
+  readonly kind: 'structured_edit_provider_executor_profile';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly executorProfile: StructuredEditProviderExecutorProfile;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1392,6 +1410,53 @@ export function importStructuredEditProviderBatchExecutionReplayBundleEnvelope(v
 
   return {
     batchReplayBundle: envelope.batchReplayBundle ?? envelope.batch_replay_bundle
+  };
+}
+
+export function structuredEditProviderExecutorProfileEnvelope(
+  executorProfile: StructuredEditProviderExecutorProfile
+): StructuredEditProviderExecutorProfileEnvelope {
+  return {
+    kind: 'structured_edit_provider_executor_profile',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executorProfile
+  };
+}
+
+export function importStructuredEditProviderExecutorProfileEnvelope(value: unknown): {
+  executorProfile?: StructuredEditProviderExecutorProfile;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_executor_profile'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_executor_profile envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    executorProfile?: StructuredEditProviderExecutorProfile;
+    executor_profile?: StructuredEditProviderExecutorProfile;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_executor_profile envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    executorProfile: envelope.executorProfile ?? envelope.executor_profile
   };
 }
 
