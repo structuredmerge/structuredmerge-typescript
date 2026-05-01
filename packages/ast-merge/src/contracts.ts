@@ -279,6 +279,12 @@ export interface StructuredEditProviderExecutionOutcome {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionOutcomeEnvelope {
+  readonly kind: 'structured_edit_provider_execution_outcome';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly providerExecutionOutcome: StructuredEditProviderExecutionOutcome;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1048,6 +1054,54 @@ export function importStructuredEditProviderExecutionDispatchEnvelope(value: unk
   return {
     providerExecutionDispatch:
       envelope.providerExecutionDispatch ?? envelope.provider_execution_dispatch
+  };
+}
+
+export function structuredEditProviderExecutionOutcomeEnvelope(
+  providerExecutionOutcome: StructuredEditProviderExecutionOutcome
+): StructuredEditProviderExecutionOutcomeEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_outcome',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    providerExecutionOutcome
+  };
+}
+
+export function importStructuredEditProviderExecutionOutcomeEnvelope(value: unknown): {
+  providerExecutionOutcome?: StructuredEditProviderExecutionOutcome;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_outcome'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_outcome envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    providerExecutionOutcome?: StructuredEditProviderExecutionOutcome;
+    provider_execution_outcome?: StructuredEditProviderExecutionOutcome;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_outcome envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    providerExecutionOutcome:
+      envelope.providerExecutionOutcome ?? envelope.provider_execution_outcome
   };
 }
 
