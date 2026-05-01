@@ -285,6 +285,17 @@ export interface StructuredEditProviderExecutionOutcomeEnvelope {
   readonly providerExecutionOutcome: StructuredEditProviderExecutionOutcome;
 }
 
+export interface StructuredEditProviderBatchExecutionOutcome {
+  readonly outcomes: readonly StructuredEditProviderExecutionOutcome[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderBatchExecutionOutcomeEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_outcome';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchOutcome: StructuredEditProviderBatchExecutionOutcome;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1102,6 +1113,53 @@ export function importStructuredEditProviderExecutionOutcomeEnvelope(value: unkn
   return {
     providerExecutionOutcome:
       envelope.providerExecutionOutcome ?? envelope.provider_execution_outcome
+  };
+}
+
+export function structuredEditProviderBatchExecutionOutcomeEnvelope(
+  batchOutcome: StructuredEditProviderBatchExecutionOutcome
+): StructuredEditProviderBatchExecutionOutcomeEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_outcome',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchOutcome
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionOutcomeEnvelope(value: unknown): {
+  batchOutcome?: StructuredEditProviderBatchExecutionOutcome;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_batch_execution_outcome'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_batch_execution_outcome envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchOutcome?: StructuredEditProviderBatchExecutionOutcome;
+    batch_outcome?: StructuredEditProviderBatchExecutionOutcome;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_outcome envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchOutcome: envelope.batchOutcome ?? envelope.batch_outcome
   };
 }
 
