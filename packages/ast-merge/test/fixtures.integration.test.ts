@@ -88,6 +88,7 @@ import type {
   StructuredEditProviderExecutionInvocationEnvelope,
   StructuredEditProviderExecutionRunResult,
   StructuredEditProviderExecutionRunResultEnvelope,
+  StructuredEditProviderExecutionReceipt,
   StructuredEditProviderBatchExecutionRunResult,
   StructuredEditProviderBatchExecutionRunResultEnvelope,
   StructuredEditProviderBatchExecutionInvocation,
@@ -1786,6 +1787,18 @@ interface StructuredEditProviderBatchExecutionRunResultEnvelopeApplicationFixtur
     label: string;
     envelope: StructuredEditProviderBatchExecutionRunResultEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionReceiptFixture {
+  cases: Array<{
+    label: string;
+    execution_receipt: {
+      run_result: StructuredEditProviderExecutionRunResultFixture['cases'][number]['execution_run_result'];
+      provenance?: StructuredEditProviderExecutionProvenanceFixture['cases'][number]['provenance'];
+      replay_bundle?: StructuredEditProviderExecutionReplayBundleFixture['cases'][number]['replay_bundle'];
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -3937,6 +3950,21 @@ function normalizeStructuredEditProviderBatchExecutionRunResultEnvelope(
     batchExecutionRunResult: normalizeStructuredEditProviderBatchExecutionRunResult(
       raw.batch_execution_run_result
     )
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceipt(
+  raw: StructuredEditProviderExecutionReceiptFixture['cases'][number]['execution_receipt']
+): StructuredEditProviderExecutionReceipt {
+  return {
+    runResult: normalizeStructuredEditProviderExecutionRunResult(raw.run_result),
+    provenance: raw.provenance
+      ? normalizeStructuredEditProviderExecutionProvenance(raw.provenance)
+      : undefined,
+    replayBundle: raw.replay_bundle
+      ? normalizeStructuredEditProviderExecutionReplayBundle(raw.replay_bundle)
+      : undefined,
+    metadata: raw.metadata
   };
 }
 
@@ -9454,6 +9482,26 @@ describe('ast-merge shared fixtures', () => {
         importStructuredEditProviderBatchExecutionRunResultEnvelope(rejectionCase.envelope)
       ).toEqual({
         error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-549 structured-edit provider execution receipt fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionReceiptFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_receipt')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            executionReceipt: normalizeStructuredEditProviderExecutionReceipt(
+              entry.execution_receipt
+            )
+          })
+        )
+      ).toEqual({
+        executionReceipt: normalizeStructuredEditProviderExecutionReceipt(entry.execution_receipt)
       });
     }
   });

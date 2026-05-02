@@ -91,6 +91,7 @@ export type {
   StructuredEditProviderExecutionInvocationEnvelope,
   StructuredEditProviderExecutionRunResult,
   StructuredEditProviderExecutionRunResultEnvelope,
+  StructuredEditProviderExecutionReceipt,
   StructuredEditProviderBatchExecutionRunResult,
   StructuredEditProviderBatchExecutionRunResultEnvelope,
   StructuredEditProviderBatchExecutionInvocation,

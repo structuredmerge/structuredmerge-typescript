@@ -322,6 +322,13 @@ export interface StructuredEditProviderBatchExecutionRunResultEnvelope {
   readonly batchExecutionRunResult: StructuredEditProviderBatchExecutionRunResult;
 }
 
+export interface StructuredEditProviderExecutionReceipt {
+  readonly runResult: StructuredEditProviderExecutionRunResult;
+  readonly provenance?: StructuredEditProviderExecutionProvenance;
+  readonly replayBundle?: StructuredEditProviderExecutionReplayBundle;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionHandoff {
   readonly handoffs: readonly StructuredEditProviderExecutionHandoff[];
   readonly metadata?: Readonly<Record<string, unknown>>;
