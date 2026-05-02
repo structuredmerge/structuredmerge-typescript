@@ -329,6 +329,12 @@ export interface StructuredEditProviderExecutionReceipt {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptEnvelope {
+  readonly kind: 'structured_edit_provider_execution_receipt';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly executionReceipt: StructuredEditProviderExecutionReceipt;
+}
+
 export interface StructuredEditProviderBatchExecutionHandoff {
   readonly handoffs: readonly StructuredEditProviderExecutionHandoff[];
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -1450,6 +1456,53 @@ export function importStructuredEditProviderBatchExecutionRunResultEnvelope(valu
 
   return {
     batchExecutionRunResult: envelope.batchExecutionRunResult ?? envelope.batch_execution_run_result
+  };
+}
+
+export function structuredEditProviderExecutionReceiptEnvelope(
+  executionReceipt: StructuredEditProviderExecutionReceipt
+): StructuredEditProviderExecutionReceiptEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_receipt',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executionReceipt
+  };
+}
+
+export function importStructuredEditProviderExecutionReceiptEnvelope(value: unknown): {
+  executionReceipt?: StructuredEditProviderExecutionReceipt;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_receipt'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_receipt envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    executionReceipt?: StructuredEditProviderExecutionReceipt;
+    execution_receipt?: StructuredEditProviderExecutionReceipt;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_receipt envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    executionReceipt: envelope.executionReceipt ?? envelope.execution_receipt
   };
 }
 
