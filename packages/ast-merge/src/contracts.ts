@@ -277,6 +277,11 @@ export interface StructuredEditProviderExecutionHandoffEnvelope {
   readonly executionHandoff: StructuredEditProviderExecutionHandoff;
 }
 
+export interface StructuredEditProviderExecutionInvocation {
+  readonly executionHandoff: StructuredEditProviderExecutionHandoff;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionHandoff {
   readonly handoffs: readonly StructuredEditProviderExecutionHandoff[];
   readonly metadata?: Readonly<Record<string, unknown>>;

@@ -84,6 +84,7 @@ import type {
   StructuredEditProviderExecutionPlanEnvelope,
   StructuredEditProviderExecutionHandoff,
   StructuredEditProviderExecutionHandoffEnvelope,
+  StructuredEditProviderExecutionInvocation,
   StructuredEditProviderBatchExecutionHandoff,
   StructuredEditProviderBatchExecutionHandoffEnvelope,
   StructuredEditProviderBatchExecutionPlan,
@@ -1605,6 +1606,16 @@ interface StructuredEditProviderExecutionHandoffEnvelopeApplicationFixture {
     label: string;
     envelope: StructuredEditProviderExecutionHandoffEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionInvocationFixture {
+  cases: Array<{
+    label: string;
+    execution_invocation: {
+      execution_handoff: StructuredEditProviderExecutionHandoffFixture['cases'][number]['execution_handoff'];
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -3667,6 +3678,15 @@ function normalizeStructuredEditProviderExecutionHandoffEnvelope(
     kind: raw.kind,
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     executionHandoff: normalizeStructuredEditProviderExecutionHandoff(raw.execution_handoff)
+  };
+}
+
+function normalizeStructuredEditProviderExecutionInvocation(
+  raw: StructuredEditProviderExecutionInvocationFixture['cases'][number]['execution_invocation']
+): StructuredEditProviderExecutionInvocation {
+  return {
+    executionHandoff: normalizeStructuredEditProviderExecutionHandoff(raw.execution_handoff),
+    metadata: raw.metadata
   };
 }
 
@@ -8845,6 +8865,28 @@ describe('ast-merge shared fixtures', () => {
     for (const rejectionCase of fixture.cases) {
       expect(importStructuredEditProviderExecutionHandoffEnvelope(rejectionCase.envelope)).toEqual({
         error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-533 structured-edit provider execution invocation fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionInvocationFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_invocation')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            executionInvocation: normalizeStructuredEditProviderExecutionInvocation(
+              entry.execution_invocation
+            )
+          })
+        )
+      ).toEqual({
+        executionInvocation: normalizeStructuredEditProviderExecutionInvocation(
+          entry.execution_invocation
+        )
       });
     }
   });
