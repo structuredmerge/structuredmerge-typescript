@@ -93,6 +93,7 @@ export type {
   StructuredEditProviderExecutionRunResultEnvelope,
   StructuredEditProviderExecutionReceipt,
   StructuredEditProviderExecutionReceiptEnvelope,
+  StructuredEditProviderExecutionReceiptReplayRequest,
   StructuredEditProviderBatchExecutionReceipt,
   StructuredEditProviderBatchExecutionReceiptEnvelope,
   StructuredEditProviderBatchExecutionRunResult,

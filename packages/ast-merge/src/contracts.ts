@@ -346,6 +346,12 @@ export interface StructuredEditProviderBatchExecutionReceiptEnvelope {
   readonly batchExecutionReceipt: StructuredEditProviderBatchExecutionReceipt;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayRequest {
+  readonly executionReceipt: StructuredEditProviderExecutionReceipt;
+  readonly replayMode: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionHandoff {
   readonly handoffs: readonly StructuredEditProviderExecutionHandoff[];
   readonly metadata?: Readonly<Record<string, unknown>>;

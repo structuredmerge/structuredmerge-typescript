@@ -90,6 +90,7 @@ import type {
   StructuredEditProviderExecutionRunResultEnvelope,
   StructuredEditProviderExecutionReceipt,
   StructuredEditProviderExecutionReceiptEnvelope,
+  StructuredEditProviderExecutionReceiptReplayRequest,
   StructuredEditProviderBatchExecutionReceipt,
   StructuredEditProviderBatchExecutionReceiptEnvelope,
   StructuredEditProviderBatchExecutionRunResult,
@@ -1878,6 +1879,17 @@ interface StructuredEditProviderBatchExecutionReceiptEnvelopeApplicationFixture 
     label: string;
     envelope: StructuredEditProviderBatchExecutionReceiptEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionReceiptReplayRequestFixture {
+  cases: Array<{
+    label: string;
+    receipt_replay_request: {
+      execution_receipt: StructuredEditProviderExecutionReceiptFixture['cases'][number]['execution_receipt'];
+      replay_mode: string;
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -4077,6 +4089,16 @@ function normalizeStructuredEditProviderBatchExecutionReceiptEnvelope(
     batchExecutionReceipt: normalizeStructuredEditProviderBatchExecutionReceipt(
       raw.batch_execution_receipt
     )
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayRequest(
+  raw: StructuredEditProviderExecutionReceiptReplayRequestFixture['cases'][number]['receipt_replay_request']
+): StructuredEditProviderExecutionReceiptReplayRequest {
+  return {
+    executionReceipt: normalizeStructuredEditProviderExecutionReceipt(raw.execution_receipt),
+    replayMode: raw.replay_mode,
+    metadata: raw.metadata
   };
 }
 
@@ -9754,6 +9776,28 @@ describe('ast-merge shared fixtures', () => {
         importStructuredEditProviderBatchExecutionReceiptEnvelope(rejectionCase.envelope)
       ).toEqual({
         error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-557 structured-edit provider execution receipt replay request fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionReceiptReplayRequestFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_receipt_replay_request')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayRequest: normalizeStructuredEditProviderExecutionReceiptReplayRequest(
+              entry.receipt_replay_request
+            )
+          })
+        )
+      ).toEqual({
+        receiptReplayRequest: normalizeStructuredEditProviderExecutionReceiptReplayRequest(
+          entry.receipt_replay_request
+        )
       });
     }
   });
