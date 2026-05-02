@@ -253,6 +253,18 @@ export interface StructuredEditProviderExecutionRequestEnvelope {
   readonly executionRequest: StructuredEditProviderExecutionRequest;
 }
 
+export interface StructuredEditProviderExecutionPlan {
+  readonly executionRequest: StructuredEditProviderExecutionRequest;
+  readonly executorResolution: StructuredEditProviderExecutorResolution;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderExecutionPlanEnvelope {
+  readonly kind: 'structured_edit_provider_execution_plan';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly executionPlan: StructuredEditProviderExecutionPlan;
+}
+
 export interface StructuredEditProviderExecutionApplication {
   readonly executionRequest: StructuredEditProviderExecutionRequest;
   readonly report: StructuredEditExecutionReport;
@@ -1074,6 +1086,51 @@ export function importStructuredEditProviderExecutionRequestEnvelope(value: unkn
   }
 
   return { executionRequest: envelope.executionRequest ?? envelope.execution_request };
+}
+
+export function structuredEditProviderExecutionPlanEnvelope(
+  executionPlan: StructuredEditProviderExecutionPlan
+): StructuredEditProviderExecutionPlanEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_plan',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executionPlan
+  };
+}
+
+export function importStructuredEditProviderExecutionPlanEnvelope(value: unknown): {
+  executionPlan?: StructuredEditProviderExecutionPlan;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_plan'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_plan envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    executionPlan?: StructuredEditProviderExecutionPlan;
+    execution_plan?: StructuredEditProviderExecutionPlan;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_plan envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { executionPlan: envelope.executionPlan ?? envelope.execution_plan };
 }
 
 export function structuredEditProviderExecutionApplicationEnvelope(
