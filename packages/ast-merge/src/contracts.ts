@@ -299,6 +299,12 @@ export interface StructuredEditProviderBatchExecutionInvocationEnvelope {
   readonly batchExecutionInvocation: StructuredEditProviderBatchExecutionInvocation;
 }
 
+export interface StructuredEditProviderExecutionRunResult {
+  readonly executionInvocation: StructuredEditProviderExecutionInvocation;
+  readonly outcome: StructuredEditProviderExecutionOutcome;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionHandoff {
   readonly handoffs: readonly StructuredEditProviderExecutionHandoff[];
   readonly metadata?: Readonly<Record<string, unknown>>;

@@ -89,6 +89,7 @@ export type {
   StructuredEditProviderExecutionHandoffEnvelope,
   StructuredEditProviderExecutionInvocation,
   StructuredEditProviderExecutionInvocationEnvelope,
+  StructuredEditProviderExecutionRunResult,
   StructuredEditProviderBatchExecutionInvocation,
   StructuredEditProviderBatchExecutionInvocationEnvelope,
   StructuredEditProviderBatchExecutionHandoff,
