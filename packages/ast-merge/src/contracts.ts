@@ -282,6 +282,12 @@ export interface StructuredEditProviderExecutionInvocation {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionInvocationEnvelope {
+  readonly kind: 'structured_edit_provider_execution_invocation';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly executionInvocation: StructuredEditProviderExecutionInvocation;
+}
+
 export interface StructuredEditProviderBatchExecutionHandoff {
   readonly handoffs: readonly StructuredEditProviderExecutionHandoff[];
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -1215,6 +1221,53 @@ export function importStructuredEditProviderExecutionHandoffEnvelope(value: unkn
   }
 
   return { executionHandoff: envelope.executionHandoff ?? envelope.execution_handoff };
+}
+
+export function structuredEditProviderExecutionInvocationEnvelope(
+  executionInvocation: StructuredEditProviderExecutionInvocation
+): StructuredEditProviderExecutionInvocationEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_invocation',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executionInvocation
+  };
+}
+
+export function importStructuredEditProviderExecutionInvocationEnvelope(value: unknown): {
+  executionInvocation?: StructuredEditProviderExecutionInvocation;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_invocation'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_invocation envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    executionInvocation?: StructuredEditProviderExecutionInvocation;
+    execution_invocation?: StructuredEditProviderExecutionInvocation;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_invocation envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    executionInvocation: envelope.executionInvocation ?? envelope.execution_invocation
+  };
 }
 
 export function structuredEditProviderBatchExecutionHandoffEnvelope(
