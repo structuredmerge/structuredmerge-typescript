@@ -82,6 +82,7 @@ import type {
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditProviderExecutionPlan,
   StructuredEditProviderExecutionPlanEnvelope,
+  StructuredEditProviderExecutionHandoff,
   StructuredEditProviderBatchExecutionPlan,
   StructuredEditProviderBatchExecutionPlanEnvelope,
   StructuredEditExecutionReport,
@@ -1553,6 +1554,17 @@ interface StructuredEditProviderExecutionPlanFixture {
     execution_plan: {
       execution_request: StructuredEditProviderExecutionRequestFixture['cases'][number]['execution_request'];
       executor_resolution: StructuredEditProviderExecutorResolutionFixture['cases'][number]['executor_resolution'];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderExecutionHandoffFixture {
+  cases: Array<{
+    label: string;
+    execution_handoff: {
+      execution_plan: StructuredEditProviderExecutionPlanFixture['cases'][number]['execution_plan'];
+      execution_dispatch: StructuredEditProviderExecutionDispatchFixture['cases'][number]['dispatch'];
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -3555,6 +3567,16 @@ function normalizeStructuredEditProviderExecutionPlan(
   return {
     executionRequest: normalizeStructuredEditProviderExecutionRequest(raw.execution_request),
     executorResolution: normalizeStructuredEditProviderExecutorResolution(raw.executor_resolution),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionHandoff(
+  raw: StructuredEditProviderExecutionHandoffFixture['cases'][number]['execution_handoff']
+): StructuredEditProviderExecutionHandoff {
+  return {
+    executionPlan: normalizeStructuredEditProviderExecutionPlan(raw.execution_plan),
+    executionDispatch: normalizeStructuredEditProviderExecutionDispatch(raw.execution_dispatch),
     metadata: raw.metadata
   };
 }
@@ -8638,6 +8660,26 @@ describe('ast-merge shared fixtures', () => {
         )
       ).toEqual({
         executionPlan: normalizeStructuredEditProviderExecutionPlan(entry.execution_plan)
+      });
+    }
+  });
+
+  it('conforms to the slice-525 structured-edit provider execution handoff fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionHandoffFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_handoff')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            executionHandoff: normalizeStructuredEditProviderExecutionHandoff(
+              entry.execution_handoff
+            )
+          })
+        )
+      ).toEqual({
+        executionHandoff: normalizeStructuredEditProviderExecutionHandoff(entry.execution_handoff)
       });
     }
   });

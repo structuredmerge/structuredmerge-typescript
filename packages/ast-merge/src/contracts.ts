@@ -265,6 +265,12 @@ export interface StructuredEditProviderExecutionPlanEnvelope {
   readonly executionPlan: StructuredEditProviderExecutionPlan;
 }
 
+export interface StructuredEditProviderExecutionHandoff {
+  readonly executionPlan: StructuredEditProviderExecutionPlan;
+  readonly executionDispatch: StructuredEditProviderExecutionDispatch;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionPlan {
   readonly plans: readonly StructuredEditProviderExecutionPlan[];
   readonly metadata?: Readonly<Record<string, unknown>>;
