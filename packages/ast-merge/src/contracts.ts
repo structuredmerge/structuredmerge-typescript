@@ -394,6 +394,12 @@ export interface StructuredEditProviderExecutorResolution {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutorResolutionEnvelope {
+  readonly kind: 'structured_edit_provider_executor_resolution';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly executorResolution: StructuredEditProviderExecutorResolution;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -1584,6 +1590,53 @@ export function importStructuredEditProviderExecutorSelectionPolicyEnvelope(valu
 
   return {
     selectionPolicy: envelope.selectionPolicy ?? envelope.selection_policy
+  };
+}
+
+export function structuredEditProviderExecutorResolutionEnvelope(
+  executorResolution: StructuredEditProviderExecutorResolution
+): StructuredEditProviderExecutorResolutionEnvelope {
+  return {
+    kind: 'structured_edit_provider_executor_resolution',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executorResolution
+  };
+}
+
+export function importStructuredEditProviderExecutorResolutionEnvelope(value: unknown): {
+  executorResolution?: StructuredEditProviderExecutorResolution;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_executor_resolution'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_executor_resolution envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    executorResolution?: StructuredEditProviderExecutorResolution;
+    executor_resolution?: StructuredEditProviderExecutorResolution;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_executor_resolution envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    executorResolution: envelope.executorResolution ?? envelope.executor_resolution
   };
 }
 
