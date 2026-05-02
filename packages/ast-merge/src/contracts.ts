@@ -271,6 +271,12 @@ export interface StructuredEditProviderExecutionHandoff {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionHandoffEnvelope {
+  readonly kind: 'structured_edit_provider_execution_handoff';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly executionHandoff: StructuredEditProviderExecutionHandoff;
+}
+
 export interface StructuredEditProviderBatchExecutionPlan {
   readonly plans: readonly StructuredEditProviderExecutionPlan[];
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -1148,6 +1154,51 @@ export function importStructuredEditProviderExecutionPlanEnvelope(value: unknown
   }
 
   return { executionPlan: envelope.executionPlan ?? envelope.execution_plan };
+}
+
+export function structuredEditProviderExecutionHandoffEnvelope(
+  executionHandoff: StructuredEditProviderExecutionHandoff
+): StructuredEditProviderExecutionHandoffEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_handoff',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    executionHandoff
+  };
+}
+
+export function importStructuredEditProviderExecutionHandoffEnvelope(value: unknown): {
+  executionHandoff?: StructuredEditProviderExecutionHandoff;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_execution_handoff'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_execution_handoff envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    executionHandoff?: StructuredEditProviderExecutionHandoff;
+    execution_handoff?: StructuredEditProviderExecutionHandoff;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_handoff envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { executionHandoff: envelope.executionHandoff ?? envelope.execution_handoff };
 }
 
 export function structuredEditProviderBatchExecutionPlanEnvelope(
