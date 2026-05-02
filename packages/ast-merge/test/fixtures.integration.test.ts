@@ -86,6 +86,8 @@ import type {
   StructuredEditProviderExecutionHandoffEnvelope,
   StructuredEditProviderExecutionInvocation,
   StructuredEditProviderExecutionInvocationEnvelope,
+  StructuredEditProviderBatchExecutionInvocation,
+  StructuredEditProviderBatchExecutionInvocationEnvelope,
   StructuredEditProviderBatchExecutionHandoff,
   StructuredEditProviderBatchExecutionHandoffEnvelope,
   StructuredEditProviderBatchExecutionPlan,
@@ -161,6 +163,7 @@ import {
   structuredEditProviderExecutionPlanEnvelope,
   structuredEditProviderExecutionHandoffEnvelope,
   structuredEditProviderExecutionInvocationEnvelope,
+  structuredEditProviderBatchExecutionInvocationEnvelope,
   structuredEditProviderBatchExecutionHandoffEnvelope,
   structuredEditProviderBatchExecutionPlanEnvelope,
   structuredEditExecutionReportEnvelope,
@@ -234,6 +237,7 @@ import {
   importStructuredEditProviderExecutionPlanEnvelope,
   importStructuredEditProviderExecutionHandoffEnvelope,
   importStructuredEditProviderExecutionInvocationEnvelope,
+  importStructuredEditProviderBatchExecutionInvocationEnvelope,
   importStructuredEditProviderBatchExecutionHandoffEnvelope,
   importStructuredEditProviderBatchExecutionPlanEnvelope,
   importStructuredEditExecutionReportEnvelope,
@@ -1649,6 +1653,47 @@ interface StructuredEditProviderExecutionInvocationEnvelopeApplicationFixture {
   cases: Array<{
     label: string;
     envelope: StructuredEditProviderExecutionInvocationEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionInvocationFixture {
+  cases: Array<{
+    label: string;
+    batch_execution_invocation: {
+      invocations: StructuredEditProviderExecutionInvocationFixture['cases'][number]['execution_invocation'][];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionInvocationEnvelopeFixture {
+  structured_edit_provider_batch_execution_invocation: StructuredEditProviderBatchExecutionInvocationFixture['cases'][number]['batch_execution_invocation'];
+  expected_envelope: {
+    kind: StructuredEditProviderBatchExecutionInvocationEnvelope['kind'];
+    version: number;
+    batch_execution_invocation: StructuredEditProviderBatchExecutionInvocationFixture['cases'][number]['batch_execution_invocation'];
+  };
+}
+
+interface StructuredEditProviderBatchExecutionInvocationEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      batch_execution_invocation: StructuredEditProviderBatchExecutionInvocationFixture['cases'][number]['batch_execution_invocation'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionInvocationEnvelopeApplicationFixture {
+  structured_edit_provider_batch_execution_invocation_envelope: StructuredEditProviderBatchExecutionInvocationEnvelopeFixture['expected_envelope'];
+  expected_batch_execution_invocation: StructuredEditProviderBatchExecutionInvocationFixture['cases'][number]['batch_execution_invocation'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderBatchExecutionInvocationEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
   }>;
 }
@@ -3732,6 +3777,29 @@ function normalizeStructuredEditProviderExecutionInvocationEnvelope(
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     executionInvocation: normalizeStructuredEditProviderExecutionInvocation(
       raw.execution_invocation
+    )
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionInvocation(
+  raw: StructuredEditProviderBatchExecutionInvocationFixture['cases'][number]['batch_execution_invocation']
+): StructuredEditProviderBatchExecutionInvocation {
+  return {
+    invocations: raw.invocations.map((invocation) =>
+      normalizeStructuredEditProviderExecutionInvocation(invocation)
+    ),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionInvocationEnvelope(
+  raw: StructuredEditProviderBatchExecutionInvocationEnvelopeFixture['expected_envelope']
+): StructuredEditProviderBatchExecutionInvocationEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchExecutionInvocation: normalizeStructuredEditProviderBatchExecutionInvocation(
+      raw.batch_execution_invocation
     )
   };
 }
@@ -8993,6 +9061,93 @@ describe('ast-merge shared fixtures', () => {
     for (const rejectionCase of fixture.cases) {
       expect(
         importStructuredEditProviderExecutionInvocationEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-537 structured-edit provider batch execution invocation fixture', () => {
+    const fixture = readFixture<StructuredEditProviderBatchExecutionInvocationFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_batch_execution_invocation')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            batchExecutionInvocation: normalizeStructuredEditProviderBatchExecutionInvocation(
+              entry.batch_execution_invocation
+            )
+          })
+        )
+      ).toEqual({
+        batchExecutionInvocation: normalizeStructuredEditProviderBatchExecutionInvocation(
+          entry.batch_execution_invocation
+        )
+      });
+    }
+  });
+
+  it('conforms to the slice-538 structured-edit provider batch execution invocation transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProviderBatchExecutionInvocationEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_batch_execution_invocation_envelope')
+    );
+    const batchExecutionInvocation = normalizeStructuredEditProviderBatchExecutionInvocation(
+      fixture.structured_edit_provider_batch_execution_invocation
+    );
+    const expected = normalizeStructuredEditProviderBatchExecutionInvocationEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(
+      structuredEditProviderBatchExecutionInvocationEnvelope(batchExecutionInvocation)
+    ).toEqual(expected);
+    expect(importStructuredEditProviderBatchExecutionInvocationEnvelope(expected)).toEqual({
+      batchExecutionInvocation
+    });
+  });
+
+  it('conforms to the slice-539 structured-edit provider batch execution invocation transport rejection fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderBatchExecutionInvocationEnvelopeRejectionFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_batch_execution_invocation_envelope_rejection'
+        )
+      );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionInvocationEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-540 structured-edit provider batch execution invocation envelope application fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderBatchExecutionInvocationEnvelopeApplicationFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_batch_execution_invocation_envelope_application'
+        )
+      );
+
+    expect(
+      importStructuredEditProviderBatchExecutionInvocationEnvelope(
+        normalizeStructuredEditProviderBatchExecutionInvocationEnvelope(
+          fixture.structured_edit_provider_batch_execution_invocation_envelope
+        )
+      )
+    ).toEqual({
+      batchExecutionInvocation: normalizeStructuredEditProviderBatchExecutionInvocation(
+        fixture.expected_batch_execution_invocation
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionInvocationEnvelope(rejectionCase.envelope)
       ).toEqual({
         error: rejectionCase.expected_error
       });
