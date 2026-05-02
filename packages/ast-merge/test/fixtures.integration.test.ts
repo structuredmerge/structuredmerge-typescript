@@ -76,6 +76,7 @@ import type {
   StructuredEditProviderExecutorRegistryEnvelope,
   StructuredEditProviderExecutorSelectionPolicy,
   StructuredEditProviderExecutorSelectionPolicyEnvelope,
+  StructuredEditProviderExecutorResolution,
   StructuredEditProviderExecutionRequest,
   StructuredEditProviderExecutionRequestEnvelope,
   StructuredEditExecutionReport,
@@ -1458,6 +1459,18 @@ interface StructuredEditProviderExecutorSelectionPolicyEnvelopeApplicationFixtur
     label: string;
     envelope: StructuredEditProviderExecutorSelectionPolicyEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutorResolutionFixture {
+  cases: Array<{
+    label: string;
+    executor_resolution: {
+      executor_registry: StructuredEditProviderExecutorRegistryFixture['cases'][number]['executor_registry'];
+      selection_policy: StructuredEditProviderExecutorSelectionPolicyFixture['cases'][number]['selection_policy'];
+      selected_executor_profile: StructuredEditProviderExecutorProfileFixture['cases'][number]['executor_profile'];
+      metadata?: Record<string, unknown>;
+    };
   }>;
 }
 
@@ -3385,6 +3398,19 @@ function normalizeStructuredEditProviderExecutorSelectionPolicyEnvelope(
     kind: raw.kind,
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     selectionPolicy: normalizeStructuredEditProviderExecutorSelectionPolicy(raw.selection_policy)
+  };
+}
+
+function normalizeStructuredEditProviderExecutorResolution(
+  raw: StructuredEditProviderExecutorResolutionFixture['cases'][number]['executor_resolution']
+): StructuredEditProviderExecutorResolution {
+  return {
+    executorRegistry: normalizeStructuredEditProviderExecutorRegistry(raw.executor_registry),
+    selectionPolicy: normalizeStructuredEditProviderExecutorSelectionPolicy(raw.selection_policy),
+    selectedExecutorProfile: normalizeStructuredEditProviderExecutorProfile(
+      raw.selected_executor_profile
+    ),
+    metadata: raw.metadata
   };
 }
 
@@ -8341,6 +8367,28 @@ describe('ast-merge shared fixtures', () => {
         importStructuredEditProviderExecutorSelectionPolicyEnvelope(rejectionCase.envelope)
       ).toEqual({
         error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-513 structured-edit provider executor resolution fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorResolutionFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_resolution')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            executorResolution: normalizeStructuredEditProviderExecutorResolution(
+              entry.executor_resolution
+            )
+          })
+        )
+      ).toEqual({
+        executorResolution: normalizeStructuredEditProviderExecutorResolution(
+          entry.executor_resolution
+        )
       });
     }
   });

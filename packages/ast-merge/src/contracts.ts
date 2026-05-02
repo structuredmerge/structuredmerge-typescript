@@ -387,6 +387,13 @@ export interface StructuredEditProviderExecutorSelectionPolicyEnvelope {
   readonly selectionPolicy: StructuredEditProviderExecutorSelectionPolicy;
 }
 
+export interface StructuredEditProviderExecutorResolution {
+  readonly executorRegistry: StructuredEditProviderExecutorRegistry;
+  readonly selectionPolicy: StructuredEditProviderExecutorSelectionPolicy;
+  readonly selectedExecutorProfile: StructuredEditProviderExecutorProfile;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionApplicationEnvelope {
   readonly kind: 'structured_edit_provider_execution_application';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
