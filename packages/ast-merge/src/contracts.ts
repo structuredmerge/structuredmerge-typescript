@@ -265,6 +265,17 @@ export interface StructuredEditProviderExecutionPlanEnvelope {
   readonly executionPlan: StructuredEditProviderExecutionPlan;
 }
 
+export interface StructuredEditProviderBatchExecutionPlan {
+  readonly plans: readonly StructuredEditProviderExecutionPlan[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditProviderBatchExecutionPlanEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_plan';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchExecutionPlan: StructuredEditProviderBatchExecutionPlan;
+}
+
 export interface StructuredEditProviderExecutionApplication {
   readonly executionRequest: StructuredEditProviderExecutionRequest;
   readonly report: StructuredEditExecutionReport;
@@ -1131,6 +1142,51 @@ export function importStructuredEditProviderExecutionPlanEnvelope(value: unknown
   }
 
   return { executionPlan: envelope.executionPlan ?? envelope.execution_plan };
+}
+
+export function structuredEditProviderBatchExecutionPlanEnvelope(
+  batchExecutionPlan: StructuredEditProviderBatchExecutionPlan
+): StructuredEditProviderBatchExecutionPlanEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_plan',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchExecutionPlan
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionPlanEnvelope(value: unknown): {
+  batchExecutionPlan?: StructuredEditProviderBatchExecutionPlan;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_provider_batch_execution_plan'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_provider_batch_execution_plan envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchExecutionPlan?: StructuredEditProviderBatchExecutionPlan;
+    batch_execution_plan?: StructuredEditProviderBatchExecutionPlan;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_plan envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { batchExecutionPlan: envelope.batchExecutionPlan ?? envelope.batch_execution_plan };
 }
 
 export function structuredEditProviderExecutionApplicationEnvelope(
