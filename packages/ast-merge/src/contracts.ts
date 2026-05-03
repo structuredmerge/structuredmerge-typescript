@@ -443,6 +443,12 @@ export interface StructuredEditProviderExecutionReceiptReplayWorkflowResult {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowResultEnvelope {
+  readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_result';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly receiptReplayWorkflowResult: StructuredEditProviderExecutionReceiptReplayWorkflowResult;
+}
+
 export interface StructuredEditProviderBatchExecutionHandoff {
   readonly handoffs: readonly StructuredEditProviderExecutionHandoff[];
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -2065,6 +2071,58 @@ export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowE
   return {
     batchReceiptReplayWorkflow:
       envelope.batchReceiptReplayWorkflow ?? envelope.batch_receipt_replay_workflow
+  };
+}
+
+export function structuredEditProviderExecutionReceiptReplayWorkflowResultEnvelope(
+  receiptReplayWorkflowResult: StructuredEditProviderExecutionReceiptReplayWorkflowResult
+): StructuredEditProviderExecutionReceiptReplayWorkflowResultEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_receipt_replay_workflow_result',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    receiptReplayWorkflowResult
+  };
+}
+
+export function importStructuredEditProviderExecutionReceiptReplayWorkflowResultEnvelope(
+  value: unknown
+): {
+  receiptReplayWorkflowResult?: StructuredEditProviderExecutionReceiptReplayWorkflowResult;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_execution_receipt_replay_workflow_result'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_execution_receipt_replay_workflow_result envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    receiptReplayWorkflowResult?: StructuredEditProviderExecutionReceiptReplayWorkflowResult;
+    receipt_replay_workflow_result?: StructuredEditProviderExecutionReceiptReplayWorkflowResult;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_receipt_replay_workflow_result envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    receiptReplayWorkflowResult:
+      envelope.receiptReplayWorkflowResult ?? envelope.receipt_replay_workflow_result
   };
 }
 
