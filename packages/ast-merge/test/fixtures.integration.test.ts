@@ -13993,6 +13993,24 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-677 structured-edit crispr overmatch fail closed fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath('structured_edit_crispr_overmatch_fail_closed')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            report: normalizeStructuredEditExecutionReport(entry.report)
+          })
+        )
+      ).toEqual({
+        report: normalizeStructuredEditExecutionReport(entry.report)
+      });
+    }
+  });
+
   it('conforms to the slice-439 structured-edit execution report transport envelope fixture', () => {
     const fixture = readFixture<StructuredEditExecutionReportEnvelopeFixture>(
       ...diagnosticsFixturePath('structured_edit_execution_report_envelope')
