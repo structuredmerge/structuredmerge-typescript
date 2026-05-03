@@ -116,11 +116,13 @@ import type {
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResult,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision,
+  StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcome,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
+  StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequest,
@@ -237,6 +239,7 @@ import {
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
+  structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope,
@@ -340,6 +343,7 @@ import {
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
+  importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope,
@@ -4927,6 +4931,21 @@ function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApply
   };
 }
 
+function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+  raw: any
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation {
+  return {
+    applyDecisionConfirmations: (
+      raw.applyDecisionConfirmations ??
+      raw.apply_decision_confirmations ??
+      []
+    ).map((entry: any) =>
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation(entry)
+    ),
+    metadata: raw.metadata
+  };
+}
+
 function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope(
   raw: any
 ): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope {
@@ -4991,6 +5010,20 @@ function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApply
       normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement(
         raw.batchReceiptReplayWorkflowApplyDecisionSettlement ??
           raw.batch_receipt_replay_workflow_apply_decision_settlement
+      )
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+  raw: any
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope {
+  return {
+    kind: raw.kind,
+    version: raw.version,
+    batchReceiptReplayWorkflowApplyDecisionConfirmation:
+      normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+        raw.batchReceiptReplayWorkflowApplyDecisionConfirmation ??
+          raw.batch_receipt_replay_workflow_apply_decision_confirmation
       )
   };
 }
@@ -12997,6 +13030,115 @@ describe('ast-merge shared fixtures', () => {
       expect(
         importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope(
           normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope(
+            rejectionCase.envelope
+          )
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-657 structured-edit provider batch execution receipt replay workflow apply decision confirmation fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            batchReceiptReplayWorkflowApplyDecisionConfirmation:
+              normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+                entry.batch_receipt_replay_workflow_apply_decision_confirmation
+              )
+          })
+        )
+      ).toEqual({
+        batchReceiptReplayWorkflowApplyDecisionConfirmation:
+          normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+            entry.batch_receipt_replay_workflow_apply_decision_confirmation
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-658 structured-edit provider batch execution receipt replay workflow apply decision confirmation transport envelope fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation_envelope'
+      )
+    );
+
+    const batchApplyDecisionConfirmation =
+      normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+        fixture.batch_receipt_replay_workflow_apply_decision_confirmation
+      );
+    const expected =
+      normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+        fixture.expected_envelope
+      );
+
+    expect(
+      structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+        batchApplyDecisionConfirmation
+      )
+    ).toEqual(expected);
+    expect(
+      importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+        expected
+      )
+    ).toEqual({
+      batchReceiptReplayWorkflowApplyDecisionConfirmation: batchApplyDecisionConfirmation
+    });
+  });
+
+  it('conforms to the slice-659 structured-edit provider batch execution receipt replay workflow apply decision confirmation transport rejection fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation_envelope_rejection'
+      )
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+          normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+            rejectionCase.envelope
+          )
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-660 structured-edit provider batch execution receipt replay workflow apply decision confirmation envelope application fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation_envelope_application'
+      )
+    );
+
+    expect(
+      importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+        normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+          fixture.batch_receipt_replay_workflow_apply_decision_confirmation_envelope
+        )
+      )
+    ).toEqual({
+      batchReceiptReplayWorkflowApplyDecisionConfirmation:
+        normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+          fixture.expected_batch_receipt_replay_workflow_apply_decision_confirmation
+        )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+          normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
             rejectionCase.envelope
           )
         )

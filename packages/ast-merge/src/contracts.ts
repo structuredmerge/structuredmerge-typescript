@@ -572,6 +572,11 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyD
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation {
+  readonly applyDecisionConfirmations: readonly StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope {
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -594,6 +599,12 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyD
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_settlement';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
   readonly batchReceiptReplayWorkflowApplyDecisionSettlement: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+}
+
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchReceiptReplayWorkflowApplyDecisionConfirmation: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation;
 }
 
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope {
@@ -2829,6 +2840,59 @@ export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowA
     batchReceiptReplayWorkflowApplyDecisionSettlement:
       envelope.batchReceiptReplayWorkflowApplyDecisionSettlement ??
       envelope.batch_receipt_replay_workflow_apply_decision_settlement
+  };
+}
+
+export function structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+  batchReceiptReplayWorkflowApplyDecisionConfirmation: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReceiptReplayWorkflowApplyDecisionConfirmation
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope(
+  value: unknown
+): {
+  batchReceiptReplayWorkflowApplyDecisionConfirmation?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchReceiptReplayWorkflowApplyDecisionConfirmation?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation;
+    batch_receipt_replay_workflow_apply_decision_confirmation?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchReceiptReplayWorkflowApplyDecisionConfirmation:
+      envelope.batchReceiptReplayWorkflowApplyDecisionConfirmation ??
+      envelope.batch_receipt_replay_workflow_apply_decision_confirmation
   };
 }
 
