@@ -103,6 +103,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplySession,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision,
+  StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResult,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResultEnvelope,
@@ -4697,6 +4698,19 @@ function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecis
         raw.receiptReplayWorkflowApplyResult ?? raw.receipt_replay_workflow_apply_result
       ),
     decision: raw.decision,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome {
+  return {
+    receiptReplayWorkflowApplyDecision:
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision(
+        raw.receiptReplayWorkflowApplyDecision ?? raw.receipt_replay_workflow_apply_decision
+      ),
+    outcome: raw.outcome,
     metadata: raw.metadata
   };
 }
@@ -12116,6 +12130,32 @@ describe('ast-merge shared fixtures', () => {
         receiptReplayWorkflowApplyDecision:
           normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision(
             entry.receipt_replay_workflow_apply_decision
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-637 structured-edit provider execution receipt replay workflow apply decision outcome fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_outcome'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayWorkflowApplyDecisionOutcome:
+              normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
+                entry.receipt_replay_workflow_apply_decision_outcome
+              )
+          })
+        )
+      ).toEqual({
+        receiptReplayWorkflowApplyDecisionOutcome:
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
+            entry.receipt_replay_workflow_apply_decision_outcome
           )
       });
     }
