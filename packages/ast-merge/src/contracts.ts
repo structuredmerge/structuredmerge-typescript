@@ -494,6 +494,12 @@ export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisi
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope {
+  readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_settlement';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly receiptReplayWorkflowApplyDecisionSettlement: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+}
+
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope {
   readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_decision';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -2641,6 +2647,59 @@ export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplyD
     receiptReplayWorkflowApplyDecisionOutcome:
       envelope.receiptReplayWorkflowApplyDecisionOutcome ??
       envelope.receipt_replay_workflow_apply_decision_outcome
+  };
+}
+
+export function structuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope(
+  receiptReplayWorkflowApplyDecisionSettlement: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_settlement',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    receiptReplayWorkflowApplyDecisionSettlement
+  };
+}
+
+export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope(
+  value: unknown
+): {
+  receiptReplayWorkflowApplyDecisionSettlement?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_settlement'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_execution_receipt_replay_workflow_apply_decision_settlement envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    receiptReplayWorkflowApplyDecisionSettlement?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+    receipt_replay_workflow_apply_decision_settlement?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_receipt_replay_workflow_apply_decision_settlement envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    receiptReplayWorkflowApplyDecisionSettlement:
+      envelope.receiptReplayWorkflowApplyDecisionSettlement ??
+      envelope.receipt_replay_workflow_apply_decision_settlement
   };
 }
 
