@@ -103,6 +103,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplySession,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision,
+  StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResult,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
@@ -4718,6 +4719,20 @@ function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecis
         raw.receiptReplayWorkflowApplyDecision ?? raw.receipt_replay_workflow_apply_decision
       ),
     outcome: raw.outcome,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement {
+  return {
+    receiptReplayWorkflowApplyDecisionOutcome:
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
+        raw.receiptReplayWorkflowApplyDecisionOutcome ??
+          raw.receipt_replay_workflow_apply_decision_outcome
+      ),
+    settlement: raw.settlement,
     metadata: raw.metadata
   };
 }
@@ -12203,6 +12218,32 @@ describe('ast-merge shared fixtures', () => {
         receiptReplayWorkflowApplyDecisionOutcome:
           normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
             entry.receipt_replay_workflow_apply_decision_outcome
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-645 structured-edit provider execution receipt replay workflow apply decision settlement fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_settlement'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayWorkflowApplyDecisionSettlement:
+              normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement(
+                entry.receipt_replay_workflow_apply_decision_settlement
+              )
+          })
+        )
+      ).toEqual({
+        receiptReplayWorkflowApplyDecisionSettlement:
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement(
+            entry.receipt_replay_workflow_apply_decision_settlement
           )
       });
     }

@@ -488,6 +488,12 @@ export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisi
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement {
+  readonly receiptReplayWorkflowApplyDecisionOutcome: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome;
+  readonly settlement: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope {
   readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_decision';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
