@@ -97,6 +97,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplaySession,
   StructuredEditProviderExecutionReceiptReplaySessionEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflow,
+  StructuredEditProviderExecutionReceiptReplayWorkflowResult,
   StructuredEditProviderExecutionReceiptReplayWorkflowEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayRequest,
   StructuredEditProviderBatchExecutionReceiptReplayRequestEnvelope,
@@ -4544,6 +4545,20 @@ function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowEnvel
     batchReceiptReplayWorkflow: normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflow(
       raw.batch_receipt_replay_workflow
     )
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowResult(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowResult {
+  return {
+    receiptReplayWorkflow: normalizeStructuredEditProviderExecutionReceiptReplayWorkflow(
+      raw.receipt_replay_workflow
+    ),
+    receiptReplayApplication: normalizeStructuredEditProviderExecutionReceiptReplayApplication(
+      raw.receipt_replay_application
+    ),
+    metadata: raw.metadata
   };
 }
 
@@ -10984,6 +10999,30 @@ describe('ast-merge shared fixtures', () => {
         )
       ).toEqual({
         error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-589 structured-edit provider execution receipt replay workflow result fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_receipt_replay_workflow_result')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayWorkflowResult:
+              normalizeStructuredEditProviderExecutionReceiptReplayWorkflowResult(
+                entry.receipt_replay_workflow_result
+              )
+          })
+        )
+      ).toEqual({
+        receiptReplayWorkflowResult:
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowResult(
+            entry.receipt_replay_workflow_result
+          )
       });
     }
   });

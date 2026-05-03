@@ -100,6 +100,7 @@ export type {
   StructuredEditProviderExecutionReceiptReplaySession,
   StructuredEditProviderExecutionReceiptReplaySessionEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflow,
+  StructuredEditProviderExecutionReceiptReplayWorkflowResult,
   StructuredEditProviderExecutionReceiptReplayWorkflowEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayRequest,
   StructuredEditProviderBatchExecutionReceiptReplayRequestEnvelope,
