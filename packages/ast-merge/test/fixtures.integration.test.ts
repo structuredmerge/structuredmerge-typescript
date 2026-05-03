@@ -106,6 +106,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResult,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
+  StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResultEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession,
@@ -221,6 +222,7 @@ import {
   structuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope,
   structuredEditProviderExecutionReceiptReplayWorkflowApplyRequestEnvelope,
   structuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
+  structuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope,
   structuredEditProviderExecutionReceiptReplayWorkflowApplyResultEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
@@ -319,6 +321,7 @@ import {
   importStructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope,
   importStructuredEditProviderExecutionReceiptReplayWorkflowApplyRequestEnvelope,
   importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
+  importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope,
   importStructuredEditProviderExecutionReceiptReplayWorkflowApplyResultEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
@@ -4724,6 +4727,20 @@ function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecis
     receiptReplayWorkflowApplyDecision:
       normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision(
         raw.receiptReplayWorkflowApplyDecision ?? raw.receipt_replay_workflow_apply_decision
+      )
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope {
+  return {
+    kind: raw.kind,
+    version: raw.version,
+    receiptReplayWorkflowApplyDecisionOutcome:
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
+        raw.receiptReplayWorkflowApplyDecisionOutcome ??
+          raw.receipt_replay_workflow_apply_decision_outcome
       )
   };
 }
@@ -12157,6 +12174,89 @@ describe('ast-merge shared fixtures', () => {
           normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
             entry.receipt_replay_workflow_apply_decision_outcome
           )
+      });
+    }
+  });
+
+  it('conforms to the slice-638 structured-edit provider execution receipt replay workflow apply decision outcome transport envelope fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_outcome_envelope'
+      )
+    );
+
+    const applyDecisionOutcome =
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
+        fixture.structured_edit_provider_execution_receipt_replay_workflow_apply_decision_outcome
+      );
+    const expected =
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+        fixture.expected_envelope
+      );
+
+    expect(
+      structuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+        applyDecisionOutcome
+      )
+    ).toEqual(expected);
+    expect(
+      importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+        expected
+      )
+    ).toEqual({
+      receiptReplayWorkflowApplyDecisionOutcome: applyDecisionOutcome
+    });
+  });
+
+  it('conforms to the slice-639 structured-edit provider execution receipt replay workflow apply decision outcome transport rejection fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_outcome_envelope_rejection'
+      )
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+            rejectionCase.envelope
+          )
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-640 structured-edit provider execution receipt replay workflow apply decision outcome envelope application fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_outcome_envelope_application'
+      )
+    );
+
+    expect(
+      importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+        normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+          fixture.structured_edit_provider_execution_receipt_replay_workflow_apply_decision_outcome_envelope
+        )
+      )
+    ).toEqual({
+      receiptReplayWorkflowApplyDecisionOutcome:
+        normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome(
+          fixture.expected_receipt_replay_workflow_apply_decision_outcome
+        )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+            rejectionCase.envelope
+          )
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
       });
     }
   });
