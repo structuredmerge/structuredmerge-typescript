@@ -538,6 +538,11 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyD
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcome {
+  readonly applyDecisionOutcomes: readonly StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope {
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -560,6 +565,12 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyD
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
   readonly batchReceiptReplayWorkflowApplyDecision: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision;
+}
+
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_outcome';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchReceiptReplayWorkflowApplyDecisionOutcome: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcome;
 }
 
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequestEnvelope {
@@ -2836,6 +2847,59 @@ export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowA
     batchReceiptReplayWorkflowApplyDecision:
       envelope.batchReceiptReplayWorkflowApplyDecision ??
       envelope.batch_receipt_replay_workflow_apply_decision
+  };
+}
+
+export function structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+  batchReceiptReplayWorkflowApplyDecisionOutcome: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcome
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_outcome',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReceiptReplayWorkflowApplyDecisionOutcome
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcomeEnvelope(
+  value: unknown
+): {
+  batchReceiptReplayWorkflowApplyDecisionOutcome?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcome;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_outcome'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_outcome envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchReceiptReplayWorkflowApplyDecisionOutcome?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcome;
+    batch_receipt_replay_workflow_apply_decision_outcome?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionOutcome;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_outcome envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchReceiptReplayWorkflowApplyDecisionOutcome:
+      envelope.batchReceiptReplayWorkflowApplyDecisionOutcome ??
+      envelope.batch_receipt_replay_workflow_apply_decision_outcome
   };
 }
 
