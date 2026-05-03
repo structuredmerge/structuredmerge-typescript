@@ -500,10 +500,22 @@ export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisi
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReport {
+  readonly receiptReplayWorkflowApplyDecisionConfirmation: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation;
+  readonly closureReport: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmationEnvelope {
   readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_confirmation';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
   readonly receiptReplayWorkflowApplyDecisionConfirmation: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation;
+}
+
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope {
+  readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_closure_report';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly receiptReplayWorkflowApplyDecisionClosureReport: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
 }
 
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope {
@@ -577,6 +589,11 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyD
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReport {
+  readonly closureReports: readonly StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReport[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope {
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -605,6 +622,12 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyD
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_confirmation';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
   readonly batchReceiptReplayWorkflowApplyDecisionConfirmation: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionConfirmation;
+}
+
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_closure_report';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchReceiptReplayWorkflowApplyDecisionClosureReport: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
 }
 
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope {
@@ -2790,6 +2813,59 @@ export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplyD
   };
 }
 
+export function structuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope(
+  receiptReplayWorkflowApplyDecisionClosureReport: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReport
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_closure_report',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    receiptReplayWorkflowApplyDecisionClosureReport
+  };
+}
+
+export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope(
+  value: unknown
+): {
+  receiptReplayWorkflowApplyDecisionClosureReport?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_closure_report'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_execution_receipt_replay_workflow_apply_decision_closure_report envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    receiptReplayWorkflowApplyDecisionClosureReport?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
+    receipt_replay_workflow_apply_decision_closure_report?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_receipt_replay_workflow_apply_decision_closure_report envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    receiptReplayWorkflowApplyDecisionClosureReport:
+      envelope.receiptReplayWorkflowApplyDecisionClosureReport ??
+      envelope.receipt_replay_workflow_apply_decision_closure_report
+  };
+}
+
 export function structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope(
   batchReceiptReplayWorkflowApplyDecisionSettlement: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement
 ): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope {
@@ -2893,6 +2969,59 @@ export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowA
     batchReceiptReplayWorkflowApplyDecisionConfirmation:
       envelope.batchReceiptReplayWorkflowApplyDecisionConfirmation ??
       envelope.batch_receipt_replay_workflow_apply_decision_confirmation
+  };
+}
+
+export function structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope(
+  batchReceiptReplayWorkflowApplyDecisionClosureReport: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReport
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_closure_report',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReceiptReplayWorkflowApplyDecisionClosureReport
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReportEnvelope(
+  value: unknown
+): {
+  batchReceiptReplayWorkflowApplyDecisionClosureReport?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_closure_report'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_closure_report envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchReceiptReplayWorkflowApplyDecisionClosureReport?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
+    batch_receipt_replay_workflow_apply_decision_closure_report?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionClosureReport;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_closure_report envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchReceiptReplayWorkflowApplyDecisionClosureReport:
+      envelope.batchReceiptReplayWorkflowApplyDecisionClosureReport ??
+      envelope.batch_receipt_replay_workflow_apply_decision_closure_report
   };
 }
 
