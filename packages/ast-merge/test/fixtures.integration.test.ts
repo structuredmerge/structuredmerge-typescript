@@ -104,6 +104,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflowApplySession,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement,
+  StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionOutcome,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResult,
@@ -4740,6 +4741,20 @@ function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecis
           raw.receipt_replay_workflow_apply_decision_outcome
       ),
     settlement: raw.settlement,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation {
+  return {
+    receiptReplayWorkflowApplyDecisionSettlement:
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement(
+        raw.receiptReplayWorkflowApplyDecisionSettlement ??
+          raw.receipt_replay_workflow_apply_decision_settlement
+      ),
+    confirmation: raw.confirmation,
     metadata: raw.metadata
   };
 }
@@ -12294,6 +12309,32 @@ describe('ast-merge shared fixtures', () => {
         receiptReplayWorkflowApplyDecisionSettlement:
           normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement(
             entry.receipt_replay_workflow_apply_decision_settlement
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-653 structured-edit provider execution receipt replay workflow apply decision confirmation fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_decision_confirmation'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayWorkflowApplyDecisionConfirmation:
+              normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+                entry.receipt_replay_workflow_apply_decision_confirmation
+              )
+          })
+        )
+      ).toEqual({
+        receiptReplayWorkflowApplyDecisionConfirmation:
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionConfirmation(
+            entry.receipt_replay_workflow_apply_decision_confirmation
           )
       });
     }
