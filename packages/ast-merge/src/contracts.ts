@@ -555,6 +555,11 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyD
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement {
+  readonly applyDecisionSettlements: readonly StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionSettlement[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope {
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -571,6 +576,12 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyR
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_result';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
   readonly batchReceiptReplayWorkflowApplyResult: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResult;
+}
+
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_settlement';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchReceiptReplayWorkflowApplyDecisionSettlement: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement;
 }
 
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope {
@@ -2700,6 +2711,59 @@ export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplyD
     receiptReplayWorkflowApplyDecisionSettlement:
       envelope.receiptReplayWorkflowApplyDecisionSettlement ??
       envelope.receipt_replay_workflow_apply_decision_settlement
+  };
+}
+
+export function structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope(
+  batchReceiptReplayWorkflowApplyDecisionSettlement: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_settlement',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReceiptReplayWorkflowApplyDecisionSettlement
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlementEnvelope(
+  value: unknown
+): {
+  batchReceiptReplayWorkflowApplyDecisionSettlement?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_settlement'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_settlement envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchReceiptReplayWorkflowApplyDecisionSettlement?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+    batch_receipt_replay_workflow_apply_decision_settlement?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionSettlement;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_settlement envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchReceiptReplayWorkflowApplyDecisionSettlement:
+      envelope.batchReceiptReplayWorkflowApplyDecisionSettlement ??
+      envelope.batch_receipt_replay_workflow_apply_decision_settlement
   };
 }
 
