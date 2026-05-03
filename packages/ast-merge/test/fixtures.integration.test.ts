@@ -109,8 +109,10 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResult,
+  StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
+  StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequest,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowReviewRequest,
@@ -221,6 +223,7 @@ import {
   structuredEditProviderExecutionReceiptReplayWorkflowApplyResultEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
+  structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope,
   structuredEditProviderExecutionReceiptReplayWorkflowReviewRequestEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayWorkflowReviewRequestEnvelope,
@@ -318,6 +321,7 @@ import {
   importStructuredEditProviderExecutionReceiptReplayWorkflowApplyResultEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResultEnvelope,
+  importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope,
   importStructuredEditProviderExecutionReceiptReplayWorkflowReviewRequestEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayWorkflowReviewRequestEnvelope,
@@ -4782,6 +4786,17 @@ function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApply
   };
 }
 
+function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision(
+  raw: any
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision {
+  return {
+    applyDecisions: (raw.applyDecisions ?? raw.apply_decisions ?? []).map((entry: any) =>
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision(entry)
+    ),
+    metadata: raw.metadata
+  };
+}
+
 function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope(
   raw: any
 ): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope {
@@ -4804,6 +4819,20 @@ function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApply
     batchReceiptReplayWorkflowApplyResult:
       normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyResult(
         raw.batch_receipt_replay_workflow_apply_result
+      )
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+  raw: any
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope {
+  return {
+    kind: raw.kind,
+    version: raw.version,
+    batchReceiptReplayWorkflowApplyDecision:
+      normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision(
+        raw.batchReceiptReplayWorkflowApplyDecision ??
+          raw.batch_receipt_replay_workflow_apply_decision
       )
   };
 }
@@ -12160,6 +12189,111 @@ describe('ast-merge shared fixtures', () => {
       expect(
         importStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
           normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+            rejectionCase.envelope
+          )
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-633 structured-edit provider batch execution receipt replay workflow apply decision fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            batchReceiptReplayWorkflowApplyDecision:
+              normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision(
+                entry.batch_receipt_replay_workflow_apply_decision
+              )
+          })
+        )
+      ).toEqual({
+        batchReceiptReplayWorkflowApplyDecision:
+          normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision(
+            entry.batch_receipt_replay_workflow_apply_decision
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-634 structured-edit provider batch execution receipt replay workflow apply decision transport envelope fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_envelope'
+      )
+    );
+
+    const batchApplyDecision =
+      normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision(
+        fixture.structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision
+      );
+    const expected =
+      normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+        fixture.expected_envelope
+      );
+
+    expect(
+      structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+        batchApplyDecision
+      )
+    ).toEqual(expected);
+    expect(
+      importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(expected)
+    ).toEqual({ batchReceiptReplayWorkflowApplyDecision: batchApplyDecision });
+  });
+
+  it('conforms to the slice-635 structured-edit provider batch execution receipt replay workflow apply decision transport rejection fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_envelope_rejection'
+      )
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+          normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+            rejectionCase.envelope
+          )
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-636 structured-edit provider batch execution receipt replay workflow apply decision envelope application fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_envelope_application'
+      )
+    );
+
+    expect(
+      importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+        normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+          fixture.structured_edit_provider_batch_execution_receipt_replay_workflow_apply_decision_envelope
+        )
+      )
+    ).toEqual({
+      batchReceiptReplayWorkflowApplyDecision:
+        normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecision(
+          fixture.expected_batch_receipt_replay_workflow_apply_decision
+        )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
+          normalizeStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyDecisionEnvelope(
             rejectionCase.envelope
           )
         )
