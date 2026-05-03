@@ -187,6 +187,15 @@ export interface StructuredEditDestinationProfile {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditCallableDestination {
+  readonly strategyKind: string;
+  readonly anchorText: string;
+  readonly anchorBoundary: string;
+  readonly anchorBoundaryFamily?: string;
+  readonly knownAnchorBoundary: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditRequest {
   readonly operationKind: string;
   readonly content: string;
@@ -197,6 +206,7 @@ export interface StructuredEditRequest {
   readonly destinationSelectorFamily?: string;
   readonly payloadText?: string;
   readonly ifMissing?: string;
+  readonly callableDestination?: StructuredEditCallableDestination;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 

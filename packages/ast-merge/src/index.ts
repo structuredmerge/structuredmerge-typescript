@@ -44,6 +44,7 @@ export type {
   StructuredEditMatchProfile,
   StructuredEditOperationProfile,
   StructuredEditDestinationProfile,
+  StructuredEditCallableDestination,
   StructuredEditRequest,
   StructuredEditResult,
   StructuredEditApplication,

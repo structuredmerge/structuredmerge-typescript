@@ -1059,6 +1059,14 @@ interface StructuredEditRequestFixture {
       destination_selector_family?: string | null;
       payload_text?: string | null;
       if_missing?: string | null;
+      callable_destination?: {
+        strategy_kind: string;
+        anchor_text: string;
+        anchor_boundary: string;
+        anchor_boundary_family?: string | null;
+        known_anchor_boundary: boolean;
+        metadata?: Record<string, unknown>;
+      } | null;
       metadata?: Record<string, unknown>;
     };
   }>;
@@ -3946,6 +3954,16 @@ function normalizeStructuredEditRequest(
     destinationSelectorFamily: raw.destination_selector_family ?? undefined,
     payloadText: raw.payload_text ?? undefined,
     ifMissing: raw.if_missing ?? undefined,
+    callableDestination: raw.callable_destination
+      ? {
+          strategyKind: raw.callable_destination.strategy_kind,
+          anchorText: raw.callable_destination.anchor_text,
+          anchorBoundary: raw.callable_destination.anchor_boundary,
+          anchorBoundaryFamily: raw.callable_destination.anchor_boundary_family ?? undefined,
+          knownAnchorBoundary: raw.callable_destination.known_anchor_boundary,
+          metadata: raw.callable_destination.metadata
+        }
+      : undefined,
     metadata: raw.metadata
   };
 }
@@ -14098,6 +14116,28 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual({
       report: fixture.report
     });
+  });
+
+  it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
+    const fixture = readFixture<StructuredEditRequestFixture>(
+      ...diagnosticsFixturePath('structured_edit_callable_destination_request')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            request: normalizeStructuredEditRequest(entry.request)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        request: normalizeStructuredEditRequest(entry.request)
+      }))
+    );
   });
 
   it('conforms to the slice-439 structured-edit execution report transport envelope fixture', () => {
