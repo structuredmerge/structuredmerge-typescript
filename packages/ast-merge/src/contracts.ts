@@ -464,6 +464,12 @@ export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyReques
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequestEnvelope {
+  readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_request';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly receiptReplayWorkflowApplyRequest: StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest;
+}
+
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequestEnvelope {
   readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_review_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -2265,6 +2271,58 @@ export function importStructuredEditProviderExecutionReceiptReplayWorkflowReview
   return {
     receiptReplayWorkflowReviewRequest:
       envelope.receiptReplayWorkflowReviewRequest ?? envelope.receipt_replay_workflow_review_request
+  };
+}
+
+export function structuredEditProviderExecutionReceiptReplayWorkflowApplyRequestEnvelope(
+  receiptReplayWorkflowApplyRequest: StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequestEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_request',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    receiptReplayWorkflowApplyRequest
+  };
+}
+
+export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplyRequestEnvelope(
+  value: unknown
+): {
+  receiptReplayWorkflowApplyRequest?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_execution_receipt_replay_workflow_apply_request'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_execution_receipt_replay_workflow_apply_request envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    receiptReplayWorkflowApplyRequest?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest;
+    receipt_replay_workflow_apply_request?: StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_receipt_replay_workflow_apply_request envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    receiptReplayWorkflowApplyRequest:
+      envelope.receiptReplayWorkflowApplyRequest ?? envelope.receipt_replay_workflow_apply_request
   };
 }
 
