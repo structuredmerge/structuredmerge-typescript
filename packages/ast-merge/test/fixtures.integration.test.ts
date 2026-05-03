@@ -99,6 +99,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflow,
   StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequestEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequest,
+  StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowReviewRequest,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowReviewRequestEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowResult,
@@ -4608,6 +4609,18 @@ function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowReviewRequ
     receiptReplayWorkflowResult:
       normalizeStructuredEditProviderExecutionReceiptReplayWorkflowResult(
         raw.receipt_replay_workflow_result
+      ),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest {
+  return {
+    receiptReplayWorkflowReviewRequest:
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowReviewRequest(
+        raw.receipt_replay_workflow_review_request
       ),
     metadata: raw.metadata
   };
@@ -11250,6 +11263,32 @@ describe('ast-merge shared fixtures', () => {
         receiptReplayWorkflowReviewRequest:
           normalizeStructuredEditProviderExecutionReceiptReplayWorkflowReviewRequest(
             entry.receipt_replay_workflow_review_request
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-605 structured-edit provider execution receipt replay workflow apply request fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_request'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayWorkflowApplyRequest:
+              normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest(
+                entry.receipt_replay_workflow_apply_request
+              )
+          })
+        )
+      ).toEqual({
+        receiptReplayWorkflowApplyRequest:
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest(
+            entry.receipt_replay_workflow_apply_request
           )
       });
     }
