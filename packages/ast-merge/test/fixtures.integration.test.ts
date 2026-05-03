@@ -14065,6 +14065,24 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-681 structured-edit crispr markdown heading section replace parity fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath('structured_edit_crispr_markdown_heading_section_replace_parity')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            report: normalizeStructuredEditExecutionReport(entry.report)
+          })
+        )
+      ).toEqual({
+        report: normalizeStructuredEditExecutionReport(entry.report)
+      });
+    }
+  });
+
   it('conforms to the slice-439 structured-edit execution report transport envelope fixture', () => {
     const fixture = readFixture<StructuredEditExecutionReportEnvelopeFixture>(
       ...diagnosticsFixturePath('structured_edit_execution_report_envelope')
