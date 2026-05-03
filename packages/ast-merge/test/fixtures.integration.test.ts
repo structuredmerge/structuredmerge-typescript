@@ -14047,6 +14047,24 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-680 structured-edit crispr ruby callable destination move parity fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath('structured_edit_crispr_ruby_callable_destination_move_parity')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            report: normalizeStructuredEditExecutionReport(entry.report)
+          })
+        )
+      ).toEqual({
+        report: normalizeStructuredEditExecutionReport(entry.report)
+      });
+    }
+  });
+
   it('conforms to the slice-439 structured-edit execution report transport envelope fixture', () => {
     const fixture = readFixture<StructuredEditExecutionReportEnvelopeFixture>(
       ...diagnosticsFixturePath('structured_edit_execution_report_envelope')
