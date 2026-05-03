@@ -470,6 +470,12 @@ export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplySessio
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyResult {
+  readonly receiptReplayWorkflowApplySession: StructuredEditProviderExecutionReceiptReplayWorkflowApplySession;
+  readonly receiptReplayWorkflowResult: StructuredEditProviderExecutionReceiptReplayWorkflowResult;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope {
   readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_session';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
