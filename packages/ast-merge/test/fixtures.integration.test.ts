@@ -101,6 +101,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequestEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequest,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest,
+  StructuredEditProviderExecutionReceiptReplayWorkflowApplySession,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequest,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayWorkflowReviewRequest,
@@ -4629,6 +4630,21 @@ function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyReque
       normalizeStructuredEditProviderExecutionReceiptReplayWorkflowReviewRequest(
         raw.receipt_replay_workflow_review_request
       ),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplySession(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplySession {
+  return {
+    receiptReplayWorkflowApplyRequest:
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest(
+        raw.receipt_replay_workflow_apply_request
+      ),
+    receiptReplaySession: normalizeStructuredEditProviderExecutionReceiptReplaySession(
+      raw.receipt_replay_session
+    ),
     metadata: raw.metadata
   };
 }
@@ -11333,6 +11349,32 @@ describe('ast-merge shared fixtures', () => {
         receiptReplayWorkflowApplyRequest:
           normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest(
             entry.receipt_replay_workflow_apply_request
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-613 structured-edit provider execution receipt replay workflow apply session fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_session'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayWorkflowApplySession:
+              normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplySession(
+                entry.receipt_replay_workflow_apply_session
+              )
+          })
+        )
+      ).toEqual({
+        receiptReplayWorkflowApplySession:
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplySession(
+            entry.receipt_replay_workflow_apply_session
           )
       });
     }
