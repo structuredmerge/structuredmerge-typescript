@@ -470,6 +470,12 @@ export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplySessio
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope {
+  readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_session';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly receiptReplayWorkflowApplySession: StructuredEditProviderExecutionReceiptReplayWorkflowApplySession;
+}
+
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequestEnvelope {
   readonly kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
@@ -481,10 +487,21 @@ export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyR
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession {
+  readonly applySessions: readonly StructuredEditProviderExecutionReceiptReplayWorkflowApplySession[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope {
   readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
   readonly batchReceiptReplayWorkflowApplyRequest: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequest;
+}
+
+export interface StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope {
+  readonly kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_session';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly batchReceiptReplayWorkflowApplySession: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession;
 }
 
 export interface StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequestEnvelope {
@@ -2343,6 +2360,58 @@ export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplyR
   };
 }
 
+export function structuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope(
+  receiptReplayWorkflowApplySession: StructuredEditProviderExecutionReceiptReplayWorkflowApplySession
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope {
+  return {
+    kind: 'structured_edit_provider_execution_receipt_replay_workflow_apply_session',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    receiptReplayWorkflowApplySession
+  };
+}
+
+export function importStructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope(
+  value: unknown
+): {
+  receiptReplayWorkflowApplySession?: StructuredEditProviderExecutionReceiptReplayWorkflowApplySession;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_execution_receipt_replay_workflow_apply_session'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_execution_receipt_replay_workflow_apply_session envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    receiptReplayWorkflowApplySession?: StructuredEditProviderExecutionReceiptReplayWorkflowApplySession;
+    receipt_replay_workflow_apply_session?: StructuredEditProviderExecutionReceiptReplayWorkflowApplySession;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_execution_receipt_replay_workflow_apply_session envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    receiptReplayWorkflowApplySession:
+      envelope.receiptReplayWorkflowApplySession ?? envelope.receipt_replay_workflow_apply_session
+  };
+}
+
 export function structuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope(
   batchReceiptReplayWorkflowApplyRequest: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequest
 ): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplyRequestEnvelope {
@@ -2393,6 +2462,59 @@ export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowA
     batchReceiptReplayWorkflowApplyRequest:
       envelope.batchReceiptReplayWorkflowApplyRequest ??
       envelope.batch_receipt_replay_workflow_apply_request
+  };
+}
+
+export function structuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope(
+  batchReceiptReplayWorkflowApplySession: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession
+): StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope {
+  return {
+    kind: 'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_session',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReceiptReplayWorkflowApplySession
+  };
+}
+
+export function importStructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySessionEnvelope(
+  value: unknown
+): {
+  batchReceiptReplayWorkflowApplySession?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !==
+      'structured_edit_provider_batch_execution_receipt_replay_workflow_apply_session'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message:
+          'expected structured_edit_provider_batch_execution_receipt_replay_workflow_apply_session envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    batchReceiptReplayWorkflowApplySession?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession;
+    batch_receipt_replay_workflow_apply_session?: StructuredEditProviderBatchExecutionReceiptReplayWorkflowApplySession;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_provider_batch_execution_receipt_replay_workflow_apply_session envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return {
+    batchReceiptReplayWorkflowApplySession:
+      envelope.batchReceiptReplayWorkflowApplySession ??
+      envelope.batch_receipt_replay_workflow_apply_session
   };
 }
 
