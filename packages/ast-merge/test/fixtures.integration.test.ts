@@ -102,6 +102,7 @@ import type {
   StructuredEditProviderExecutionReceiptReplayWorkflowReviewRequest,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyRequest,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplySession,
+  StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResult,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplyResultEnvelope,
   StructuredEditProviderExecutionReceiptReplayWorkflowApplySessionEnvelope,
@@ -4676,6 +4677,19 @@ function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyResul
       normalizeStructuredEditProviderExecutionReceiptReplayWorkflowResult(
         raw.receipt_replay_workflow_result
       ),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision(
+  raw: any
+): StructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision {
+  return {
+    receiptReplayWorkflowApplyResult:
+      normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyResult(
+        raw.receiptReplayWorkflowApplyResult ?? raw.receipt_replay_workflow_apply_result
+      ),
+    decision: raw.decision,
     metadata: raw.metadata
   };
 }
@@ -12032,6 +12046,32 @@ describe('ast-merge shared fixtures', () => {
         )
       ).toEqual({
         error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-629 structured-edit provider execution receipt replay workflow apply decision fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_workflow_apply_decision'
+      )
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplayWorkflowApplyDecision:
+              normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision(
+                entry.receipt_replay_workflow_apply_decision
+              )
+          })
+        )
+      ).toEqual({
+        receiptReplayWorkflowApplyDecision:
+          normalizeStructuredEditProviderExecutionReceiptReplayWorkflowApplyDecision(
+            entry.receipt_replay_workflow_apply_decision
+          )
       });
     }
   });
