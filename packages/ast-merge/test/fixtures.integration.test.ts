@@ -94,10 +94,14 @@ import type {
   StructuredEditProviderExecutionReceiptReplayRequestEnvelope,
   StructuredEditProviderExecutionReceiptReplayApplication,
   StructuredEditProviderExecutionReceiptReplayApplicationEnvelope,
+  StructuredEditProviderExecutionReceiptReplaySession,
+  StructuredEditProviderExecutionReceiptReplaySessionEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayRequest,
   StructuredEditProviderBatchExecutionReceiptReplayRequestEnvelope,
   StructuredEditProviderBatchExecutionReceiptReplayApplication,
   StructuredEditProviderBatchExecutionReceiptReplayApplicationEnvelope,
+  StructuredEditProviderBatchExecutionReceiptReplaySession,
+  StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope,
   StructuredEditProviderBatchExecutionReceipt,
   StructuredEditProviderBatchExecutionReceiptEnvelope,
   StructuredEditProviderBatchExecutionRunResult,
@@ -183,8 +187,10 @@ import {
   structuredEditProviderExecutionReceiptEnvelope,
   structuredEditProviderExecutionReceiptReplayRequestEnvelope,
   structuredEditProviderExecutionReceiptReplayApplicationEnvelope,
+  structuredEditProviderExecutionReceiptReplaySessionEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayRequestEnvelope,
   structuredEditProviderBatchExecutionReceiptReplayApplicationEnvelope,
+  structuredEditProviderBatchExecutionReceiptReplaySessionEnvelope,
   structuredEditProviderBatchExecutionReceiptEnvelope,
   structuredEditProviderBatchExecutionRunResultEnvelope,
   structuredEditProviderBatchExecutionInvocationEnvelope,
@@ -265,8 +271,10 @@ import {
   importStructuredEditProviderExecutionReceiptEnvelope,
   importStructuredEditProviderExecutionReceiptReplayRequestEnvelope,
   importStructuredEditProviderExecutionReceiptReplayApplicationEnvelope,
+  importStructuredEditProviderExecutionReceiptReplaySessionEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayRequestEnvelope,
   importStructuredEditProviderBatchExecutionReceiptReplayApplicationEnvelope,
+  importStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope,
   importStructuredEditProviderBatchExecutionReceiptEnvelope,
   importStructuredEditProviderBatchExecutionRunResultEnvelope,
   importStructuredEditProviderBatchExecutionInvocationEnvelope,
@@ -2059,6 +2067,89 @@ interface StructuredEditProviderBatchExecutionReceiptReplayApplicationEnvelopeAp
   cases: Array<{
     label: string;
     envelope: StructuredEditProviderBatchExecutionReceiptReplayApplicationEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionReceiptReplaySessionFixture {
+  cases: Array<{
+    label: string;
+    receipt_replay_session: {
+      receipt_replay_application: StructuredEditProviderExecutionReceiptReplayApplicationFixture['cases'][number]['receipt_replay_application'];
+      execution_receipt: StructuredEditProviderExecutionReceiptFixture['cases'][number]['execution_receipt'];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderExecutionReceiptReplaySessionEnvelopeFixture {
+  structured_edit_provider_execution_receipt_replay_session: StructuredEditProviderExecutionReceiptReplaySessionFixture['cases'][number]['receipt_replay_session'];
+  expected_envelope: {
+    kind: StructuredEditProviderExecutionReceiptReplaySessionEnvelope['kind'];
+    version: number;
+    receipt_replay_session: StructuredEditProviderExecutionReceiptReplaySessionFixture['cases'][number]['receipt_replay_session'];
+  };
+}
+
+interface StructuredEditProviderExecutionReceiptReplaySessionEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      receipt_replay_session: StructuredEditProviderExecutionReceiptReplaySessionFixture['cases'][number]['receipt_replay_session'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderExecutionReceiptReplaySessionEnvelopeApplicationFixture {
+  structured_edit_provider_execution_receipt_replay_session_envelope: StructuredEditProviderExecutionReceiptReplaySessionEnvelopeFixture['expected_envelope'];
+  expected_receipt_replay_session: StructuredEditProviderExecutionReceiptReplaySessionFixture['cases'][number]['receipt_replay_session'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderExecutionReceiptReplaySessionEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionReceiptReplaySessionFixture {
+  cases: Array<{
+    label: string;
+    batch_receipt_replay_session: {
+      sessions: StructuredEditProviderExecutionReceiptReplaySessionFixture['cases'][number]['receipt_replay_session'][];
+      metadata?: Record<string, unknown>;
+    };
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeFixture {
+  structured_edit_provider_batch_execution_receipt_replay_session: StructuredEditProviderBatchExecutionReceiptReplaySessionFixture['cases'][number]['batch_receipt_replay_session'];
+  expected_envelope: {
+    kind: StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope['kind'];
+    version: number;
+    batch_receipt_replay_session: StructuredEditProviderBatchExecutionReceiptReplaySessionFixture['cases'][number]['batch_receipt_replay_session'];
+  };
+}
+
+interface StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      batch_receipt_replay_session: StructuredEditProviderBatchExecutionReceiptReplaySessionFixture['cases'][number]['batch_receipt_replay_session'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeApplicationFixture {
+  structured_edit_provider_batch_execution_receipt_replay_session_envelope: StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeFixture['expected_envelope'];
+  expected_batch_receipt_replay_session: StructuredEditProviderBatchExecutionReceiptReplaySessionFixture['cases'][number]['batch_receipt_replay_session'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
   }>;
 }
@@ -4352,6 +4443,53 @@ function normalizeStructuredEditProviderBatchExecutionReceiptReplayApplicationEn
       normalizeStructuredEditProviderBatchExecutionReceiptReplayApplication(
         raw.batch_receipt_replay_application
       )
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplaySession(
+  raw: StructuredEditProviderExecutionReceiptReplaySessionFixture['cases'][number]['receipt_replay_session']
+): StructuredEditProviderExecutionReceiptReplaySession {
+  return {
+    receiptReplayApplication: normalizeStructuredEditProviderExecutionReceiptReplayApplication(
+      raw.receipt_replay_application
+    ),
+    executionReceipt: normalizeStructuredEditProviderExecutionReceipt(raw.execution_receipt),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderExecutionReceiptReplaySessionEnvelope(
+  raw: StructuredEditProviderExecutionReceiptReplaySessionEnvelopeFixture['expected_envelope']
+): StructuredEditProviderExecutionReceiptReplaySessionEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    receiptReplaySession: normalizeStructuredEditProviderExecutionReceiptReplaySession(
+      raw.receipt_replay_session
+    )
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionReceiptReplaySession(
+  raw: StructuredEditProviderBatchExecutionReceiptReplaySessionFixture['cases'][number]['batch_receipt_replay_session']
+): StructuredEditProviderBatchExecutionReceiptReplaySession {
+  return {
+    sessions: raw.sessions.map((session) =>
+      normalizeStructuredEditProviderExecutionReceiptReplaySession(session)
+    ),
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(
+  raw: StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeFixture['expected_envelope']
+): StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    batchReceiptReplaySession: normalizeStructuredEditProviderBatchExecutionReceiptReplaySession(
+      raw.batch_receipt_replay_session
+    )
   };
 }
 
@@ -10416,6 +10554,194 @@ describe('ast-merge shared fixtures', () => {
     for (const rejectionCase of fixture.cases) {
       expect(
         importStructuredEditProviderBatchExecutionReceiptReplayApplicationEnvelope(
+          rejectionCase.envelope
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-573 structured-edit provider execution receipt replay session fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionReceiptReplaySessionFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_execution_receipt_replay_session')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            receiptReplaySession: normalizeStructuredEditProviderExecutionReceiptReplaySession(
+              entry.receipt_replay_session
+            )
+          })
+        )
+      ).toEqual({
+        receiptReplaySession: normalizeStructuredEditProviderExecutionReceiptReplaySession(
+          entry.receipt_replay_session
+        )
+      });
+    }
+  });
+
+  it('conforms to the slice-574 structured-edit provider execution receipt replay session transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutionReceiptReplaySessionEnvelopeFixture>(
+      ...diagnosticsFixturePath(
+        'structured_edit_provider_execution_receipt_replay_session_envelope'
+      )
+    );
+    const receiptReplaySession = normalizeStructuredEditProviderExecutionReceiptReplaySession(
+      fixture.structured_edit_provider_execution_receipt_replay_session
+    );
+    const expected = normalizeStructuredEditProviderExecutionReceiptReplaySessionEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(
+      structuredEditProviderExecutionReceiptReplaySessionEnvelope(receiptReplaySession)
+    ).toEqual(expected);
+    expect(importStructuredEditProviderExecutionReceiptReplaySessionEnvelope(expected)).toEqual({
+      receiptReplaySession
+    });
+  });
+
+  it('conforms to the slice-575 structured-edit provider execution receipt replay session transport rejection fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderExecutionReceiptReplaySessionEnvelopeRejectionFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_execution_receipt_replay_session_envelope_rejection'
+        )
+      );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutionReceiptReplaySessionEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-576 structured-edit provider execution receipt replay session envelope application fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderExecutionReceiptReplaySessionEnvelopeApplicationFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_execution_receipt_replay_session_envelope_application'
+        )
+      );
+
+    expect(
+      importStructuredEditProviderExecutionReceiptReplaySessionEnvelope(
+        normalizeStructuredEditProviderExecutionReceiptReplaySessionEnvelope(
+          fixture.structured_edit_provider_execution_receipt_replay_session_envelope
+        )
+      )
+    ).toEqual({
+      receiptReplaySession: normalizeStructuredEditProviderExecutionReceiptReplaySession(
+        fixture.expected_receipt_replay_session
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderExecutionReceiptReplaySessionEnvelope(rejectionCase.envelope)
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-577 structured-edit provider batch execution receipt replay session fixture', () => {
+    const fixture = readFixture<StructuredEditProviderBatchExecutionReceiptReplaySessionFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_batch_execution_receipt_replay_session')
+    );
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            batchReceiptReplaySession:
+              normalizeStructuredEditProviderBatchExecutionReceiptReplaySession(
+                entry.batch_receipt_replay_session
+              )
+          })
+        )
+      ).toEqual({
+        batchReceiptReplaySession:
+          normalizeStructuredEditProviderBatchExecutionReceiptReplaySession(
+            entry.batch_receipt_replay_session
+          )
+      });
+    }
+  });
+
+  it('conforms to the slice-578 structured-edit provider batch execution receipt replay session transport envelope fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_batch_execution_receipt_replay_session_envelope'
+        )
+      );
+    const batchReceiptReplaySession =
+      normalizeStructuredEditProviderBatchExecutionReceiptReplaySession(
+        fixture.structured_edit_provider_batch_execution_receipt_replay_session
+      );
+    const expected = normalizeStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(
+      fixture.expected_envelope
+    );
+
+    expect(
+      structuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(batchReceiptReplaySession)
+    ).toEqual(expected);
+    expect(
+      importStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(expected)
+    ).toEqual({
+      batchReceiptReplaySession
+    });
+  });
+
+  it('conforms to the slice-579 structured-edit provider batch execution receipt replay session transport rejection fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeRejectionFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_batch_execution_receipt_replay_session_envelope_rejection'
+        )
+      );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(
+          rejectionCase.envelope
+        )
+      ).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-580 structured-edit provider batch execution receipt replay session envelope application fixture', () => {
+    const fixture =
+      readFixture<StructuredEditProviderBatchExecutionReceiptReplaySessionEnvelopeApplicationFixture>(
+        ...diagnosticsFixturePath(
+          'structured_edit_provider_batch_execution_receipt_replay_session_envelope_application'
+        )
+      );
+
+    expect(
+      importStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(
+        normalizeStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(
+          fixture.structured_edit_provider_batch_execution_receipt_replay_session_envelope
+        )
+      )
+    ).toEqual({
+      batchReceiptReplaySession: normalizeStructuredEditProviderBatchExecutionReceiptReplaySession(
+        fixture.expected_batch_receipt_replay_session
+      )
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(
+        importStructuredEditProviderBatchExecutionReceiptReplaySessionEnvelope(
           rejectionCase.envelope
         )
       ).toEqual({
