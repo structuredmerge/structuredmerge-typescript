@@ -157,6 +157,7 @@ import type {
   StructuredEditProviderBatchExecutionHandoffEnvelope,
   StructuredEditProviderBatchExecutionPlan,
   StructuredEditProviderBatchExecutionPlanEnvelope,
+  StructuredEditCrisprExampleParityReport,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
   PolicyReference,
@@ -14081,6 +14082,22 @@ describe('ast-merge shared fixtures', () => {
         report: normalizeStructuredEditExecutionReport(entry.report)
       });
     }
+  });
+
+  it('conforms to the slice-682 structured-edit crispr example parity report fixture', () => {
+    const fixture = readFixture<{ report: StructuredEditCrisprExampleParityReport }>(
+      ...diagnosticsFixturePath('structured_edit_crispr_example_parity_report')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify({
+          report: fixture.report
+        })
+      )
+    ).toEqual({
+      report: fixture.report
+    });
   });
 
   it('conforms to the slice-439 structured-edit execution report transport envelope fixture', () => {

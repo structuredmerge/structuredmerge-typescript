@@ -240,6 +240,29 @@ export interface StructuredEditExecutionReport {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditCrisprExampleParityBackendNote {
+  readonly backend: string;
+  readonly scope: string;
+  readonly notes: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditCrisprExampleParityScenario {
+  readonly scenario: string;
+  readonly family: string;
+  readonly reproduced: boolean;
+  readonly referenceBackend?: string;
+  readonly implementationNotes: readonly string[];
+  readonly backendNotes?: readonly StructuredEditCrisprExampleParityBackendNote[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditCrisprExampleParityReport {
+  readonly scenarios: readonly StructuredEditCrisprExampleParityScenario[];
+  readonly remainingGaps?: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionRequest {
   readonly request: StructuredEditRequest;
   readonly providerFamily: string;
