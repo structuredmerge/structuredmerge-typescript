@@ -14572,6 +14572,32 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-707 project facts runtime context fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('project_facts_runtime_context'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report;
+      const projectFacts = report.request.runtime_context?.project_facts as
+        | { schema?: string }
+        | undefined;
+      expect(projectFacts?.schema).toBe('project_facts.v1');
+
+      if (entry.label === 'dependency-floor-comments-from-project-facts') {
+        expect(report.final_content).toContain('# Required for Ruby < 3.4.');
+        expect(report.step_reports[0]?.metadata?.consumed_fact_id).toBe('dependency.ruby_floor');
+      }
+      if (entry.label === 'dependency-floor-comments-missing-project-facts-fail-closed') {
+        expect(report.changed).toBe(false);
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
