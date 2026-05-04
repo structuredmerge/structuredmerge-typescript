@@ -14536,6 +14536,23 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-705 Ruby gemspec files policy acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_gemspec_files_policy_acceptance'));
+
+    for (const entry of fixture.cases) {
+      if (entry.label === 'gemspec-files-literal-dir-union-and-duplicate-cleanup') {
+        const finalContent = entry.report_envelope.report.final_content;
+        expect(finalContent.match(/spec\.files =/g)?.length).toBe(1);
+        expect(finalContent).toContain('sig/**/*.rbs');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
