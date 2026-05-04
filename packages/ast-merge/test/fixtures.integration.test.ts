@@ -38,6 +38,7 @@ import type {
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
+  StructuredEditTargetSelection,
   StructuredEditMatchProfile,
   StructuredEditOperationProfile,
   StructuredEditDestinationProfile,
@@ -1058,6 +1059,16 @@ interface StructuredEditRequestFixture {
       source_label: string;
       target_selector?: string | null;
       target_selector_family?: string | null;
+      target_selection?: {
+        selector_kind: string;
+        selection_intent: string;
+        selection_intent_family?: string | null;
+        known_selection_intent: boolean;
+        comment_region?: string | null;
+        include_trailing_gap: boolean;
+        comment_anchored: boolean;
+        metadata?: Record<string, unknown>;
+      } | null;
       destination_selector?: string | null;
       destination_selector_family?: string | null;
       payload_text?: string | null;
@@ -1090,6 +1101,13 @@ interface StructuredEditResultFixture {
         | null;
       metadata?: Record<string, unknown>;
     };
+  }>;
+}
+
+interface StructuredEditParitySelectionSemanticsFixture {
+  cases: Array<{
+    label: string;
+    request: StructuredEditRequestFixture['cases'][number]['request'];
   }>;
 }
 
@@ -3984,6 +4002,9 @@ function normalizeStructuredEditRequest(
     sourceLabel: raw.source_label,
     targetSelector: raw.target_selector ?? undefined,
     targetSelectorFamily: raw.target_selector_family ?? undefined,
+    targetSelection: raw.target_selection
+      ? normalizeStructuredEditTargetSelection(raw.target_selection)
+      : undefined,
     destinationSelector: raw.destination_selector ?? undefined,
     destinationSelectorFamily: raw.destination_selector_family ?? undefined,
     payloadText: raw.payload_text ?? undefined,
@@ -3998,6 +4019,21 @@ function normalizeStructuredEditRequest(
           metadata: raw.callable_destination.metadata
         }
       : undefined,
+    metadata: raw.metadata
+  };
+}
+
+function normalizeStructuredEditTargetSelection(
+  raw: NonNullable<StructuredEditRequestFixture['cases'][number]['request']['target_selection']>
+): StructuredEditTargetSelection {
+  return {
+    selectorKind: raw.selector_kind,
+    selectionIntent: raw.selection_intent,
+    selectionIntentFamily: raw.selection_intent_family ?? undefined,
+    knownSelectionIntent: raw.known_selection_intent,
+    commentRegion: raw.comment_region ?? undefined,
+    includeTrailingGap: raw.include_trailing_gap,
+    commentAnchored: raw.comment_anchored,
     metadata: raw.metadata
   };
 }
@@ -14219,6 +14255,24 @@ describe('ast-merge shared fixtures', () => {
           }))
         )
       )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        request: normalizeStructuredEditRequest(entry.request)
+      }))
+    );
+  });
+
+  it('conforms to the slice-687 structured-edit parity selection semantics fixture', () => {
+    const fixture = readFixture<StructuredEditParitySelectionSemanticsFixture>(
+      ...diagnosticsFixturePath('structured_edit_parity_selection_semantics')
+    );
+
+    expect(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        request: normalizeStructuredEditRequest(entry.request)
+      }))
     ).toEqual(
       fixture.cases.map((entry) => ({
         label: entry.label,

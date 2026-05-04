@@ -41,6 +41,7 @@ export type {
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
+  StructuredEditTargetSelection,
   StructuredEditMatchProfile,
   StructuredEditOperationProfile,
   StructuredEditDestinationProfile,

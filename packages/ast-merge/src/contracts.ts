@@ -146,6 +146,17 @@ export interface StructuredEditSelectionProfile {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditTargetSelection {
+  readonly selectorKind: string;
+  readonly selectionIntent: string;
+  readonly selectionIntentFamily?: string;
+  readonly knownSelectionIntent: boolean;
+  readonly commentRegion?: string;
+  readonly includeTrailingGap: boolean;
+  readonly commentAnchored: boolean;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditMatchProfile {
   readonly startBoundary: string;
   readonly startBoundaryFamily?: string;
@@ -202,6 +213,7 @@ export interface StructuredEditRequest {
   readonly sourceLabel: string;
   readonly targetSelector?: string;
   readonly targetSelectorFamily?: string;
+  readonly targetSelection?: StructuredEditTargetSelection;
   readonly destinationSelector?: string;
   readonly destinationSelectorFamily?: string;
   readonly payloadText?: string;
