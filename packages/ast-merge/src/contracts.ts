@@ -242,6 +242,12 @@ export interface StructuredEditApplicationEnvelope {
   readonly application: StructuredEditApplication;
 }
 
+export interface StructuredEditRequestEnvelope {
+  readonly kind: 'structured_edit_request';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly request: StructuredEditRequest;
+}
+
 export interface StructuredEditExecutionReport {
   readonly application: StructuredEditApplication;
   readonly providerFamily: string;
@@ -1502,6 +1508,50 @@ export function importStructuredEditApplicationEnvelope(value: unknown): {
   }
 
   return { application: envelope.application };
+}
+
+export function structuredEditRequestEnvelope(
+  request: StructuredEditRequest
+): StructuredEditRequestEnvelope {
+  return {
+    kind: 'structured_edit_request',
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    request
+  };
+}
+
+export function importStructuredEditRequestEnvelope(value: unknown): {
+  request?: StructuredEditRequest;
+  error?: StructuredEditTransportImportError;
+} {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    (value as { kind?: unknown }).kind !== 'structured_edit_request'
+  ) {
+    return {
+      error: {
+        category: 'kind_mismatch',
+        message: 'expected structured_edit_request envelope kind.'
+      }
+    };
+  }
+
+  const envelope = value as {
+    version?: unknown;
+    request: StructuredEditRequest;
+  };
+
+  if (envelope.version !== STRUCTURED_EDIT_TRANSPORT_VERSION) {
+    return {
+      error: {
+        category: 'unsupported_version',
+        message: `unsupported structured_edit_request envelope version ${String(envelope.version)}.`
+      }
+    };
+  }
+
+  return { request: envelope.request };
 }
 
 export function structuredEditProviderExecutionRequestEnvelope(

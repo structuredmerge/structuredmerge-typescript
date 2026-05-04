@@ -42,6 +42,7 @@ import type {
   StructuredEditOperationProfile,
   StructuredEditDestinationProfile,
   StructuredEditRequest,
+  StructuredEditRequestEnvelope,
   StructuredEditResult,
   StructuredEditApplication,
   StructuredEditApplicationEnvelope,
@@ -209,6 +210,7 @@ import {
   selectProjectedChildReviewGroupsAcceptedForApply,
   selectProjectedChildReviewGroupsReadyForApply,
   structuredEditApplicationEnvelope,
+  structuredEditRequestEnvelope,
   structuredEditBatchReportEnvelope,
   structuredEditProviderBatchExecutionDispatchEnvelope,
   structuredEditProviderBatchExecutionRequestEnvelope,
@@ -315,6 +317,7 @@ import {
   importReviewedNestedExecutionEnvelope,
   importReviewReplayBundleEnvelope,
   importStructuredEditApplicationEnvelope,
+  importStructuredEditRequestEnvelope,
   importStructuredEditBatchReportEnvelope,
   importStructuredEditProviderBatchExecutionDispatchEnvelope,
   importStructuredEditProviderBatchExecutionRequestEnvelope,
@@ -1128,6 +1131,37 @@ interface StructuredEditApplicationEnvelopeApplicationFixture {
   cases: Array<{
     label: string;
     envelope: StructuredEditApplicationEnvelopeRejectionFixture['cases'][number]['envelope'];
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditRequestEnvelopeFixture {
+  structured_edit_request: StructuredEditRequestFixture['cases'][number]['request'];
+  expected_envelope: {
+    kind: StructuredEditRequestEnvelope['kind'];
+    version: number;
+    request: StructuredEditRequestFixture['cases'][number]['request'];
+  };
+}
+
+interface StructuredEditRequestEnvelopeRejectionFixture {
+  cases: Array<{
+    label: string;
+    envelope: {
+      kind: string;
+      version: number;
+      request: StructuredEditRequestFixture['cases'][number]['request'];
+    };
+    expected_error: StructuredEditTransportImportError;
+  }>;
+}
+
+interface StructuredEditRequestEnvelopeApplicationFixture {
+  structured_edit_request_envelope: StructuredEditRequestEnvelopeFixture['expected_envelope'];
+  expected_request: StructuredEditRequestFixture['cases'][number]['request'];
+  cases: Array<{
+    label: string;
+    envelope: StructuredEditRequestEnvelopeRejectionFixture['cases'][number]['envelope'];
     expected_error: StructuredEditTransportImportError;
   }>;
 }
@@ -4002,6 +4036,16 @@ function normalizeStructuredEditApplicationEnvelope(
     kind: raw.kind,
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     application: normalizeStructuredEditApplication(raw.application)
+  };
+}
+
+function normalizeStructuredEditRequestEnvelope(
+  raw: StructuredEditRequestEnvelopeFixture['expected_envelope']
+): StructuredEditRequestEnvelope {
+  return {
+    kind: raw.kind,
+    version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    request: normalizeStructuredEditRequest(raw.request)
   };
 }
 
@@ -9248,6 +9292,49 @@ describe('ast-merge shared fixtures', () => {
 
     for (const rejectionCase of fixture.cases) {
       expect(importStructuredEditApplicationEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-684 structured-edit request transport envelope fixture', () => {
+    const fixture = readFixture<StructuredEditRequestEnvelopeFixture>(
+      ...diagnosticsFixturePath('structured_edit_request_envelope')
+    );
+    const request = normalizeStructuredEditRequest(fixture.structured_edit_request);
+    const expected = normalizeStructuredEditRequestEnvelope(fixture.expected_envelope);
+
+    expect(structuredEditRequestEnvelope(request)).toEqual(expected);
+    expect(importStructuredEditRequestEnvelope(expected)).toEqual({ request });
+  });
+
+  it('conforms to the slice-685 structured-edit request transport rejection fixture', () => {
+    const fixture = readFixture<StructuredEditRequestEnvelopeRejectionFixture>(
+      ...diagnosticsFixturePath('structured_edit_request_envelope_rejection')
+    );
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditRequestEnvelope(rejectionCase.envelope)).toEqual({
+        error: rejectionCase.expected_error
+      });
+    }
+  });
+
+  it('conforms to the slice-686 structured-edit request envelope application fixture', () => {
+    const fixture = readFixture<StructuredEditRequestEnvelopeApplicationFixture>(
+      ...diagnosticsFixturePath('structured_edit_request_envelope_application')
+    );
+
+    expect(
+      importStructuredEditRequestEnvelope(
+        normalizeStructuredEditRequestEnvelope(fixture.structured_edit_request_envelope)
+      )
+    ).toEqual({
+      request: normalizeStructuredEditRequest(fixture.expected_request)
+    });
+
+    for (const rejectionCase of fixture.cases) {
+      expect(importStructuredEditRequestEnvelope(rejectionCase.envelope)).toEqual({
         error: rejectionCase.expected_error
       });
     }
