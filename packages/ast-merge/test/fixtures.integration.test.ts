@@ -14667,6 +14667,30 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-711 Ruby Appraisals min-ruby prune policy acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_appraisals_min_ruby_prune_policy_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report;
+
+      if (entry.label === 'delete-ruby-appraisals-below-min-ruby') {
+        expect(report.final_content).not.toContain('ruby-2-7');
+        expect(report.final_content).not.toContain('ruby-3-0');
+        expect(report.final_content).toContain('ruby-3-2');
+        expect(report.final_content).toContain('appraise "style"');
+        expect(report.final_content).not.toContain('\n\n\n');
+      }
+      if (entry.label === 'missing-min-ruby-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
