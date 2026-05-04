@@ -14573,20 +14573,20 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
-  it('conforms to the slice-707 project facts runtime context fixture', () => {
+  it('conforms to the slice-707 runtime facts runtime context fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
         label: string;
         report_envelope: any;
       }[];
-    }>(...diagnosticsFixturePath('project_facts_runtime_context'));
+    }>(...diagnosticsFixturePath('runtime_facts_context'));
 
     for (const entry of fixture.cases) {
       const report = entry.report_envelope.report as any;
-      const projectFacts = report.request.runtime_context?.project_facts as
+      const runtimeFacts = report.request.runtime_context?.facts as
         | { schema?: string }
         | undefined;
-      expect(projectFacts?.schema).toBe('project_facts.v1');
+      expect(runtimeFacts?.schema).toBe('runtime_facts.v1');
 
       if (entry.label === 'dependency-floor-comments-from-project-facts') {
         expect(report.final_content).toContain('# Required for Ruby < 3.4.');
