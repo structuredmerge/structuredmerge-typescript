@@ -161,6 +161,7 @@ import type {
   StructuredEditProviderBatchExecutionPlan,
   StructuredEditProviderBatchExecutionPlanEnvelope,
   StructuredEditCrisprExampleParityReport,
+  StructuredEditKettleJemPrimitiveGapReport,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
   PolicyReference,
@@ -14361,6 +14362,22 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-689 structured-edit crispr parity substrate report fixture', () => {
     const fixture = readFixture<{ report: StructuredEditCrisprExampleParityReport }>(
       ...diagnosticsFixturePath('structured_edit_crispr_parity_substrate_report')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify({
+          report: fixture.report
+        })
+      )
+    ).toEqual({
+      report: fixture.report
+    });
+  });
+
+  it('conforms to the slice-696 structured-edit kettle-jem primitive gap report fixture', () => {
+    const fixture = readFixture<{ report: StructuredEditKettleJemPrimitiveGapReport }>(
+      ...diagnosticsFixturePath('structured_edit_kettle_jem_primitive_gap_report')
     );
 
     expect(

@@ -307,6 +307,45 @@ export interface StructuredEditCrisprExampleParityReport {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface StructuredEditKettleJemSubstrateCapability {
+  readonly capability: string;
+  readonly status: string;
+  readonly evidence: readonly string[];
+  readonly notes?: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditKettleJemRequiredPrimitive {
+  readonly name: string;
+  readonly capabilityKind: string;
+  readonly portabilityStatus: string;
+  readonly nativeContract: string;
+  readonly sourceReferences: readonly string[];
+  readonly dependsOn?: readonly string[];
+  readonly notes?: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditKettleJemScriptClassification {
+  readonly source: string;
+  readonly classification: string;
+  readonly sharedContract: string;
+  readonly notes?: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface StructuredEditKettleJemPrimitiveGapReport {
+  readonly referenceProject: string;
+  readonly scope: string;
+  readonly productTarget: string;
+  readonly currentSubstrate: readonly StructuredEditKettleJemSubstrateCapability[];
+  readonly requiredPrimitives: readonly StructuredEditKettleJemRequiredPrimitive[];
+  readonly scriptClassifications: readonly StructuredEditKettleJemScriptClassification[];
+  readonly nonGoals?: readonly string[];
+  readonly nextSlices?: readonly string[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface StructuredEditProviderExecutionRequest {
   readonly request: StructuredEditRequest;
   readonly providerFamily: string;
