@@ -14434,6 +14434,22 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-699 native structured-edit recipe steps fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('native_structured_edit_recipe_steps'));
+
+    for (const entry of fixture.cases) {
+      const operationKinds = entry.report_envelope.report.step_reports.map(
+        (step) => step.application?.request.operation_kind
+      );
+      expect(operationKinds).toEqual(['replace', 'insert', 'delete']);
+      expect(entry.report_envelope.report.changed).toBe(true);
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
