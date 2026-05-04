@@ -14744,6 +14744,32 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-714 supplied Markdown pruning acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('supplied_markdown_pruning_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'prune-supplied-table-rows-and-reference-definitions') {
+        expect(report.final_content).not.toContain('Works with JRuby');
+        expect(report.final_content).not.toContain('[jruby-9.4]:');
+        expect(report.final_content).not.toContain('[jruby-head]:');
+        expect(report.final_content).toContain('Works with MRI Ruby');
+        expect(report.final_content).toContain('[ruby-3.2]:');
+        expect(report.step_reports[0]?.metadata?.deleted_rows).toBe(1);
+        expect(report.step_reports[1]?.metadata?.deleted_reference_definitions).toBe(2);
+      }
+      if (entry.label === 'missing-prune-selectors-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
