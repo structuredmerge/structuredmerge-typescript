@@ -14693,6 +14693,33 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-712 CHANGELOG Unreleased normalization acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('changelog_unreleased_normalization_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'create-unreleased-section-from-supplied-entries') {
+        const unreleasedIndex = report.final_content.indexOf('## Unreleased');
+        const releaseIndex = report.final_content.indexOf('## 1.2.0');
+        expect(unreleasedIndex).toBeGreaterThanOrEqual(0);
+        expect(releaseIndex).toBeGreaterThanOrEqual(0);
+        expect(unreleasedIndex).toBeLessThan(releaseIndex);
+        expect(report.final_content).toContain('- Added native Markdown recipe boundary.');
+        expect(report.final_content).toContain('- Existing release.');
+        expect(report.step_reports[0]?.metadata?.operation).toBe('insert_or_replace_section');
+      }
+      if (entry.label === 'missing-entries-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
