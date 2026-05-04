@@ -353,6 +353,65 @@ export interface StructuredEditProviderExecutionRequest {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface ContentRecipeStep {
+  readonly stepId: string;
+  readonly stepKind: 'smart_merge' | 'partial_merge' | 'structured_edit' | 'native_policy';
+  readonly name: string;
+  readonly providerFamily?: string;
+  readonly providerBackend?: string;
+  readonly mergeProfile?: Readonly<Record<string, unknown>>;
+  readonly partialTarget?: Readonly<Record<string, unknown>>;
+  readonly structuredEditRequest?: StructuredEditRequest;
+  readonly policy?: Readonly<Record<string, unknown>>;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ContentRecipeExecutionRequest {
+  readonly recipeName: string;
+  readonly recipeVersion: string;
+  readonly relativePath: string;
+  readonly providerFamily: string;
+  readonly providerBackend?: string;
+  readonly templateContent: string;
+  readonly destinationContent: string;
+  readonly steps: readonly ContentRecipeStep[];
+  readonly runtimeContext?: Readonly<Record<string, unknown>>;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ContentRecipeExecutionRequestEnvelope {
+  readonly kind: 'content_recipe_execution_request';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly request: ContentRecipeExecutionRequest;
+}
+
+export interface ContentRecipeStepReport {
+  readonly stepId: string;
+  readonly stepKind: string;
+  readonly status: 'applied' | 'unchanged' | 'skipped' | 'failed';
+  readonly changed: boolean;
+  readonly inputContent: string;
+  readonly outputContent: string;
+  readonly application?: StructuredEditApplication;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ContentRecipeExecutionReport {
+  readonly request: ContentRecipeExecutionRequest;
+  readonly finalContent: string;
+  readonly changed: boolean;
+  readonly stepReports: readonly ContentRecipeStepReport[];
+  readonly diagnostics: readonly Diagnostic[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface ContentRecipeExecutionReportEnvelope {
+  readonly kind: 'content_recipe_execution_report';
+  readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly report: ContentRecipeExecutionReport;
+}
+
 export interface StructuredEditProviderExecutionRequestEnvelope {
   readonly kind: 'structured_edit_provider_execution_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;

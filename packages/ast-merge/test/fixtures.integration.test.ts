@@ -162,6 +162,8 @@ import type {
   StructuredEditProviderBatchExecutionPlanEnvelope,
   StructuredEditCrisprExampleParityReport,
   StructuredEditKettleJemPrimitiveGapReport,
+  ContentRecipeExecutionRequestEnvelope,
+  ContentRecipeExecutionReportEnvelope,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
   PolicyReference,
@@ -14389,6 +14391,29 @@ describe('ast-merge shared fixtures', () => {
     ).toEqual({
       report: fixture.report
     });
+  });
+
+  it('conforms to the slice-697 content recipe execution envelope fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        request_envelope: ContentRecipeExecutionRequestEnvelope;
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('content_recipe_execution_envelope'));
+
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            requestEnvelope: entry.request_envelope,
+            reportEnvelope: entry.report_envelope
+          })
+        )
+      ).toEqual({
+        requestEnvelope: entry.request_envelope,
+        reportEnvelope: entry.report_envelope
+      });
+    }
   });
 
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
