@@ -14416,6 +14416,24 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-698 single-file README heading-section acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        request_envelope: ContentRecipeExecutionRequestEnvelope;
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('single_file_readme_heading_section_acceptance'));
+
+    for (const entry of fixture.cases) {
+      expect(entry.request_envelope.request.relative_path).toBe('README.md');
+      expect(entry.report_envelope.report.request.relative_path).toBe('README.md');
+      expect(entry.report_envelope.report.final_content.length).toBeGreaterThan(0);
+      expect(entry.report_envelope.report.step_reports.length).toBe(
+        entry.report_envelope.report.request.steps.length
+      );
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
