@@ -14644,6 +14644,29 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-710 Ruby Appraisals self-dependency policy acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_appraisals_self_dependency_policy_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report;
+
+      if (entry.label === 'delete-appraisals-self-dependencies') {
+        expect(report.final_content).not.toContain('gem "demo"');
+        expect(report.final_content).toContain('appraise("rails-6")');
+        expect(report.final_content).toContain('gem "rspec" # Testing');
+        expect(report.step_reports[0]?.metadata?.operation).toBe('delete');
+      }
+      if (entry.label === 'missing-project-identity-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
