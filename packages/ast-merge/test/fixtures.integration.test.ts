@@ -1597,6 +1597,16 @@ interface StructuredEditProviderExecutorProfileFixture {
   }>;
 }
 
+interface StructuredEditProviderExecutorOperationTriadProfileFixture
+  extends StructuredEditProviderExecutorProfileFixture {
+  metadata: {
+    canonical_operation_kinds: string[];
+    parity_scope: string;
+    remove_alias_encoded: boolean;
+    source: string;
+  };
+}
+
 interface StructuredEditProviderExecutorProfileEnvelopeFixture {
   structured_edit_provider_executor_profile: StructuredEditProviderExecutorProfileFixture['cases'][number]['executor_profile'];
   expected_envelope: {
@@ -10143,6 +10153,34 @@ describe('ast-merge shared fixtures', () => {
       ...diagnosticsFixturePath('structured_edit_provider_executor_profile')
     );
 
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            executorProfile: normalizeStructuredEditProviderExecutorProfile(entry.executor_profile)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        executorProfile: normalizeStructuredEditProviderExecutorProfile(entry.executor_profile)
+      }))
+    );
+  });
+
+  it('conforms to the slice-693 structured-edit provider executor operation triad profile fixture', () => {
+    const fixture = readFixture<StructuredEditProviderExecutorOperationTriadProfileFixture>(
+      ...diagnosticsFixturePath('structured_edit_provider_executor_operation_triad_profile')
+    );
+
+    expect(fixture.metadata.canonical_operation_kinds).toEqual([
+      'insert',
+      'replace',
+      'delete'
+    ]);
+    expect(fixture.metadata.remove_alias_encoded).toBe(false);
     expect(
       JSON.parse(
         JSON.stringify(
