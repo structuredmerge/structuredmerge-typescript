@@ -34,7 +34,10 @@ function normalizeFixtureValue<T>(value: T): T {
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [toCamelCaseKey(key), normalizeFixtureValue(entry)])
+      Object.entries(value).map(([key, entry]) => [
+        toCamelCaseKey(key),
+        normalizeFixtureValue(entry)
+      ])
     ) as T;
   }
   return value;

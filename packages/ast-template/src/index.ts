@@ -864,6 +864,18 @@ export interface DirectorySessionOptions {
   config?: TemplateTokenConfig;
 }
 
+export interface DirectorySessionOptionOverrides {
+  mode?: DirectorySessionMode;
+  templateRoot?: string;
+  destinationRoot?: string;
+  context?: TemplateDestinationContext;
+  defaultStrategy?: TemplateStrategy;
+  overrides?: readonly TemplateStrategyOverride[];
+  replacements?: Readonly<Record<string, string>>;
+  allowedFamilies?: readonly string[];
+  config?: TemplateTokenConfig;
+}
+
 export interface DirectorySessionProfile {
   mode: DirectorySessionMode;
   context: TemplateDestinationContext;
@@ -1583,7 +1595,7 @@ function normalizeSessionMode(mode: DirectorySessionMode | undefined): Directory
 }
 
 export function reportTemplateDirectorySessionOptionsConfiguration(
-  options: Pick<DirectorySessionOptions, 'mode' | 'templateRoot' | 'destinationRoot'>
+  options: Pick<DirectorySessionOptionOverrides, 'mode' | 'templateRoot' | 'destinationRoot'>
 ): SessionDiagnosticsReport {
   const diagnostics: SessionDiagnostic[] = [];
   if (!options.destinationRoot) {
@@ -1613,7 +1625,7 @@ export function reportTemplateDirectorySessionOptionsConfiguration(
 export function reportTemplateDirectorySessionProfileConfiguration(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
-  overrides: Pick<DirectorySessionOptions, 'mode' | 'templateRoot' | 'destinationRoot'>
+  overrides: Pick<DirectorySessionOptionOverrides, 'mode' | 'templateRoot' | 'destinationRoot'>
 ): SessionDiagnosticsReport {
   const diagnostics = [
     ...reportTemplateDirectorySessionOptionsConfiguration(overrides).diagnostics
@@ -1665,7 +1677,7 @@ function resolveTemplateDirectorySessionOptionsRequest(
 export function reportTemplateDirectorySessionProfileRequest(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
-  overrides: DirectorySessionOptions
+  overrides: DirectorySessionOptionOverrides
 ): SessionRequestReport {
   const request = resolveTemplateDirectorySessionProfileRequest(profiles, profileName, overrides);
   return {
@@ -1681,7 +1693,7 @@ export function reportTemplateDirectorySessionProfileRequest(
 function resolveTemplateDirectorySessionProfileRequest(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
-  overrides: DirectorySessionOptions
+  overrides: DirectorySessionOptionOverrides
 ): InternalSessionRequest {
   const configuration = reportTemplateDirectorySessionProfileConfiguration(
     profiles,
@@ -2104,7 +2116,7 @@ export function runTemplateDirectorySession(
 export function resolveTemplateDirectorySessionOptions(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
-  overrides: DirectorySessionOptions
+  overrides: DirectorySessionOptionOverrides
 ): DirectorySessionOptions | undefined {
   const profile = profiles[profileName];
   if (!profile) {
@@ -2112,8 +2124,8 @@ export function resolveTemplateDirectorySessionOptions(
   }
   return {
     mode: overrides.mode ?? profile.mode,
-    templateRoot: overrides.templateRoot,
-    destinationRoot: overrides.destinationRoot,
+    templateRoot: overrides.templateRoot ?? '',
+    destinationRoot: overrides.destinationRoot ?? '',
     context: overrides.context ?? profile.context,
     defaultStrategy: overrides.defaultStrategy ?? profile.defaultStrategy,
     overrides: overrides.overrides ?? profile.overrides,
@@ -2126,7 +2138,7 @@ export function resolveTemplateDirectorySessionOptions(
 export function runTemplateDirectorySessionWithProfile(
   profiles: Readonly<Record<string, DirectorySessionProfile>>,
   profileName: string,
-  overrides: DirectorySessionOptions
+  overrides: DirectorySessionOptionOverrides
 ): SessionOutcomeReport {
   const request = resolveTemplateDirectorySessionProfileRequest(profiles, profileName, overrides);
   if (!request.ready) {
@@ -2195,7 +2207,7 @@ function denormalizeResolvedSessionOptions(options: unknown): DirectorySessionOp
   };
 }
 
-function denormalizeRunnerOptions(options: unknown): DirectorySessionOptions | null {
+function denormalizeRunnerOptions(options: unknown): DirectorySessionOptionOverrides | null {
   if (!options || typeof options !== 'object') {
     return null;
   }
@@ -2203,8 +2215,8 @@ function denormalizeRunnerOptions(options: unknown): DirectorySessionOptions | n
   const context = value.context as Record<string, unknown> | undefined;
   return {
     mode: value.mode as DirectorySessionMode,
-    templateRoot: (value.template_root ?? '') as string,
-    destinationRoot: (value.destination_root ?? '') as string,
+    templateRoot: value.template_root as string | undefined,
+    destinationRoot: value.destination_root as string | undefined,
     context: context
       ? {
           projectName: typeof context.project_name === 'string' ? context.project_name : undefined

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -10,12 +12,14 @@ import type {
 } from '@structuredmerge/ast-merge';
 import type {
   SessionCommand,
+  SessionCommandPayload,
   SessionEntrypoint,
   SessionInspectionReport,
   SessionInvocation,
   SessionDiagnosticsReport,
   SessionOutcomeReport,
   SessionRequestReport,
+  SessionRunnerRequest,
   SessionStatusReport,
   SessionRunnerPayload
 } from '../src/index';
@@ -588,11 +592,11 @@ describe('template directory session report fixture', () => {
     };
 
     for (const testCase of fixture.cases) {
-      expect(sessionStatusEnvelope(testCase.input as SessionStatusReport)).toEqual(
+      expect(sessionStatusEnvelope(testCase.input as unknown as SessionStatusReport)).toEqual(
         testCase.expected_envelope
       );
       expect(importSessionStatusEnvelope(testCase.expected_envelope)).toEqual({
-        status: testCase.input as SessionStatusReport
+        status: testCase.input as unknown as SessionStatusReport
       });
     }
   });
@@ -645,7 +649,7 @@ describe('template directory session report fixture', () => {
 
     for (const testCase of fixture.cases) {
       expect(importSessionStatusEnvelope(testCase.envelope)).toEqual({
-        status: testCase.expected as SessionStatusReport
+        status: testCase.expected as unknown as SessionStatusReport
       });
     }
 
@@ -674,11 +678,11 @@ describe('template directory session report fixture', () => {
     };
 
     for (const testCase of fixture.cases) {
-      expect(sessionDiagnosticsEnvelope(testCase.input as SessionDiagnosticsReport)).toEqual(
-        testCase.expected_envelope
-      );
+      expect(
+        sessionDiagnosticsEnvelope(testCase.input as unknown as SessionDiagnosticsReport)
+      ).toEqual(testCase.expected_envelope);
       expect(importSessionDiagnosticsEnvelope(testCase.expected_envelope)).toEqual({
-        diagnostics: testCase.input as SessionDiagnosticsReport
+        diagnostics: testCase.input as unknown as SessionDiagnosticsReport
       });
     }
   });
@@ -701,7 +705,7 @@ describe('template directory session report fixture', () => {
     };
 
     for (const testCase of fixture.cases) {
-      expect(sessionOutcomeEnvelope(testCase.input as SessionOutcomeReport)).toEqual(
+      expect(sessionOutcomeEnvelope(testCase.input as unknown as SessionOutcomeReport)).toEqual(
         testCase.expected_envelope
       );
       expect(importSessionOutcomeEnvelope(testCase.expected_envelope)).toEqual({
@@ -735,9 +739,11 @@ describe('template directory session report fixture', () => {
         fixtureRoot
       );
 
-      expect(sessionInspectionEnvelope(input as SessionInspectionReport)).toEqual(expected);
+      expect(sessionInspectionEnvelope(input as unknown as SessionInspectionReport)).toEqual(
+        expected
+      );
       expect(importSessionInspectionEnvelope(expected)).toEqual({
-        inspection: input as SessionInspectionReport
+        inspection: input as unknown as SessionInspectionReport
       });
     }
   });
@@ -797,7 +803,7 @@ describe('template directory session report fixture', () => {
         inspection: resolveSessionInspectionExpectedPaths(
           testCase.expected,
           fixtureRoot
-        ) as SessionInspectionReport
+        ) as unknown as SessionInspectionReport
       });
     }
 
@@ -857,7 +863,7 @@ describe('template directory session report fixture', () => {
 
     for (const testCase of fixture.cases) {
       expect(importSessionOutcomeEnvelope(testCase.envelope)).toEqual({
-        outcome: testCase.expected as SessionOutcomeReport
+        outcome: testCase.expected as unknown as SessionOutcomeReport
       });
     }
 
@@ -1346,7 +1352,7 @@ describe('template directory session report fixture', () => {
         fixtureRoot
       );
 
-      expect(sessionRequestEnvelope(input as SessionRequestReport)).toEqual(expected);
+      expect(sessionRequestEnvelope(input as unknown as SessionRequestReport)).toEqual(expected);
       expect(importSessionRequestEnvelope(expected)).toEqual({ request: input });
     }
   });
@@ -1404,9 +1410,9 @@ describe('template directory session report fixture', () => {
       const envelope = resolveSessionRequestEnvelopeFixturePaths(testCase.envelope, fixtureRoot);
       const imported = importSessionRequestEnvelope(envelope);
       expect(imported.error).toBeUndefined();
-      expect(runTemplateDirectorySessionRequest(imported.request as SessionRequestReport)).toEqual(
-        resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot)
-      );
+      expect(
+        runTemplateDirectorySessionRequest(imported.request as unknown as SessionRequestReport)
+      ).toEqual(resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot));
     }
 
     for (const testCase of fixture.rejections) {
@@ -1553,7 +1559,9 @@ describe('template directory session report fixture', () => {
         fixtureRoot
       );
 
-      expect(sessionRunnerPayloadEnvelope(input as SessionRunnerPayload)).toEqual(expected);
+      expect(sessionRunnerPayloadEnvelope(input as unknown as SessionRunnerPayload)).toEqual(
+        expected
+      );
       expect(importSessionRunnerPayloadEnvelope(expected)).toEqual({ payload: input });
     }
   });
@@ -1620,7 +1628,10 @@ describe('template directory session report fixture', () => {
       const imported = importSessionRunnerPayloadEnvelope(envelope);
       expect(imported.error).toBeUndefined();
       expect(
-        runTemplateDirectorySessionRunnerPayload(imported.payload as SessionRunnerPayload, profiles)
+        runTemplateDirectorySessionRunnerPayload(
+          imported.payload as unknown as SessionRunnerPayload,
+          profiles
+        )
       ).toEqual(resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot));
     }
 
@@ -1914,7 +1925,7 @@ describe('template directory session report fixture', () => {
           resolveSessionEntrypointFixturePaths(
             input.entrypoint as Record<string, unknown>,
             fixtureRoot
-          ) as SessionEntrypoint,
+          ) as unknown as SessionEntrypoint,
           {}
         )
       ).toThrow(testCase.expected_error);
@@ -1941,9 +1952,9 @@ describe('template directory session report fixture', () => {
 
     for (const testCase of fixture.cases) {
       const input = resolveSessionCommandFixturePaths(testCase.input, fixtureRoot);
-      expect(() => runTemplateDirectorySessionCommand(input as SessionCommand, {})).toThrow(
-        testCase.expected_error
-      );
+      expect(() =>
+        runTemplateDirectorySessionCommand(input as unknown as SessionCommand, {})
+      ).toThrow(testCase.expected_error);
     }
   });
 
@@ -1967,9 +1978,9 @@ describe('template directory session report fixture', () => {
 
     for (const testCase of fixture.cases) {
       const input = resolveSessionCommandPayloadFixturePaths(testCase.input, fixtureRoot);
-      expect(() => runTemplateDirectorySessionCommandPayload(input, {})).toThrow(
-        testCase.expected_error
-      );
+      expect(() =>
+        runTemplateDirectorySessionCommandPayload(input as unknown as SessionCommandPayload, {})
+      ).toThrow(testCase.expected_error);
     }
   });
 
@@ -1998,7 +2009,7 @@ describe('template directory session report fixture', () => {
         fixtureRoot
       );
 
-      expect(sessionCommandEnvelope(input as SessionCommand)).toEqual(expected);
+      expect(sessionCommandEnvelope(input as unknown as SessionCommand)).toEqual(expected);
       expect(importSessionCommandEnvelope(expected)).toEqual({ command: input });
     }
   });
@@ -2113,7 +2124,7 @@ describe('template directory session report fixture', () => {
         fixtureRoot
       );
 
-      expect(sessionEntrypointEnvelope(input as SessionEntrypoint)).toEqual(expected);
+      expect(sessionEntrypointEnvelope(input as unknown as SessionEntrypoint)).toEqual(expected);
       expect(importSessionEntrypointEnvelope(expected)).toEqual({ entrypoint: input });
     }
   });
@@ -2210,7 +2221,10 @@ describe('template directory session report fixture', () => {
       const imported = importSessionRunnerRequestEnvelope(envelope);
       expect(imported.error).toBeUndefined();
       expect(
-        runTemplateDirectorySessionRunnerRequest(imported.request as SessionRunnerRequest, profiles)
+        runTemplateDirectorySessionRunnerRequest(
+          imported.request as unknown as SessionRunnerRequest,
+          profiles
+        )
       ).toEqual(resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot));
     }
 
@@ -2281,7 +2295,7 @@ describe('template directory session report fixture', () => {
       const imported = importSessionCommandEnvelope(envelope);
       expect(imported.error).toBeUndefined();
       expect(
-        runTemplateDirectorySessionCommand(imported.command as SessionCommand, profiles)
+        runTemplateDirectorySessionCommand(imported.command as unknown as SessionCommand, profiles)
       ).toEqual(resolveSessionDispatchExpectedPaths(testCase.expected, fixtureRoot));
     }
 
@@ -2323,7 +2337,10 @@ describe('template directory session report fixture', () => {
       const imported = importSessionEntrypointEnvelope(envelope);
       expect(imported.error).toBeUndefined();
       expect(
-        runTemplateDirectorySessionEntrypoint(imported.entrypoint as SessionEntrypoint, profiles)
+        runTemplateDirectorySessionEntrypoint(
+          imported.entrypoint as unknown as SessionEntrypoint,
+          profiles
+        )
       ).toEqual(resolveSessionOutcomeExpectedPaths(testCase.expected, fixtureRoot));
     }
 
@@ -2369,7 +2386,7 @@ describe('template directory session report fixture', () => {
       expect(imported.error).toBeUndefined();
       expect(
         runTemplateDirectorySessionCommandPayload(
-          imported.payload as SessionCommandPayload,
+          imported.payload as unknown as SessionCommandPayload,
           profiles
         )
       ).toEqual(resolveSessionDispatchExpectedPaths(testCase.expected, fixtureRoot));
@@ -2439,7 +2456,7 @@ describe('template directory session report fixture', () => {
 
     for (const testCase of fixture.cases) {
       const input = resolveSessionInvocationFixturePaths(testCase.input, fixtureRoot);
-      expect(() => runTemplateDirectorySession(input as SessionInvocation, {})).toThrow(
+      expect(() => runTemplateDirectorySession(input as unknown as SessionInvocation, {})).toThrow(
         testCase.expected_error
       );
     }
@@ -2464,7 +2481,7 @@ describe('template directory session report fixture', () => {
 
     for (const testCase of fixture.cases) {
       const input = resolveSessionInvocationFixturePaths(testCase.input, fixtureRoot);
-      const roundTripped = JSON.parse(JSON.stringify(input)) as SessionInvocation;
+      const roundTripped = JSON.parse(JSON.stringify(input)) as unknown as SessionInvocation;
       expect(roundTripped).toEqual(input);
     }
   });
@@ -2557,7 +2574,7 @@ describe('template directory session report fixture', () => {
       const imported = importSessionInvocationEnvelope(envelope);
       expect(imported.error).toBeUndefined();
       expect(
-        runTemplateDirectorySession(imported.invocation as SessionInvocation, profiles)
+        runTemplateDirectorySession(imported.invocation as unknown as SessionInvocation, profiles)
       ).toEqual(resolveSessionDispatchExpectedPaths(testCase.expected, fixtureRoot));
     }
 
@@ -2910,7 +2927,7 @@ function resolveSessionInvocationFixturePaths(
   if (typeof cloned.destination_root === 'string' && cloned.destination_root.length > 0) {
     cloned.destination_root = path.join(fixtureRoot, cloned.destination_root);
   }
-  return cloned as SessionInvocation;
+  return cloned as unknown as SessionInvocation;
 }
 
 function resolveSessionInvocationEnvelopeFixturePaths(

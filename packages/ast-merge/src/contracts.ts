@@ -11,7 +11,8 @@ export type DiagnosticCategory =
   | 'ambiguity'
   | 'assumed_default'
   | 'configuration_error'
-  | 'replay_rejected';
+  | 'replay_rejected'
+  | ReviewTransportImportErrorCategory;
 
 export type ReviewDiagnosticReason =
   | 'missing_required_payload'
@@ -5201,7 +5202,6 @@ export function applyTemplateTreeExecutionToDirectory(
 }
 
 export function reportTemplateTreeRun(result: TemplateTreeRunResult): TemplateTreeRunReport {
-  const created = new Set(result.applyResult.createdPaths);
   const updated = new Set(result.applyResult.updatedPaths);
   const kept = new Set(result.applyResult.keptPaths);
   const blocked = new Set(result.applyResult.blockedPaths);

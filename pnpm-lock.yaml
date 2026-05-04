@@ -39,7 +39,26 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.12.2)(yaml@2.8.3)
 
-  packages/ast-merge: {}
+  packages/ast-merge:
+    devDependencies:
+      '@structuredmerge/markdown-merge':
+        specifier: workspace:*
+        version: link:../markdown-merge
+
+  packages/ast-template:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/markdown-merge':
+        specifier: workspace:*
+        version: link:../markdown-merge
+      '@structuredmerge/ruby-merge':
+        specifier: workspace:*
+        version: link:../ruby-merge
+      '@structuredmerge/toml-merge':
+        specifier: workspace:*
+        version: link:../toml-merge
 
   packages/go-merge:
     dependencies:

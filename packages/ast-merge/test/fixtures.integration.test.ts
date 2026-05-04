@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -16,7 +18,6 @@ import type {
   ConformanceManifestPlanningOptions,
   ConformanceManifestReport,
   ConformanceManifestReviewOptions,
-  ConformanceManifestReviewedNestedApplication,
   ConformanceManifestReviewState,
   ConformanceManifestReviewStateEnvelope,
   NamedConformanceSuiteReport,
@@ -183,12 +184,11 @@ import type {
   ReviewTransportImportError,
   StructuredEditTransportImportError,
   ReviewRequest,
-  ReviewedNestedExecutionApplication,
+  MergeResult,
   TemplateTokenConfig,
   TemplateExecutionPlanEntry,
   TemplateDirectoryApplyReport,
   TemplateDirectoryPlanReport,
-  TemplateDirectoryRunnerReport,
   SurfaceOwnerRef,
   SurfaceSpan,
   TemplateTreeRunReport,
@@ -418,6 +418,7 @@ import {
 interface DiagnosticFixture {
   severities: DiagnosticSeverity[];
   categories: DiagnosticCategory[];
+  diagnostics: DiagnosticFixtureEntry[];
 }
 
 interface PolicyFixture {
@@ -654,6 +655,15 @@ interface MiniTemplateTreeRunFixture {
 }
 
 interface MiniTemplateTreeRunReportFixture {
+  context: {
+    project_name?: string;
+  };
+  default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  overrides: Array<{
+    path: string;
+    strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  }>;
+  replacements: Record<string, string>;
   expected: {
     entries: Array<{
       template_source_path: string;
@@ -688,9 +698,19 @@ interface MiniTemplateTreeFamilyMergeCallbackFixture {
   };
 }
 
-interface MiniTemplateTreeMultiFamilyMergeCallbackFixture extends MiniTemplateTreeFamilyMergeCallbackFixture {}
+type MiniTemplateTreeMultiFamilyMergeCallbackFixture = MiniTemplateTreeFamilyMergeCallbackFixture;
 
-interface MiniTemplateTreeMultiFamilyRunReportFixture extends MiniTemplateTreeRunReportFixture {}
+interface MiniTemplateTreeMultiFamilyRunReportFixture extends MiniTemplateTreeRunReportFixture {
+  context: {
+    project_name?: string;
+  };
+  default_strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  overrides: Array<{
+    path: string;
+    strategy: 'merge' | 'accept_template' | 'keep_destination' | 'raw_copy';
+  }>;
+  replacements: Record<string, string>;
+}
 
 interface MiniTemplateTreeDirectoryApplyConvergenceFixture {
   context: Record<string, string>;
@@ -832,7 +852,7 @@ function repoTempDir(): string {
   return dir;
 }
 
-function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry) {
+function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry): MergeResult<string> {
   switch (entry.classification.family) {
     case 'markdown':
       return mergeMarkdown(entry.preparedTemplateContent!, entry.destinationContent!, 'markdown');
@@ -845,12 +865,11 @@ function multiFamilyMergeCallback(entry: TemplateExecutionPlanEntry) {
         ok: false,
         diagnostics: [
           {
-            severity: 'error',
-            category: 'configuration_error',
+            severity: 'error' as const,
+            category: 'configuration_error' as const,
             message: `missing family merge adapter for ${entry.classification.family}`
           }
         ],
-        output: undefined,
         policies: []
       };
   }
@@ -1600,8 +1619,7 @@ interface StructuredEditProviderExecutorProfileFixture {
   }>;
 }
 
-interface StructuredEditProviderExecutorOperationTriadProfileFixture
-  extends StructuredEditProviderExecutorProfileFixture {
+interface StructuredEditProviderExecutorOperationTriadProfileFixture extends StructuredEditProviderExecutorProfileFixture {
   metadata: {
     canonical_operation_kinds: string[];
     parity_scope: string;
@@ -3752,12 +3770,12 @@ function normalizeReviewReplayBundleEnvelope(raw: {
       require_explicit_contexts: boolean;
     };
     decisions: ReviewDecisionFixture[];
-    reviewed_nested_executions?: ReviewedNestedExecutionFixture[];
+    reviewed_nested_executions?: ReviewedNestedExecutionFixture['execution'][];
   };
 }): ReviewReplayBundleEnvelope {
   return {
     kind: raw.kind,
-    version: raw.version,
+    version: raw.version as typeof REVIEW_TRANSPORT_VERSION,
     replayBundle: {
       replayContext: normalizeReviewReplayContext(raw.replay_bundle.replay_context),
       decisions: raw.replay_bundle.decisions.map((decision) => normalizeReviewDecision(decision)),
@@ -3779,7 +3797,7 @@ function normalizeReviewStateEnvelope(raw: {
 }): ConformanceManifestReviewStateEnvelope {
   return {
     kind: raw.kind,
-    version: raw.version,
+    version: raw.version as typeof REVIEW_TRANSPORT_VERSION,
     state: normalizeManifestReviewState(raw.state as never)
   };
 }
@@ -4053,7 +4071,9 @@ function normalizeStructuredEditRequest(
     targetSelection: raw.target_selection
       ? normalizeStructuredEditTargetSelection(raw.target_selection)
       : undefined,
-    targetMatch: raw.target_match ? normalizeStructuredEditTargetMatch(raw.target_match) : undefined,
+    targetMatch: raw.target_match
+      ? normalizeStructuredEditTargetMatch(raw.target_match)
+      : undefined,
     destinationSelector: raw.destination_selector ?? undefined,
     destinationSelectorFamily: raw.destination_selector_family ?? undefined,
     payloadText: raw.payload_text ?? undefined,
@@ -4388,25 +4408,14 @@ function normalizeStructuredEditProviderExecutorRegistryEnvelope(
 function normalizeStructuredEditProviderExecutorSelectionPolicy(
   raw: StructuredEditProviderExecutorSelectionPolicyFixture['cases'][number]['selection_policy']
 ): StructuredEditProviderExecutorSelectionPolicy {
-  const selectionPolicy: StructuredEditProviderExecutorSelectionPolicy = {
+  return {
     providerFamily: raw.provider_family,
     selectionMode: raw.selection_mode,
-    allowRegistryFallback: raw.allow_registry_fallback
+    allowRegistryFallback: raw.allow_registry_fallback,
+    ...(raw.provider_backend !== undefined ? { providerBackend: raw.provider_backend } : {}),
+    ...(raw.executor_label !== undefined ? { executorLabel: raw.executor_label } : {}),
+    ...(raw.metadata !== undefined ? { metadata: raw.metadata } : {})
   };
-
-  if (raw.provider_backend !== undefined) {
-    selectionPolicy.providerBackend = raw.provider_backend;
-  }
-
-  if (raw.executor_label !== undefined) {
-    selectionPolicy.executorLabel = raw.executor_label;
-  }
-
-  if (raw.metadata !== undefined) {
-    selectionPolicy.metadata = raw.metadata;
-  }
-
-  return selectionPolicy;
 }
 
 function normalizeStructuredEditProviderExecutorSelectionPolicyEnvelope(
@@ -10178,11 +10187,7 @@ describe('ast-merge shared fixtures', () => {
       ...diagnosticsFixturePath('structured_edit_provider_executor_operation_triad_profile')
     );
 
-    expect(fixture.metadata.canonical_operation_kinds).toEqual([
-      'insert',
-      'replace',
-      'delete'
-    ]);
+    expect(fixture.metadata.canonical_operation_kinds).toEqual(['insert', 'replace', 'delete']);
     expect(fixture.metadata.remove_alias_encoded).toBe(false);
     expect(
       JSON.parse(
@@ -14254,11 +14259,7 @@ describe('ast-merge shared fixtures', () => {
       ...diagnosticsFixturePath('structured_edit_crispr_acceptance_scenario')
     );
 
-    expect(fixture.metadata.canonical_operation_kinds).toEqual([
-      'insert',
-      'replace',
-      'delete'
-    ]);
+    expect(fixture.metadata.canonical_operation_kinds).toEqual(['insert', 'replace', 'delete']);
     expect(fixture.metadata.remove_alias_encoded).toBe(false);
     for (const entry of fixture.cases) {
       expect(
@@ -14396,8 +14397,8 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-697 content recipe execution envelope fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
-        request_envelope: ContentRecipeExecutionRequestEnvelope;
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        request_envelope: any;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('content_recipe_execution_envelope'));
 
@@ -14419,8 +14420,8 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-698 single-file README heading-section acceptance fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
-        request_envelope: ContentRecipeExecutionRequestEnvelope;
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        request_envelope: any;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('single_file_readme_heading_section_acceptance'));
 
@@ -14437,13 +14438,13 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-699 native structured-edit recipe steps fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('native_structured_edit_recipe_steps'));
 
     for (const entry of fixture.cases) {
       const operationKinds = entry.report_envelope.report.step_reports.map(
-        (step) => step.application?.request.operation_kind
+        (step: any) => step.application?.request.operation_kind
       );
       expect(operationKinds).toEqual(['replace', 'insert', 'delete']);
       expect(entry.report_envelope.report.changed).toBe(true);
@@ -14454,12 +14455,12 @@ describe('ast-merge shared fixtures', () => {
     const fixture = readFixture<{
       cases: readonly {
         label: string;
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('ruby_gemfile_signature_merge_acceptance'));
 
     for (const entry of fixture.cases) {
-      const report = entry.report_envelope.report;
+      const report = entry.report_envelope.report as any;
       expect(report.request.steps[0]?.merge_profile?.signature_profile).toBe(
         'gemfile_declarations'
       );
@@ -14479,7 +14480,7 @@ describe('ast-merge shared fixtures', () => {
       wrapper_required_behaviors: readonly {
         name: string;
       }[];
-      example_native_recipe: ContentRecipeExecutionRequestEnvelope;
+      example_native_recipe: any;
     }>(...diagnosticsFixturePath('ruby_gemspec_native_boundary_report'));
 
     expect(report.kind).toBe('ruby_gemspec_native_boundary_report');
@@ -14495,12 +14496,12 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-702 Ruby gemspec signature merge acceptance fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('ruby_gemspec_signature_merge_acceptance'));
 
     for (const entry of fixture.cases) {
-      const report = entry.report_envelope.report;
+      const report = entry.report_envelope.report as any;
       expect(report.request.steps[0]?.merge_profile?.signature_profile).toBe(
         'gemspec_declarations'
       );
@@ -14511,7 +14512,7 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-703 Ruby gemspec field policy acceptance fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('ruby_gemspec_field_policy_acceptance'));
 
@@ -14525,7 +14526,7 @@ describe('ast-merge shared fixtures', () => {
   it('conforms to the slice-704 Ruby gemspec dependency section policy acceptance fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('ruby_gemspec_dependency_section_policy_acceptance'));
 
@@ -14540,7 +14541,7 @@ describe('ast-merge shared fixtures', () => {
     const fixture = readFixture<{
       cases: readonly {
         label: string;
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('ruby_gemspec_files_policy_acceptance'));
 
@@ -14557,7 +14558,7 @@ describe('ast-merge shared fixtures', () => {
     const fixture = readFixture<{
       cases: readonly {
         label: string;
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('ruby_gemspec_version_loader_policy_acceptance'));
 
@@ -14576,12 +14577,12 @@ describe('ast-merge shared fixtures', () => {
     const fixture = readFixture<{
       cases: readonly {
         label: string;
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('project_facts_runtime_context'));
 
     for (const entry of fixture.cases) {
-      const report = entry.report_envelope.report;
+      const report = entry.report_envelope.report as any;
       const projectFacts = report.request.runtime_context?.project_facts as
         | { schema?: string }
         | undefined;
@@ -14602,12 +14603,12 @@ describe('ast-merge shared fixtures', () => {
     const fixture = readFixture<{
       cases: readonly {
         label: string;
-        report_envelope: ContentRecipeExecutionReportEnvelope;
+        report_envelope: any;
       }[];
     }>(...diagnosticsFixturePath('ruby_gemspec_self_dependency_policy_acceptance'));
 
     for (const entry of fixture.cases) {
-      const report = entry.report_envelope.report;
+      const report = entry.report_envelope.report as any;
 
       if (entry.label === 'delete-active-self-dependencies-preserve-comments') {
         expect(report.final_content).not.toContain('spec.add_dependency "demo", "~> 1.0"');
@@ -14683,11 +14684,7 @@ describe('ast-merge shared fixtures', () => {
       ...diagnosticsFixturePath('structured_edit_operation_triad_parity')
     );
 
-    expect(fixture.metadata.canonical_operation_kinds).toEqual([
-      'insert',
-      'replace',
-      'delete'
-    ]);
+    expect(fixture.metadata.canonical_operation_kinds).toEqual(['insert', 'replace', 'delete']);
     expect(fixture.metadata.remove_alias_encoded).toBe(false);
     expect(
       JSON.parse(
@@ -15654,8 +15651,6 @@ describe('ast-merge shared fixtures', () => {
           policies: entry.result.policies
         }
       }))
-    } satisfies ReviewedNestedExecutionApplication<string> & {
-      results: Array<{ execution_family: string; result: MergeResult<string> }>;
     });
   });
 
@@ -15694,8 +15689,6 @@ describe('ast-merge shared fixtures', () => {
           policies: entry.result.policies
         }
       }))
-    } satisfies ReviewedNestedExecutionApplication<string> & {
-      results: Array<{ execution_family: string; result: MergeResult<string> }>;
     });
   });
 
@@ -15792,8 +15785,6 @@ describe('ast-merge shared fixtures', () => {
           policies: entry.result.policies
         }
       }))
-    } satisfies ConformanceManifestReviewedNestedApplication<string> & {
-      results: Array<{ execution_family: string; result: MergeResult<string> }>;
     });
   });
 

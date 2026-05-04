@@ -11,7 +11,9 @@
       "@structuredmerge/toml-merge": ["./packages/toml-merge/src/index.ts"],
       "@structuredmerge/peggy-toml-merge": ["./packages/peggy-toml-merge/src/index.ts"],
       "@structuredmerge/typescript-merge": ["./packages/typescript-merge/src/index.ts"],
-      "@structuredmerge/typescript-compiler-merge": ["./packages/typescript-compiler-merge/src/index.ts"],
+      "@structuredmerge/typescript-compiler-merge": [
+        "./packages/typescript-compiler-merge/src/index.ts"
+      ],
       "@structuredmerge/yaml-merge": ["./packages/yaml-merge/src/index.ts"],
       "@structuredmerge/js-yaml-merge": ["./packages/js-yaml-merge/src/index.ts"]
     },

@@ -334,9 +334,7 @@ describe('ruby-merge shared fixtures', () => {
       'ruby'
     );
     expect(invalidDestinationResult.ok).toBe(false);
-    expect(
-      invalidDestinationResult.diagnostics.map((diagnostic) => diagnostic.category)
-    ).toEqual(
+    expect(invalidDestinationResult.diagnostics.map((diagnostic) => diagnostic.category)).toEqual(
       invalidDestinationFixture.expected.diagnostics.map((diagnostic) => diagnostic.category)
     );
 
@@ -771,7 +769,10 @@ describe('ruby-merge shared fixtures', () => {
             case_ids: string[];
             delegated_case_ids: string[];
           };
-          action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+          action_offers: Array<{
+            action: 'apply_delegated_child_group';
+            requires_context: boolean;
+          }>;
           default_action: 'apply_delegated_child_group';
         }>;
         accepted_groups: Array<{
@@ -845,7 +846,11 @@ describe('ruby-merge shared fixtures', () => {
       template: string;
       destination: string;
       replay_bundle: {
-        replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+        replay_context: {
+          surface: 'conformance_manifest';
+          families: string[];
+          require_explicit_contexts: boolean;
+        };
         decisions: [];
         reviewed_nested_executions: Array<{
           family: string;
@@ -871,7 +876,11 @@ describe('ruby-merge shared fixtures', () => {
         requests: [];
         applied_decisions: [];
         host_hints: { interactive: boolean; require_explicit_contexts: boolean };
-        replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+        replay_context: {
+          surface: 'conformance_manifest';
+          families: string[];
+          require_explicit_contexts: boolean;
+        };
         reviewed_nested_executions: Array<{
           family: string;
           review_state: {
@@ -908,29 +917,31 @@ describe('ruby-merge shared fixtures', () => {
           requireExplicitContexts: fixture.replay_bundle.replay_context.require_explicit_contexts
         },
         decisions: fixture.replay_bundle.decisions,
-        reviewedNestedExecutions: fixture.replay_bundle.reviewed_nested_executions.map((execution) => ({
-          family: execution.family,
-          reviewState: {
-            requests: execution.review_state.requests,
-            acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
-              delegatedApplyGroup: group.delegated_apply_group,
-              parentOperationId: group.parent_operation_id,
-              childOperationId: group.child_operation_id,
-              delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
-              caseIds: group.case_ids,
-              delegatedCaseIds: group.delegated_case_ids
-            })),
-            appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
-              requestId: decision.request_id,
-              action: decision.action
-            })),
-            diagnostics: execution.review_state.diagnostics
-          },
-          appliedChildren: execution.applied_children.map((entry) => ({
-            operationId: entry.operation_id,
-            output: entry.output
-          }))
-        }))
+        reviewedNestedExecutions: fixture.replay_bundle.reviewed_nested_executions.map(
+          (execution) => ({
+            family: execution.family,
+            reviewState: {
+              requests: execution.review_state.requests,
+              acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+                delegatedApplyGroup: group.delegated_apply_group,
+                parentOperationId: group.parent_operation_id,
+                childOperationId: group.child_operation_id,
+                delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+                caseIds: group.case_ids,
+                delegatedCaseIds: group.delegated_case_ids
+              })),
+              appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+                requestId: decision.request_id,
+                action: decision.action
+              })),
+              diagnostics: execution.review_state.diagnostics
+            },
+            appliedChildren: execution.applied_children.map((entry) => ({
+              operationId: entry.operation_id,
+              output: entry.output
+            }))
+          })
+        )
       }
     );
 
@@ -952,29 +963,31 @@ describe('ruby-merge shared fixtures', () => {
           families: fixture.review_state.replay_context.families,
           requireExplicitContexts: fixture.review_state.replay_context.require_explicit_contexts
         },
-        reviewedNestedExecutions: fixture.review_state.reviewed_nested_executions.map((execution) => ({
-          family: execution.family,
-          reviewState: {
-            requests: execution.review_state.requests,
-            acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
-              delegatedApplyGroup: group.delegated_apply_group,
-              parentOperationId: group.parent_operation_id,
-              childOperationId: group.child_operation_id,
-              delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
-              caseIds: group.case_ids,
-              delegatedCaseIds: group.delegated_case_ids
-            })),
-            appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
-              requestId: decision.request_id,
-              action: decision.action
-            })),
-            diagnostics: execution.review_state.diagnostics
-          },
-          appliedChildren: execution.applied_children.map((entry) => ({
-            operationId: entry.operation_id,
-            output: entry.output
-          }))
-        }))
+        reviewedNestedExecutions: fixture.review_state.reviewed_nested_executions.map(
+          (execution) => ({
+            family: execution.family,
+            reviewState: {
+              requests: execution.review_state.requests,
+              acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+                delegatedApplyGroup: group.delegated_apply_group,
+                parentOperationId: group.parent_operation_id,
+                childOperationId: group.child_operation_id,
+                delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+                caseIds: group.case_ids,
+                delegatedCaseIds: group.delegated_case_ids
+              })),
+              appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+                requestId: decision.request_id,
+                action: decision.action
+              })),
+              diagnostics: execution.review_state.diagnostics
+            },
+            appliedChildren: execution.applied_children.map((entry) => ({
+              operationId: entry.operation_id,
+              output: entry.output
+            }))
+          })
+        )
       }
     );
 
@@ -1029,14 +1042,21 @@ describe('ruby-merge shared fixtures', () => {
         kind: 'review_replay_bundle';
         version: 1;
         replay_bundle: {
-          replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+          replay_context: {
+            surface: 'conformance_manifest';
+            families: string[];
+            require_explicit_contexts: boolean;
+          };
           decisions: [];
           reviewed_nested_executions: Array<{
             family: string;
             review_state: {
               requests: [];
               accepted_groups: Array<FixtureProjectedChildGroup>;
-              applied_decisions: Array<{ request_id: string; action: 'apply_delegated_child_group' }>;
+              applied_decisions: Array<{
+                request_id: string;
+                action: 'apply_delegated_child_group';
+              }>;
               diagnostics: [];
             };
             applied_children: Array<{ operation_id: string; output: string }>;
@@ -1052,13 +1072,20 @@ describe('ruby-merge shared fixtures', () => {
           requests: [];
           applied_decisions: [];
           host_hints: { interactive: boolean; require_explicit_contexts: boolean };
-          replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+          replay_context: {
+            surface: 'conformance_manifest';
+            families: string[];
+            require_explicit_contexts: boolean;
+          };
           reviewed_nested_executions: Array<{
             family: string;
             review_state: {
               requests: [];
               accepted_groups: Array<FixtureProjectedChildGroup>;
-              applied_decisions: Array<{ request_id: string; action: 'apply_delegated_child_group' }>;
+              applied_decisions: Array<{
+                request_id: string;
+                action: 'apply_delegated_child_group';
+              }>;
               diagnostics: [];
             };
             applied_children: Array<{ operation_id: string; output: string }>;
@@ -1084,29 +1111,31 @@ describe('ruby-merge shared fixtures', () => {
         },
         decisions: fixture.replay_bundle_envelope.replay_bundle.decisions,
         reviewedNestedExecutions:
-          fixture.replay_bundle_envelope.replay_bundle.reviewed_nested_executions.map((execution) => ({
-            family: execution.family,
-            reviewState: {
-              requests: execution.review_state.requests,
-              acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
-                delegatedApplyGroup: group.delegated_apply_group,
-                parentOperationId: group.parent_operation_id,
-                childOperationId: group.child_operation_id,
-                delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
-                caseIds: group.case_ids,
-                delegatedCaseIds: group.delegated_case_ids
-              })),
-              appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
-                requestId: decision.request_id,
-                action: decision.action
-              })),
-              diagnostics: execution.review_state.diagnostics
-            },
-            appliedChildren: execution.applied_children.map((entry) => ({
-              operationId: entry.operation_id,
-              output: entry.output
-            }))
-          }))
+          fixture.replay_bundle_envelope.replay_bundle.reviewed_nested_executions.map(
+            (execution) => ({
+              family: execution.family,
+              reviewState: {
+                requests: execution.review_state.requests,
+                acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+                  delegatedApplyGroup: group.delegated_apply_group,
+                  parentOperationId: group.parent_operation_id,
+                  childOperationId: group.child_operation_id,
+                  delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+                  caseIds: group.case_ids,
+                  delegatedCaseIds: group.delegated_case_ids
+                })),
+                appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+                  requestId: decision.request_id,
+                  action: decision.action
+                })),
+                diagnostics: execution.review_state.diagnostics
+              },
+              appliedChildren: execution.applied_children.map((entry) => ({
+                operationId: entry.operation_id,
+                output: entry.output
+              }))
+            })
+          )
       }
     };
 
@@ -1241,11 +1270,7 @@ describe('ruby-merge shared fixtures', () => {
           supported_policies: Array<{ surface: 'array'; name: string }>;
         };
       };
-    }>(
-      'diagnostics',
-      'slice-216-ruby-family-plan-contexts',
-      'ruby-ruby-plan-contexts.json'
-    );
+    }>('diagnostics', 'slice-216-ruby-family-plan-contexts', 'ruby-ruby-plan-contexts.json');
 
     expect(availableRubyBackends()).toEqual(['kreuzberg-language-pack']);
     expect(registeredBackends()).toContainEqual({

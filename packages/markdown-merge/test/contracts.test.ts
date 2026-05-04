@@ -38,10 +38,7 @@ describe('markdown-merge contracts', () => {
   });
 
   it('extracts headings and code fences from Markdown analysis', () => {
-    const result = parseMarkdown(
-      "# Title\n\n```ts\nconsole.log('hi')\n```\n",
-      'markdown'
-    );
+    const result = parseMarkdown("# Title\n\n```ts\nconsole.log('hi')\n```\n", 'markdown');
     expect(result.ok).toBe(true);
     expect(result.analysis?.owners).toEqual([
       { path: '/heading/0', ownerKind: 'heading', matchKey: 'h1:title', level: 1 },

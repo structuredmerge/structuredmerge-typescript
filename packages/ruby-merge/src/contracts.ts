@@ -16,7 +16,7 @@ import type {
   ReviewedNestedExecution
 } from '@structuredmerge/ast-merge';
 import {
-  delegatedChildApplyPlan as astDelegatedChildApplyPlan,
+  type delegatedChildApplyPlan as astDelegatedChildApplyPlan,
   executeNestedMerge,
   importConformanceManifestReviewStateEnvelope,
   importReviewReplayBundleEnvelope,
@@ -279,7 +279,9 @@ export function applyRubyDelegatedChildOutputs(
     return {
       ok: false,
       diagnostics: [
-        configurationError(error instanceof Error ? error.message : 'failed to apply delegated child outputs.')
+        configurationError(
+          error instanceof Error ? error.message : 'failed to apply delegated child outputs.'
+        )
       ],
       policies: []
     };
@@ -393,38 +395,40 @@ export function mergeRubyWithReviewedNestedOutputsFromReplayBundle(
     };
   }
 
-  return executeReviewReplayBundleReviewedNestedExecutions<string>(replayBundle, () => ({
-    mergeParent: () => mergeRuby(templateSource, destinationSource, dialect),
-    discoverOperations: (mergedOutput) => {
-      const analysis = parseRuby(mergedOutput, dialect);
-      if (!analysis.ok || !analysis.analysis) {
-        return { ok: false, diagnostics: analysis.diagnostics };
-      }
+  return (
+    executeReviewReplayBundleReviewedNestedExecutions<string>(replayBundle, () => ({
+      mergeParent: () => mergeRuby(templateSource, destinationSource, dialect),
+      discoverOperations: (mergedOutput) => {
+        const analysis = parseRuby(mergedOutput, dialect);
+        if (!analysis.ok || !analysis.analysis) {
+          return { ok: false, diagnostics: analysis.diagnostics };
+        }
 
-      return {
-        ok: true,
-        diagnostics: [],
-        operations: rubyDelegatedChildOperations(analysis.analysis)
-      };
-    },
-    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
-      applyRubyDelegatedChildOutputs(
-        mergedOutput,
-        operations,
-        applyPlan,
-        resolvedChildren as readonly AppliedDelegatedChildOutput[]
-      )
-  })).find((run) => run.execution.family === execution.family)?.result ?? {
-    ok: false,
-    diagnostics: [
-      {
-        severity: 'error',
-        category: 'configuration_error',
-        message: 'review replay bundle ruby execution could not be applied.'
-      }
-    ],
-    policies: []
-  };
+        return {
+          ok: true,
+          diagnostics: [],
+          operations: rubyDelegatedChildOperations(analysis.analysis)
+        };
+      },
+      applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+        applyRubyDelegatedChildOutputs(
+          mergedOutput,
+          operations,
+          applyPlan,
+          resolvedChildren as readonly AppliedDelegatedChildOutput[]
+        )
+    })).find((run) => run.execution.family === execution.family)?.result ?? {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review replay bundle ruby execution could not be applied.'
+        }
+      ],
+      policies: []
+    }
+  );
 }
 
 export function mergeRubyWithReviewedNestedOutputsFromReviewState(
@@ -448,38 +452,40 @@ export function mergeRubyWithReviewedNestedOutputsFromReviewState(
     };
   }
 
-  return executeReviewStateReviewedNestedExecutions<string>(reviewState, () => ({
-    mergeParent: () => mergeRuby(templateSource, destinationSource, dialect),
-    discoverOperations: (mergedOutput) => {
-      const analysis = parseRuby(mergedOutput, dialect);
-      if (!analysis.ok || !analysis.analysis) {
-        return { ok: false, diagnostics: analysis.diagnostics };
-      }
+  return (
+    executeReviewStateReviewedNestedExecutions<string>(reviewState, () => ({
+      mergeParent: () => mergeRuby(templateSource, destinationSource, dialect),
+      discoverOperations: (mergedOutput) => {
+        const analysis = parseRuby(mergedOutput, dialect);
+        if (!analysis.ok || !analysis.analysis) {
+          return { ok: false, diagnostics: analysis.diagnostics };
+        }
 
-      return {
-        ok: true,
-        diagnostics: [],
-        operations: rubyDelegatedChildOperations(analysis.analysis)
-      };
-    },
-    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
-      applyRubyDelegatedChildOutputs(
-        mergedOutput,
-        operations,
-        applyPlan,
-        resolvedChildren as readonly AppliedDelegatedChildOutput[]
-      )
-  })).find((run) => run.execution.family === execution.family)?.result ?? {
-    ok: false,
-    diagnostics: [
-      {
-        severity: 'error',
-        category: 'configuration_error',
-        message: 'review state ruby execution could not be applied.'
-      }
-    ],
-    policies: []
-  };
+        return {
+          ok: true,
+          diagnostics: [],
+          operations: rubyDelegatedChildOperations(analysis.analysis)
+        };
+      },
+      applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+        applyRubyDelegatedChildOutputs(
+          mergedOutput,
+          operations,
+          applyPlan,
+          resolvedChildren as readonly AppliedDelegatedChildOutput[]
+        )
+    })).find((run) => run.execution.family === execution.family)?.result ?? {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review state ruby execution could not be applied.'
+        }
+      ],
+      policies: []
+    }
+  );
 }
 
 export function mergeRubyWithReviewedNestedOutputsFromReplayBundleEnvelope(
@@ -771,11 +777,12 @@ export function mergeRuby(
   const destinationRequires = collectRubyRequireEntries(destination.analysis.source);
   const destinationDeclarations = collectRubyDeclarationEntries(destination.analysis.source);
   const templateDeclarations = collectRubyDeclarationEntries(template.analysis.source);
-  const destinationDeclarationPaths = new Set(
-    destinationDeclarations.map((entry) => entry.path)
-  );
+  const destinationDeclarationPaths = new Set(destinationDeclarations.map((entry) => entry.path));
   const sections = [
-    destinationRequires.map((entry) => entry.text).join('\n').trim(),
+    destinationRequires
+      .map((entry) => entry.text)
+      .join('\n')
+      .trim(),
     ...destinationDeclarations.map((entry) => entry.text),
     ...templateDeclarations
       .filter((entry) => !destinationDeclarationPaths.has(entry.path))

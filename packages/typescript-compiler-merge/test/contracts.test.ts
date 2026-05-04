@@ -33,7 +33,9 @@ describe('typescript-compiler-merge contracts', () => {
   });
 
   it('rejects unsupported backend overrides', () => {
-    expect(parseTypeScript('export const answer = 42;\n', 'typescript', 'kreuzberg-language-pack')).toEqual({
+    expect(
+      parseTypeScript('export const answer = 42;\n', 'typescript', 'kreuzberg-language-pack')
+    ).toEqual({
       ok: false,
       diagnostics: [
         {
@@ -44,7 +46,14 @@ describe('typescript-compiler-merge contracts', () => {
       ]
     });
 
-    expect(mergeTypeScript('export const a = 1;\n', 'export const b = 2;\n', 'typescript', 'kreuzberg-language-pack')).toEqual({
+    expect(
+      mergeTypeScript(
+        'export const a = 1;\n',
+        'export const b = 2;\n',
+        'typescript',
+        'kreuzberg-language-pack'
+      )
+    ).toEqual({
       ok: false,
       diagnostics: [
         {

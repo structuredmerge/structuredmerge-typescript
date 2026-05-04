@@ -51,8 +51,9 @@ describe('peggy-toml-merge shared fixtures', () => {
       supportedDialects: providerProfile.supported_dialects,
       supportedPolicies: providerProfile.supported_policies,
       backend: providerProfile.backend,
-      backendRef: (providerProfile.backendRef ??
-        providerProfile.backend_ref) as Record<string, unknown> | undefined
+      backendRef: (providerProfile.backendRef ?? providerProfile.backend_ref) as
+        | Record<string, unknown>
+        | undefined
     });
   });
 

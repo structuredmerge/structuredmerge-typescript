@@ -17,7 +17,7 @@ import type {
   ReviewedNestedExecution
 } from '@structuredmerge/ast-merge';
 import {
-  delegatedChildApplyPlan as astDelegatedChildApplyPlan,
+  type delegatedChildApplyPlan as astDelegatedChildApplyPlan,
   executeNestedMerge,
   importConformanceManifestReviewStateEnvelope,
   importReviewReplayBundleEnvelope,
@@ -314,7 +314,10 @@ function markdownOwnerStartIndices(source: string): Map<string, number> {
   return starts;
 }
 
-function collectMarkdownSections(source: string, owners: readonly MarkdownOwner[]): MarkdownSection[] {
+function collectMarkdownSections(
+  source: string,
+  owners: readonly MarkdownOwner[]
+): MarkdownSection[] {
   const normalized = normalizeMarkdownSource(source);
   const lines = normalized.split('\n');
   const starts = markdownOwnerStartIndices(normalized);
@@ -409,7 +412,9 @@ export function applyMarkdownDelegatedChildOutputs(
     return {
       ok: false,
       diagnostics: [
-        configurationError(error instanceof Error ? error.message : 'failed to apply delegated child outputs.')
+        configurationError(
+          error instanceof Error ? error.message : 'failed to apply delegated child outputs.'
+        )
       ],
       policies: []
     };
@@ -526,38 +531,40 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundle(
     };
   }
 
-  return executeReviewReplayBundleReviewedNestedExecutions<string>(replayBundle, () => ({
-    mergeParent: () => mergeMarkdown(templateSource, destinationSource, dialect, backend),
-    discoverOperations: (mergedOutput) => {
-      const analysis = parseMarkdown(mergedOutput, dialect, backend);
-      if (!analysis.ok || !analysis.analysis) {
-        return { ok: false, diagnostics: analysis.diagnostics };
-      }
+  return (
+    executeReviewReplayBundleReviewedNestedExecutions<string>(replayBundle, () => ({
+      mergeParent: () => mergeMarkdown(templateSource, destinationSource, dialect, backend),
+      discoverOperations: (mergedOutput) => {
+        const analysis = parseMarkdown(mergedOutput, dialect, backend);
+        if (!analysis.ok || !analysis.analysis) {
+          return { ok: false, diagnostics: analysis.diagnostics };
+        }
 
-      return {
-        ok: true,
-        diagnostics: [],
-        operations: markdownDelegatedChildOperations(analysis.analysis)
-      };
-    },
-    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
-      applyMarkdownDelegatedChildOutputs(
-        mergedOutput,
-        operations,
-        applyPlan,
-        resolvedChildren as readonly AppliedDelegatedChildOutput[]
-      )
-  })).find((run) => run.execution.family === execution.family)?.result ?? {
-    ok: false,
-    diagnostics: [
-      {
-        severity: 'error',
-        category: 'configuration_error',
-        message: 'review replay bundle markdown execution could not be applied.'
-      }
-    ],
-    policies: []
-  };
+        return {
+          ok: true,
+          diagnostics: [],
+          operations: markdownDelegatedChildOperations(analysis.analysis)
+        };
+      },
+      applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+        applyMarkdownDelegatedChildOutputs(
+          mergedOutput,
+          operations,
+          applyPlan,
+          resolvedChildren as readonly AppliedDelegatedChildOutput[]
+        )
+    })).find((run) => run.execution.family === execution.family)?.result ?? {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review replay bundle markdown execution could not be applied.'
+        }
+      ],
+      policies: []
+    }
+  );
 }
 
 export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
@@ -582,38 +589,40 @@ export function mergeMarkdownWithReviewedNestedOutputsFromReviewState(
     };
   }
 
-  return executeReviewStateReviewedNestedExecutions<string>(reviewState, () => ({
-    mergeParent: () => mergeMarkdown(templateSource, destinationSource, dialect, backend),
-    discoverOperations: (mergedOutput) => {
-      const analysis = parseMarkdown(mergedOutput, dialect, backend);
-      if (!analysis.ok || !analysis.analysis) {
-        return { ok: false, diagnostics: analysis.diagnostics };
-      }
+  return (
+    executeReviewStateReviewedNestedExecutions<string>(reviewState, () => ({
+      mergeParent: () => mergeMarkdown(templateSource, destinationSource, dialect, backend),
+      discoverOperations: (mergedOutput) => {
+        const analysis = parseMarkdown(mergedOutput, dialect, backend);
+        if (!analysis.ok || !analysis.analysis) {
+          return { ok: false, diagnostics: analysis.diagnostics };
+        }
 
-      return {
-        ok: true,
-        diagnostics: [],
-        operations: markdownDelegatedChildOperations(analysis.analysis)
-      };
-    },
-    applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
-      applyMarkdownDelegatedChildOutputs(
-        mergedOutput,
-        operations,
-        applyPlan,
-        resolvedChildren as readonly AppliedDelegatedChildOutput[]
-      )
-  })).find((run) => run.execution.family === execution.family)?.result ?? {
-    ok: false,
-    diagnostics: [
-      {
-        severity: 'error',
-        category: 'configuration_error',
-        message: 'review state markdown execution could not be applied.'
-      }
-    ],
-    policies: []
-  };
+        return {
+          ok: true,
+          diagnostics: [],
+          operations: markdownDelegatedChildOperations(analysis.analysis)
+        };
+      },
+      applyResolvedOutputs: (mergedOutput, operations, applyPlan, resolvedChildren) =>
+        applyMarkdownDelegatedChildOutputs(
+          mergedOutput,
+          operations,
+          applyPlan,
+          resolvedChildren as readonly AppliedDelegatedChildOutput[]
+        )
+    })).find((run) => run.execution.family === execution.family)?.result ?? {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'error',
+          category: 'configuration_error',
+          message: 'review state markdown execution could not be applied.'
+        }
+      ],
+      policies: []
+    }
+  );
 }
 
 export function mergeMarkdownWithReviewedNestedOutputsFromReplayBundleEnvelope(

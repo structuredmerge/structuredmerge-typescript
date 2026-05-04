@@ -343,7 +343,12 @@ describe('executeNestedMerge', () => {
     ] as const;
 
     const runs = executeReviewedNestedExecutions(executions, (execution) => ({
-      mergeParent: () => ({ ok: true, diagnostics: [], output: `${execution.family}-merged`, policies: [] }),
+      mergeParent: () => ({
+        ok: true,
+        diagnostics: [],
+        output: `${execution.family}-merged`,
+        policies: []
+      }),
       discoverOperations: () => ({
         ok: true,
         diagnostics: [],
