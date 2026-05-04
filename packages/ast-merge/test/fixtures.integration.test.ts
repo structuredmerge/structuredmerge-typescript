@@ -1133,6 +1133,19 @@ interface StructuredEditParityMatchSemanticsFixture {
   }>;
 }
 
+interface StructuredEditOperationTriadParityFixture {
+  cases: Array<{
+    label: string;
+    application: StructuredEditApplicationFixture['cases'][number]['application'];
+  }>;
+  metadata: {
+    canonical_operation_kinds: string[];
+    parity_scope: string;
+    remove_alias_encoded: boolean;
+    source: string;
+  };
+}
+
 interface StructuredEditApplicationFixture {
   cases: Array<{
     label: string;
@@ -14353,6 +14366,34 @@ describe('ast-merge shared fixtures', () => {
       fixture.cases.map((entry) => ({
         label: entry.label,
         request: normalizeStructuredEditRequest(entry.request)
+      }))
+    );
+  });
+
+  it('conforms to the slice-692 structured-edit operation triad parity fixture', () => {
+    const fixture = readFixture<StructuredEditOperationTriadParityFixture>(
+      ...diagnosticsFixturePath('structured_edit_operation_triad_parity')
+    );
+
+    expect(fixture.metadata.canonical_operation_kinds).toEqual([
+      'insert',
+      'replace',
+      'delete'
+    ]);
+    expect(fixture.metadata.remove_alias_encoded).toBe(false);
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          fixture.cases.map((entry) => ({
+            label: entry.label,
+            application: normalizeStructuredEditApplication(entry.application)
+          }))
+        )
+      )
+    ).toEqual(
+      fixture.cases.map((entry) => ({
+        label: entry.label,
+        application: normalizeStructuredEditApplication(entry.application)
       }))
     );
   });
