@@ -14492,6 +14492,22 @@ describe('ast-merge shared fixtures', () => {
     );
   });
 
+  it('conforms to the slice-702 Ruby gemspec signature merge acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_gemspec_signature_merge_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report;
+      expect(report.request.steps[0]?.merge_profile?.signature_profile).toBe(
+        'gemspec_declarations'
+      );
+      expect(report.final_content).toContain('spec.add_development_dependency("rubocop"');
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
