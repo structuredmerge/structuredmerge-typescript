@@ -14621,6 +14621,78 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-709 Ruby Gemfile self-dependency policy acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_gemfile_self_dependency_policy_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'delete-gemfile-self-dependencies-across-nesting') {
+        expect(report.final_content).not.toContain('gem "demo", "~> 1.0"');
+        expect(report.final_content).not.toContain('path: "../dev/demo"');
+        expect(report.final_content).toContain('# gem "demo", "~> 0"');
+        expect(report.final_content).toContain('gem "fallback-gem"');
+        expect(report.step_reports[0]?.metadata?.operation).toBe('delete');
+      }
+      if (entry.label === 'missing-project-identity-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
+  it('conforms to the slice-710 Ruby Appraisals self-dependency policy acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_appraisals_self_dependency_policy_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'delete-appraisals-self-dependencies') {
+        expect(report.final_content).not.toContain('gem "demo"');
+        expect(report.final_content).toContain('appraise("rails-6")');
+        expect(report.final_content).toContain('gem "rspec" # Testing');
+        expect(report.step_reports[0]?.metadata?.operation).toBe('delete');
+      }
+      if (entry.label === 'missing-project-identity-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
+  it('conforms to the slice-711 Ruby Appraisals min-Ruby prune policy acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_appraisals_min_ruby_prune_policy_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'delete-ruby-appraisals-below-min-ruby') {
+        expect(report.final_content).not.toContain('ruby-2-3');
+        expect(report.final_content).not.toContain('ruby-2-7');
+        expect(report.final_content).not.toContain('ruby-3-0');
+        expect(report.final_content).toContain('ruby-3-2');
+        expect(report.final_content).toContain('appraise "style"');
+        expect(report.step_reports[0]?.metadata?.operation).toBe('delete');
+      }
+      if (entry.label === 'missing-min-ruby-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
