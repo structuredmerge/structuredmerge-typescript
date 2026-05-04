@@ -14450,6 +14450,26 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-700 Ruby Gemfile signature merge acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: ContentRecipeExecutionReportEnvelope;
+      }[];
+    }>(...diagnosticsFixturePath('ruby_gemfile_signature_merge_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report;
+      expect(report.request.steps[0]?.merge_profile?.signature_profile).toBe(
+        'gemfile_declarations'
+      );
+      if (entry.label === 'gemfile-cross-nesting-duplicates-fail-closed') {
+        expect(report.changed).toBe(false);
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
