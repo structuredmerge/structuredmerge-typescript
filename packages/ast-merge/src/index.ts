@@ -43,6 +43,7 @@ export type {
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
   StructuredEditMatchProfile,
+  StructuredEditTargetMatch,
   StructuredEditOperationProfile,
   StructuredEditDestinationProfile,
   StructuredEditCallableDestination,
