@@ -14470,6 +14470,28 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-701 Ruby gemspec native boundary report fixture', () => {
+    const report = readFixture<{
+      kind: string;
+      native_recipe_surface: {
+        signature_profile: string;
+      };
+      wrapper_required_behaviors: readonly {
+        name: string;
+      }[];
+      example_native_recipe: ContentRecipeExecutionRequestEnvelope;
+    }>(...diagnosticsFixturePath('ruby_gemspec_native_boundary_report'));
+
+    expect(report.kind).toBe('ruby_gemspec_native_boundary_report');
+    expect(report.native_recipe_surface.signature_profile).toBe('gemspec_declarations');
+    expect(report.wrapper_required_behaviors.map((behavior) => behavior.name)).toContain(
+      'dependency_ruby_floor_comment_alignment'
+    );
+    expect(report.example_native_recipe.request.steps[0]?.merge_profile?.signature_profile).toBe(
+      'gemspec_declarations'
+    );
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
