@@ -14720,6 +14720,30 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-713 README supplied metadata synchronization acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('readme_supplied_metadata_synchronization_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'sync-readme-heading-and-summary-from-supplied-metadata') {
+        expect(report.final_content.startsWith('# Demo Toolkit\n')).toBe(true);
+        expect(report.final_content).toContain('A deterministic toolkit for structured merges.');
+        expect(report.final_content).toContain('Destination usage.');
+        expect(report.step_reports[0]?.metadata?.consumed_context).toBe('readme_metadata.title');
+        expect(report.step_reports[1]?.metadata?.consumed_context).toBe('readme_metadata.summary');
+      }
+      if (entry.label === 'missing-readme-metadata-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
