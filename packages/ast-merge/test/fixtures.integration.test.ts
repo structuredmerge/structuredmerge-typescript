@@ -14283,6 +14283,22 @@ describe('ast-merge shared fixtures', () => {
     });
   });
 
+  it('conforms to the slice-689 structured-edit crispr parity substrate report fixture', () => {
+    const fixture = readFixture<{ report: StructuredEditCrisprExampleParityReport }>(
+      ...diagnosticsFixturePath('structured_edit_crispr_parity_substrate_report')
+    );
+
+    expect(
+      JSON.parse(
+        JSON.stringify({
+          report: fixture.report
+        })
+      )
+    ).toEqual({
+      report: fixture.report
+    });
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
