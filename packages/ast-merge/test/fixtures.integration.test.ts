@@ -14770,6 +14770,31 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-715 supplied source selector deletion acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('supplied_source_selector_deletion_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'delete-supplied-structural-owner-ranges') {
+        expect(report.final_content).not.toContain('kettle/scaffold');
+        expect(report.final_content).not.toContain('task :scaffold');
+        expect(report.final_content).toContain('require "bundler/gem_tasks"');
+        expect(report.final_content).toContain('task :spec');
+        expect(report.final_content).not.toContain('\n\n\n');
+        expect(report.step_reports[0]?.metadata?.deleted_ranges).toBe(2);
+      }
+      if (entry.label === 'missing-delete-selectors-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
