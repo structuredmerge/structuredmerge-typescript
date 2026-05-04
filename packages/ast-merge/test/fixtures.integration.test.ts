@@ -14246,6 +14246,30 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-695 structured-edit crispr acceptance scenario fixture', () => {
+    const fixture = readFixture<any>(
+      ...diagnosticsFixturePath('structured_edit_crispr_acceptance_scenario')
+    );
+
+    expect(fixture.metadata.canonical_operation_kinds).toEqual([
+      'insert',
+      'replace',
+      'delete'
+    ]);
+    expect(fixture.metadata.remove_alias_encoded).toBe(false);
+    for (const entry of fixture.cases) {
+      expect(
+        JSON.parse(
+          JSON.stringify({
+            report: normalizeStructuredEditExecutionReport(entry.report)
+          })
+        )
+      ).toEqual({
+        report: normalizeStructuredEditExecutionReport(entry.report)
+      });
+    }
+  });
+
   it('conforms to the slice-678 structured-edit crispr append fallback insert fixture', () => {
     const fixture = readFixture<any>(
       ...diagnosticsFixturePath('structured_edit_crispr_append_fallback_insert')
