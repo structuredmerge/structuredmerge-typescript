@@ -1,0 +1,36 @@
+{
+  "case_id": "kettle-nodule-vnext-readme-changelog-managed-block",
+  "ecosystem": "npm",
+  "inputs": {
+    "files": {
+      "package.json": "{\n  \"name\": \"@example/nodule\",\n  \"description\": \"Example npm package\",\n  \"homepage\": \"https://example.test/nodule\",\n  \"repository\": {\n    \"url\": \"https://github.com/example/nodule\"\n  },\n  \"license\": \"MIT\",\n  \"type\": \"module\",\n  \"packageManager\": \"pnpm@10.19.0\"\n}\n",
+      "README.md": "# Old Package\n\nExisting npm intro.\n",
+      "CHANGELOG.md": "# Changelog\n\n## [0.1.0] - 2026-01-01\n\n- Initial release.\n",
+      "src/generated-package-info.ts": "export const localValue = true;\n"
+    }
+  },
+  "expected": {
+    "facts": {
+      "package": {
+        "ecosystem": "npm",
+        "name": "@example/nodule",
+        "slug": "@example/nodule",
+        "description": "Example npm package",
+        "homepageUrl": "https://example.test/nodule",
+        "sourceUrl": "https://github.com/example/nodule",
+        "licenseExpression": "MIT"
+      },
+      "npm": {
+        "packageJsonPath": "package.json",
+        "packageManager": "pnpm@10.19.0",
+        "moduleType": "module"
+      }
+    },
+    "changedFiles": ["CHANGELOG.md", "README.md", "src/generated-package-info.ts"],
+    "files": {
+      "README.md": "# @example/nodule\n\nExisting npm intro.\n\n<!-- kettle-nodule:metadata:start -->\n| Field | Value |\n|---|---|\n| Package | @example/nodule |\n| Description | Example npm package |\n| Homepage | https://example.test/nodule |\n| Source | https://github.com/example/nodule |\n| License | MIT |\n<!-- kettle-nodule:metadata:end -->\n",
+      "CHANGELOG.md": "# Changelog\n\n## [Unreleased]\n\n### Added\n\n### Changed\n\n### Fixed\n\n## [0.1.0] - 2026-01-01\n\n- Initial release.\n",
+      "src/generated-package-info.ts": "export const localValue = true;\n// <<kettle-nodule:generated>> do not edit below this line\nexport const packageName = \"@example/nodule\";\nexport const packageEcosystem = \"npm\";\n// <</kettle-nodule:generated>>\n"
+    }
+  }
+}

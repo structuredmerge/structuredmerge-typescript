@@ -15,7 +15,8 @@
         "./packages/typescript-compiler-merge/src/index.ts"
       ],
       "@structuredmerge/yaml-merge": ["./packages/yaml-merge/src/index.ts"],
-      "@structuredmerge/js-yaml-merge": ["./packages/js-yaml-merge/src/index.ts"]
+      "@structuredmerge/js-yaml-merge": ["./packages/js-yaml-merge/src/index.ts"],
+      "@structuredmerge/kettle-nodule": ["./packages/kettle-nodule/src/index.ts"]
     },
     "types": ["node", "vitest/globals"]
   },

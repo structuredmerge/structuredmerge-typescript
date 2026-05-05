@@ -93,6 +93,12 @@ importers:
         specifier: workspace:*
         version: link:../tree-haver
 
+  packages/kettle-nodule:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+
   packages/markdown-it-merge:
     dependencies:
       '@structuredmerge/markdown-merge':
