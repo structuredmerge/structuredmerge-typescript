@@ -14856,6 +14856,32 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-718 supplied YAML placeholder scalar backfill acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('supplied_yaml_placeholder_scalar_backfill_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'backfill-placeholder-and-blank-scalars') {
+        expect(report.final_content).toContain('name: "demo-toolkit"');
+        expect(report.final_content).toContain("namespace: 'Demo::Toolkit'");
+        expect(report.final_content).toContain('homepage: "https://example.invalid/existing"');
+        expect(report.final_content).toContain('# ENV: KJ_GEM_NAME');
+        expect(report.final_content).toContain('# keep concrete value');
+        expect(report.step_reports[0]?.metadata?.updated_scalars).toBe(2);
+        expect(report.step_reports[0]?.metadata?.preserved_scalars).toBe(1);
+      }
+      if (entry.label === 'missing-yaml-scalar-backfills-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
