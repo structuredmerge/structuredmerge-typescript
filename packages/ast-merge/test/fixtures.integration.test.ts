@@ -14583,9 +14583,7 @@ describe('ast-merge shared fixtures', () => {
 
     for (const entry of fixture.cases) {
       const report = entry.report_envelope.report as any;
-      const runtimeFacts = report.request.runtime_context?.facts as
-        | { schema?: string }
-        | undefined;
+      const runtimeFacts = report.request.runtime_context?.facts as { schema?: string } | undefined;
       expect(runtimeFacts?.schema).toBe('runtime_facts.v1');
 
       if (entry.label === 'dependency-floor-comments-from-project-facts') {
@@ -14790,6 +14788,39 @@ describe('ast-merge shared fixtures', () => {
         expect(report.step_reports[0]?.metadata?.deleted_ranges).toBe(2);
       }
       if (entry.label === 'missing-delete-selectors-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
+  it('conforms to the slice-716 supplied YAML snippet synchronization acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('supplied_yaml_snippet_synchronization_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'apply-supplied-sections-and-scalar-pins') {
+        expect(report.final_content).toContain('concurrency:');
+        expect(report.final_content).toContain('permissions:');
+        expect(report.final_content).toContain(
+          'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd'
+        );
+        expect(report.final_content).toContain(
+          'ruby/setup-ruby@e65c17d16e57e481586a6a5a0282698790062f92'
+        );
+        expect(report.final_content).not.toContain('actions/checkout@v3');
+        expect(report.final_content).not.toContain('ruby/setup-ruby@v1');
+        expect(report.final_content).toContain('gemfiles/current.gemfile');
+        expect(report.final_content).toContain('ruby-version: ${{ matrix.ruby }}');
+        expect(report.step_reports[0]?.metadata?.updated_sections).toBe(2);
+        expect(report.step_reports[1]?.metadata?.updated_scalars).toBe(2);
+      }
+      if (entry.label === 'missing-yaml-updates-fails-closed') {
         expect(report.step_reports[0]?.status).toBe('failed');
       }
     }
