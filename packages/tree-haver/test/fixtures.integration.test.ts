@@ -10,6 +10,11 @@ import {
 import { processWithLanguagePack } from '../src/index';
 import {
   currentBackendId,
+  kaitaiAdapterInfo,
+  kaitaiFeatureProfile,
+  KAITAI_STRUCT_BACKEND,
+  type KaitaiTreeAnalysis,
+  type KaitaiTreeNode,
   PEGGY_BACKEND,
   peggyAdapterInfo,
   peggyFeatureProfile,
@@ -41,6 +46,29 @@ interface FeatureProfileFixture {
 
 interface BackendRegistryFixture {
   backends: BackendReference[];
+}
+
+interface KaitaiSubstrateFixture {
+  backend: BackendReference;
+  adapter_info: {
+    backend: string;
+    backend_ref: BackendReference;
+    supports_dialects: boolean;
+    supported_policies: PolicyReference[];
+  };
+  feature_profile: {
+    backend: string;
+    backend_ref: BackendReference;
+    supports_dialects: boolean;
+    supported_policies: PolicyReference[];
+  };
+  tree_node: {
+    kind: string;
+    schema_path: string;
+    span: { start_byte: number; end_byte: number };
+    fields: Record<string, unknown>;
+    children: KaitaiSubstrateFixture['tree_node'][];
+  };
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -181,6 +209,43 @@ describe('tree-haver shared fixtures', () => {
     expect(PEGGY_BACKEND).toEqual({ id: 'peggy', family: 'peg' });
     expect(peggyAdapterInfo.backendRef).toEqual({ id: 'peggy', family: 'peg' });
     expect(peggyFeatureProfile.backendRef).toEqual({ id: 'peggy', family: 'peg' });
+  });
+
+  it('conforms to the slice-721 Kaitai tree-haver substrate fixture', () => {
+    const fixture = readFixture<KaitaiSubstrateFixture>(
+      ...diagnosticsFixturePath('kaitai_tree_haver_substrate')
+    );
+
+    const toNode = (node: KaitaiSubstrateFixture['tree_node']): KaitaiTreeNode => ({
+      kind: node.kind,
+      schemaPath: node.schema_path,
+      span: {
+        startByte: node.span.start_byte,
+        endByte: node.span.end_byte
+      },
+      fields: node.fields,
+      children: node.children.map(toNode)
+    });
+    const analysis: KaitaiTreeAnalysis = {
+      kind: 'kaitai-tree',
+      schema: 'png.ksy',
+      root: toNode(fixture.tree_node),
+      backendRef: KAITAI_STRUCT_BACKEND
+    };
+
+    expect(KAITAI_STRUCT_BACKEND).toEqual(fixture.backend);
+    expect(kaitaiAdapterInfo).toEqual({
+      backend: fixture.adapter_info.backend,
+      backendRef: fixture.adapter_info.backend_ref,
+      supportsDialects: fixture.adapter_info.supports_dialects
+    });
+    expect(kaitaiFeatureProfile).toEqual({
+      backend: fixture.feature_profile.backend,
+      backendRef: fixture.feature_profile.backend_ref,
+      supportsDialects: fixture.feature_profile.supports_dialects
+    });
+    expect(analysis.root.schemaPath).toBe('/chunks/1');
+    expect(analysis.root.children[0]?.fields.value).toBe('Template');
   });
 
   it('supports temporary backend context selection', () => {

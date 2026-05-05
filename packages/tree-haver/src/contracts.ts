@@ -98,6 +98,26 @@ export interface LanguagePackProcessAnalysis extends AnalysisHandle {
   readonly backendRef: BackendReference;
 }
 
+export interface KaitaiByteSpan {
+  readonly startByte: number;
+  readonly endByte: number;
+}
+
+export interface KaitaiTreeNode {
+  readonly kind: string;
+  readonly schemaPath: string;
+  readonly span: KaitaiByteSpan;
+  readonly fields: Readonly<Record<string, unknown>>;
+  readonly children: readonly KaitaiTreeNode[];
+}
+
+export interface KaitaiTreeAnalysis extends AnalysisHandle {
+  readonly kind: 'kaitai-tree';
+  readonly schema: string;
+  readonly root: KaitaiTreeNode;
+  readonly backendRef: BackendReference;
+}
+
 export interface PeggyParser {
   parse(source: string): unknown;
 }
@@ -109,6 +129,10 @@ export const KREUZBERG_LANGUAGE_PACK_BACKEND: BackendReference = {
 export const PEGGY_BACKEND: BackendReference = {
   id: 'peggy',
   family: 'peg'
+};
+export const KAITAI_STRUCT_BACKEND: BackendReference = {
+  id: 'kaitai-struct',
+  family: 'kaitai'
 };
 
 export const languagePackAdapterInfo: AdapterInfo = {
@@ -126,11 +150,22 @@ export const peggyFeatureProfile: FeatureProfile = {
   backendRef: PEGGY_BACKEND,
   supportsDialects: false
 };
+export const kaitaiAdapterInfo: AdapterInfo = {
+  backend: KAITAI_STRUCT_BACKEND.id,
+  backendRef: KAITAI_STRUCT_BACKEND,
+  supportsDialects: false
+};
+export const kaitaiFeatureProfile: FeatureProfile = {
+  backend: KAITAI_STRUCT_BACKEND.id,
+  backendRef: KAITAI_STRUCT_BACKEND,
+  supportsDialects: false
+};
 
 const initializedLanguages = new Set<string>();
 const backendRegistry = new Map<string, BackendReference>([
   [KREUZBERG_LANGUAGE_PACK_BACKEND.id, KREUZBERG_LANGUAGE_PACK_BACKEND],
-  [PEGGY_BACKEND.id, PEGGY_BACKEND]
+  [PEGGY_BACKEND.id, PEGGY_BACKEND],
+  [KAITAI_STRUCT_BACKEND.id, KAITAI_STRUCT_BACKEND]
 ]);
 let currentBackend: string | undefined;
 
