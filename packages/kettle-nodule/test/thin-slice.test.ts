@@ -94,7 +94,12 @@ describe('kettle-nodule thin vertical slice', () => {
   });
 
   it('plans, applies, and reapplies packaged template inventory', () => {
-    const projectRoot = path.resolve(import.meta.dirname, '..', 'tmp', 'packaged-template-inventory');
+    const projectRoot = path.resolve(
+      import.meta.dirname,
+      '..',
+      'tmp',
+      'packaged-template-inventory'
+    );
     rmSync(projectRoot, { force: true, recursive: true });
     writeTree(projectRoot, {
       'package.json': JSON.stringify(

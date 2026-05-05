@@ -74,7 +74,7 @@ describe('yaml-merge', () => {
 
     expect(result.ok).toBe(true);
     expect(result.output).toBe(
-      'package:\n  meta:\n    authors:\n      - pb\n    enabled: false\n    release: true\n  name: structuredmerge\n  tags:\n    - destination\n  version: 0.2.0\ntitle: "Structured Merge"\n'
+      'title: "Structured Merge"\npackage:\n  name: structuredmerge\n  tags:\n    - destination\n  version: 0.2.0\n  meta:\n    enabled: false\n    authors:\n      - pb\n    release: true\n'
     );
     expect(result.policies).toEqual([{ surface: 'array', name: 'destination_wins_array' }]);
   });

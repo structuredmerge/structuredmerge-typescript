@@ -52,7 +52,7 @@ describe('json-merge', () => {
     );
 
     expect(result.ok).toBe(true);
-    expect(result.output).toBe('{"items":[9],"meta":{"mode":"template","tags":["destination"]}}');
+    expect(result.output).toBe('{"items":[9],"meta":{"tags":["destination"],"mode":"template"}}');
     expect(result.policies).toEqual([
       {
         surface: 'array',

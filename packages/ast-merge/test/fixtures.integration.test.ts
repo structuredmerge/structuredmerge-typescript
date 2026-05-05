@@ -163,8 +163,6 @@ import type {
   StructuredEditProviderBatchExecutionPlanEnvelope,
   StructuredEditCrisprExampleParityReport,
   StructuredEditKettleJemPrimitiveGapReport,
-  ContentRecipeExecutionRequestEnvelope,
-  ContentRecipeExecutionReportEnvelope,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
   PolicyReference,

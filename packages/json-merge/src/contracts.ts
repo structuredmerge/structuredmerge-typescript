@@ -476,13 +476,13 @@ function mergeValues(template: unknown, destination: unknown): unknown {
     !Array.isArray(destination)
   ) {
     const merged: Record<string, unknown> = {};
-    const keys = new Set([
-      ...Object.keys(template as Record<string, unknown>),
-      ...Object.keys(destination as Record<string, unknown>)
-    ]);
-    for (const key of [...keys].sort()) {
-      const templateRecord = template as Record<string, unknown>;
-      const destinationRecord = destination as Record<string, unknown>;
+    const templateRecord = template as Record<string, unknown>;
+    const destinationRecord = destination as Record<string, unknown>;
+    const keys = [
+      ...Object.keys(templateRecord),
+      ...Object.keys(destinationRecord).filter((key) => !(key in templateRecord))
+    ];
+    for (const key of keys) {
       const hasTemplate = Object.prototype.hasOwnProperty.call(templateRecord, key);
       const hasDestination = Object.prototype.hasOwnProperty.call(destinationRecord, key);
 
@@ -507,9 +507,9 @@ function canonicalJson(value: unknown): string {
 
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    const entries = Object.keys(record)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`);
+    const entries = Object.keys(record).map(
+      (key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`
+    );
     return `{${entries.join(',')}}`;
   }
 

@@ -166,7 +166,9 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
     const [name, ...args] = line.split(/\s+/);
     const path = String(lineNumber);
     if (!compactRulesetIdentifierPattern.test(name)) {
-      diagnostics.push(compactRulesetDiagnostic(`invalid directive token ${JSON.stringify(name)}`, path));
+      diagnostics.push(
+        compactRulesetDiagnostic(`invalid directive token ${JSON.stringify(name)}`, path)
+      );
       return;
     }
     if (!compactRulesetKnownDirective(name)) {
@@ -174,7 +176,12 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
       return;
     }
     if (args.length === 0) {
-      diagnostics.push(compactRulesetDiagnostic(`directive ${JSON.stringify(name)} requires at least one argument`, path));
+      diagnostics.push(
+        compactRulesetDiagnostic(
+          `directive ${JSON.stringify(name)} requires at least one argument`,
+          path
+        )
+      );
       return;
     }
     for (const arg of args) {
@@ -184,7 +191,9 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
         !compactRulesetIdentifierPattern.test(arg) &&
         !compactRulesetTokenPattern.test(arg)
       ) {
-        diagnostics.push(compactRulesetDiagnostic(`invalid argument token ${JSON.stringify(arg)}`, path));
+        diagnostics.push(
+          compactRulesetDiagnostic(`invalid argument token ${JSON.stringify(arg)}`, path)
+        );
       }
     }
 
@@ -199,15 +208,24 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
     if (compactRulesetRepeatableKeyedDirectives.has(name)) {
       const key = `${name}\u0000${args[0]}`;
       if (seenRepeatableKeys.has(key)) {
-        diagnostics.push(compactRulesetDiagnostic(`repeated ${JSON.stringify(name)} key ${JSON.stringify(args[0])}`, path));
+        diagnostics.push(
+          compactRulesetDiagnostic(
+            `repeated ${JSON.stringify(name)} key ${JSON.stringify(args[0])}`,
+            path
+          )
+        );
       }
       seenRepeatableKeys.add(key);
     }
     if (name === 'read' && !compactRulesetReadValues.has(args[0])) {
-      diagnostics.push(compactRulesetDiagnostic(`unknown read value ${JSON.stringify(args[0])}`, path));
+      diagnostics.push(
+        compactRulesetDiagnostic(`unknown read value ${JSON.stringify(args[0])}`, path)
+      );
     }
     if (name === 'attach' && !compactRulesetAttachValues.has(args[0])) {
-      diagnostics.push(compactRulesetDiagnostic(`unknown attach value ${JSON.stringify(args[0])}`, path));
+      diagnostics.push(
+        compactRulesetDiagnostic(`unknown attach value ${JSON.stringify(args[0])}`, path)
+      );
     }
 
     seenDirectives.set(name, lineNumber);
@@ -216,7 +234,9 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
 
   for (const required of compactRulesetRequiredDirectives) {
     if (!seenDirectives.has(required)) {
-      diagnostics.push(compactRulesetDiagnostic(`missing required directive ${JSON.stringify(required)}`));
+      diagnostics.push(
+        compactRulesetDiagnostic(`missing required directive ${JSON.stringify(required)}`)
+      );
     }
   }
 
@@ -226,7 +246,9 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
 }
 
 function compactRulesetKnownDirective(name: string): boolean {
-  return compactRulesetSingletonDirectives.has(name) || compactRulesetRepeatableKeyedDirectives.has(name);
+  return (
+    compactRulesetSingletonDirectives.has(name) || compactRulesetRepeatableKeyedDirectives.has(name)
+  );
 }
 
 function compactRulesetDiagnostic(message: string, path?: string): Diagnostic {
