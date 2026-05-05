@@ -9,6 +9,10 @@ import {
 } from '@structuredmerge/ast-merge';
 import { processWithLanguagePack } from '../src/index';
 import {
+  byteOffsetForPoint,
+  byteRangeContainsByte,
+  byteRangeLength,
+  byteRangeOverlaps,
   currentBackendId,
   kaitaiAdapterInfo,
   kaitaiFeatureProfile,
@@ -20,6 +24,7 @@ import {
   peggyFeatureProfile,
   registerBackend,
   registeredBackends,
+  sliceByteRange,
   withBackend
 } from '../src/index';
 
@@ -68,6 +73,25 @@ interface KaitaiSubstrateFixture {
     span: { start_byte: number; end_byte: number };
     fields: Record<string, unknown>;
     children: KaitaiSubstrateFixture['tree_node'][];
+  };
+}
+
+interface ByteLocationFixture {
+  source: string;
+  byte_range: { start_byte: number; end_byte: number };
+  source_point: { row: number; column: number };
+  expected: {
+    length: number;
+    slice: string;
+    contains_start: boolean;
+    contains_end: boolean;
+    overlaps: boolean;
+    disjoint: boolean;
+    line_column_offset: number;
+  };
+  comparison_ranges: {
+    overlapping: { start_byte: number; end_byte: number };
+    disjoint: { start_byte: number; end_byte: number };
   };
 }
 
@@ -246,6 +270,38 @@ describe('tree-haver shared fixtures', () => {
     });
     expect(analysis.root.schemaPath).toBe('/chunks/1');
     expect(analysis.root.children[0]?.fields.value).toBe('Template');
+  });
+
+  it('conforms to the slice-722 portable byte location contract fixture', () => {
+    const fixture = readFixture<ByteLocationFixture>(
+      ...diagnosticsFixturePath('portable_byte_location_contract')
+    );
+    const byteRange = {
+      startByte: fixture.byte_range.start_byte,
+      endByte: fixture.byte_range.end_byte
+    };
+    const point = {
+      row: fixture.source_point.row,
+      column: fixture.source_point.column
+    };
+    const overlappingRange = {
+      startByte: fixture.comparison_ranges.overlapping.start_byte,
+      endByte: fixture.comparison_ranges.overlapping.end_byte
+    };
+    const disjointRange = {
+      startByte: fixture.comparison_ranges.disjoint.start_byte,
+      endByte: fixture.comparison_ranges.disjoint.end_byte
+    };
+
+    expect(byteRangeLength(byteRange)).toBe(fixture.expected.length);
+    expect(sliceByteRange(fixture.source, byteRange)).toBe(fixture.expected.slice);
+    expect(byteRangeContainsByte(byteRange, byteRange.startByte)).toBe(
+      fixture.expected.contains_start
+    );
+    expect(byteRangeContainsByte(byteRange, byteRange.endByte)).toBe(fixture.expected.contains_end);
+    expect(byteRangeOverlaps(byteRange, overlappingRange)).toBe(fixture.expected.overlaps);
+    expect(byteRangeOverlaps(byteRange, disjointRange)).toBe(fixture.expected.disjoint);
+    expect(byteOffsetForPoint(fixture.source, point)).toBe(fixture.expected.line_column_offset);
   });
 
   it('supports temporary backend context selection', () => {

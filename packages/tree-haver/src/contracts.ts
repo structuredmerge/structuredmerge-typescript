@@ -63,6 +63,89 @@ export interface ProcessSpan {
   readonly endCol: number;
 }
 
+export interface ByteRange {
+  readonly startByte: number;
+  readonly endByte: number;
+}
+
+export interface SourcePoint {
+  readonly row: number;
+  readonly column: number;
+}
+
+export interface SourceSpan {
+  readonly range: ByteRange;
+  readonly startPoint: SourcePoint;
+  readonly endPoint: SourcePoint;
+}
+
+export function byteRangeLength(range: ByteRange): number {
+  return byteRangeIsValid(range) ? range.endByte - range.startByte : 0;
+}
+
+export function byteRangeIsValid(range: ByteRange): boolean {
+  return range.startByte >= 0 && range.endByte >= range.startByte;
+}
+
+export function byteRangeContainsByte(range: ByteRange, offset: number): boolean {
+  return byteRangeIsValid(range) && offset >= range.startByte && offset < range.endByte;
+}
+
+export function byteRangeContainsRange(range: ByteRange, other: ByteRange): boolean {
+  return (
+    byteRangeIsValid(range) &&
+    byteRangeIsValid(other) &&
+    other.startByte >= range.startByte &&
+    other.endByte <= range.endByte
+  );
+}
+
+export function byteRangeOverlaps(range: ByteRange, other: ByteRange): boolean {
+  return (
+    byteRangeIsValid(range) &&
+    byteRangeIsValid(other) &&
+    range.startByte < other.endByte &&
+    other.startByte < range.endByte
+  );
+}
+
+export function sliceByteRange(source: string, range: ByteRange): string {
+  const sourceBytes = Buffer.from(source, 'utf8');
+  if (!byteRangeIsValid(range) || range.endByte > sourceBytes.length) {
+    throw new RangeError(
+      `invalid byte range [${range.startByte}, ${range.endByte}) for source length ${sourceBytes.length}`
+    );
+  }
+
+  return sourceBytes.subarray(range.startByte, range.endByte).toString('utf8');
+}
+
+export function byteOffsetForPoint(source: string, point: SourcePoint): number {
+  if (point.row < 0 || point.column < 0) {
+    throw new RangeError(`invalid source point (${point.row}, ${point.column})`);
+  }
+
+  const sourceBytes = Buffer.from(source, 'utf8');
+  let row = 0;
+  let column = 0;
+  for (const [offset, value] of sourceBytes.entries()) {
+    if (row === point.row && column === point.column) {
+      return offset;
+    }
+    if (value === 10) {
+      row += 1;
+      column = 0;
+    } else {
+      column += 1;
+    }
+  }
+  if (row === point.row && column === point.column) {
+    return sourceBytes.length;
+  }
+
+  throw new RangeError(`source point (${point.row}, ${point.column}) is outside source`);
+}
+
 export interface ProcessStructureItem {
   readonly kind: string;
   readonly name?: string;

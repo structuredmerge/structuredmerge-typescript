@@ -4,6 +4,7 @@ export type {
   AdapterInfo,
   AnalysisHandle,
   BackendReference,
+  ByteRange,
   FeatureProfile,
   KaitaiByteSpan,
   KaitaiTreeAnalysis,
@@ -17,10 +18,18 @@ export type {
   ProcessImportInfo,
   ProcessRequest,
   ProcessSpan,
-  ProcessStructureItem
+  ProcessStructureItem,
+  SourcePoint,
+  SourceSpan
 } from './contracts';
 export {
   backendReference,
+  byteOffsetForPoint,
+  byteRangeContainsByte,
+  byteRangeContainsRange,
+  byteRangeIsValid,
+  byteRangeLength,
+  byteRangeOverlaps,
   createPeggyParser,
   currentBackendId,
   KAITAI_STRUCT_BACKEND,
@@ -36,5 +45,6 @@ export {
   parseWithPeggy,
   registerBackend,
   registeredBackends,
+  sliceByteRange,
   withBackend
 } from './contracts';
