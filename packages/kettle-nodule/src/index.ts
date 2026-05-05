@@ -40,19 +40,24 @@ export interface PackageFacts {
 }
 
 export interface PackagingRecipe {
-  readonly name: 'readme_metadata' | 'changelog_unreleased' | 'generated_block_sync';
+  readonly name:
+    | 'readme_metadata'
+    | 'changelog_unreleased'
+    | 'generated_block_sync'
+    | 'template_source_application';
   readonly targetPath: string;
   readonly providerFamily: 'markdown' | 'text';
   readonly primitive:
     | 'supplied_readme_metadata_synchronization'
     | 'changelog_unreleased_normalization'
-    | 'supplied_managed_text_block_replacement';
+    | 'supplied_managed_text_block_replacement'
+    | 'supplied_template_source_application';
   readonly facts: readonly string[];
   readonly selectors: readonly string[];
 }
 
 export interface RecipePack {
-  readonly name: 'kettle-nodule-core';
+  readonly name: 'kettle-nodule-core' | 'kettle-nodule-packaged-template-inventory';
   readonly version: 1;
   readonly ecosystem: 'npm';
   readonly recipes: readonly PackagingRecipe[];
@@ -145,6 +150,21 @@ export function recipePack(): RecipePack {
   };
 }
 
+export function packagedTemplateInventoryPack(): RecipePack {
+  return {
+    name: 'kettle-nodule-packaged-template-inventory',
+    version: 1,
+    ecosystem: 'npm',
+    recipes: [
+      templateRecipe('.editorconfig'),
+      templateRecipe('.github/workflows/ci.yml'),
+      templateRecipe('.gitignore'),
+      templateRecipe('.npmrc'),
+      templateRecipe('.prettierrc.json')
+    ]
+  };
+}
+
 export function planProject(projectRoot: string): ProjectReport {
   const facts = discoverFacts(projectRoot);
   const pack = recipePack();
@@ -152,10 +172,7 @@ export function planProject(projectRoot: string): ProjectReport {
   const recipeReports = pack.recipes.map((recipe) =>
     executeRecipe({ projectRoot, recipe, facts, files })
   );
-  const changedFiles = recipeReports
-    .filter((report) => report.changed)
-    .map((report) => report.relativePath)
-    .sort();
+  const changedFiles = changedFilesForReports(recipeReports);
 
   return {
     mode: 'plan',
@@ -166,6 +183,37 @@ export function planProject(projectRoot: string): ProjectReport {
     changedFiles,
     diagnostics: recipeReports.flatMap((report) => report.diagnostics)
   };
+}
+
+export function planPackagedTemplateInventory(projectRoot: string): ProjectReport {
+  const facts = discoverFacts(projectRoot);
+  const pack = packagedTemplateInventoryPack();
+  const files = readProjectFiles(projectRoot, pack);
+  const recipeReports = pack.recipes.map((recipe) =>
+    executeRecipe({ projectRoot, recipe, facts, files })
+  );
+
+  return {
+    mode: 'plan',
+    ready: true,
+    facts,
+    recipePack: pack,
+    recipeReports,
+    changedFiles: changedFilesForReports(recipeReports),
+    diagnostics: recipeReports.flatMap((report) => report.diagnostics)
+  };
+}
+
+export function applyPackagedTemplateInventory(projectRoot: string): ProjectReport {
+  const report = { ...planPackagedTemplateInventory(projectRoot), mode: 'apply' as const };
+  for (const recipeReport of report.recipeReports) {
+    if (!recipeReport.changed) continue;
+
+    const targetPath = path.join(projectRoot, recipeReport.relativePath);
+    mkdirSync(path.dirname(targetPath), { recursive: true });
+    writeFileSync(targetPath, recipeReport.finalContent);
+  }
+  return report;
 }
 
 export function applyProject(projectRoot: string): ProjectReport {
@@ -192,7 +240,9 @@ function executeRecipe(input: {
       ? synchronizeReadme(original, input.facts)
       : input.recipe.name === 'changelog_unreleased'
         ? normalizeChangelog(original)
-        : synchronizeManagedBlock(original, input.facts);
+        : input.recipe.name === 'generated_block_sync'
+          ? synchronizeManagedBlock(original, input.facts)
+          : renderPackagedTemplate(input.recipe.targetPath, input.facts);
   const request = contentRecipeExecutionRequest({
     recipeName: input.recipe.primitive,
     recipeVersion: '1',
@@ -396,6 +446,56 @@ function recipeEntry(
     facts,
     selectors: []
   };
+}
+
+function templateRecipe(targetPath: string): PackagingRecipe {
+  return recipeEntry(
+    'template_source_application',
+    targetPath,
+    'text',
+    'supplied_template_source_application',
+    ['package', 'templates']
+  );
+}
+
+function changedFilesForReports(reports: readonly RecipeRunReport[]): readonly string[] {
+  return reports
+    .filter((report) => report.changed)
+    .map((report) => report.relativePath)
+    .sort();
+}
+
+function renderPackagedTemplate(targetPath: string, facts: PackageFacts): string {
+  return packagedTemplateContent(targetPath)
+    .replaceAll('{{PACKAGE_NAME}}', facts.package.name)
+    .replaceAll('{{PACKAGE_MANAGER_COMMAND}}', packageManagerCommand(facts.npm.packageManager))
+    .replaceAll('{{NODE_VERSION}}', nodeVersionFromPackageManager(facts.npm.packageManager));
+}
+
+function packagedTemplateContent(targetPath: string): string {
+  switch (targetPath) {
+    case '.editorconfig':
+      return 'root = true\n\n[*]\ncharset = utf-8\nend_of_line = lf\ninsert_final_newline = true\ntrim_trailing_whitespace = true\n';
+    case '.github/workflows/ci.yml':
+      return 'name: CI\n\non:\n  push:\n  pull_request:\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: "{{NODE_VERSION}}"\n      - run: corepack enable\n      - run: {{PACKAGE_MANAGER_COMMAND}} install\n      - run: {{PACKAGE_MANAGER_COMMAND}} test\n';
+    case '.gitignore':
+      return 'node_modules/\ncoverage/\ndist/\n';
+    case '.npmrc':
+      return 'engine-strict=true\nfund=true\n';
+    case '.prettierrc.json':
+      return '{\n  "singleQuote": true,\n  "trailingComma": "none"\n}\n';
+    default:
+      return '';
+  }
+}
+
+function nodeVersionFromPackageManager(packageManager: string | undefined): string {
+  const match = packageManager?.match(/node@(\d+(?:\.\d+){0,2})/);
+  return match?.[1] ?? '20';
+}
+
+function packageManagerCommand(packageManager: string | undefined): string {
+  return packageManager?.split('@')[0] || 'npm';
 }
 
 function readmeMetadataBlock(facts: PackageFacts): string {
