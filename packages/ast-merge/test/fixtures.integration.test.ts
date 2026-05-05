@@ -14826,6 +14826,36 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
+  it('conforms to the slice-717 supplied managed text block replacement acceptance fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        label: string;
+        report_envelope: any;
+      }[];
+    }>(...diagnosticsFixturePath('supplied_managed_text_block_replacement_acceptance'));
+
+    for (const entry of fixture.cases) {
+      const report = entry.report_envelope.report as any;
+
+      if (entry.label === 'replace-existing-managed-text-block') {
+        expect(report.final_content).toContain('gem "debug", "~> 1.9"');
+        expect(report.final_content).toContain('gem "irb", "~> 1.15"');
+        expect(report.final_content).not.toContain('old-debug');
+        expect(report.final_content).toContain('gem "rake"');
+        expect(report.final_content).toContain('gem "rspec"');
+        expect(report.step_reports[0]?.metadata?.replaced_blocks).toBe(1);
+      }
+      if (entry.label === 'append-missing-managed-text-block') {
+        expect(report.final_content).toContain('# <<kettle-jem:generated>>');
+        expect(report.final_content).toContain('# (no shunted dependencies)');
+        expect(report.step_reports[0]?.metadata?.appended_blocks).toBe(1);
+      }
+      if (entry.label === 'missing-managed-block-updates-fails-closed') {
+        expect(report.step_reports[0]?.status).toBe('failed');
+      }
+    }
+  });
+
   it('conforms to the slice-683 structured-edit callable destination request fixture', () => {
     const fixture = readFixture<StructuredEditRequestFixture>(
       ...diagnosticsFixturePath('structured_edit_callable_destination_request')
