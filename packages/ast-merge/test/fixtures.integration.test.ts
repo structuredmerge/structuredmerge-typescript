@@ -14666,7 +14666,7 @@ describe('ast-merge shared fixtures', () => {
     }
   });
 
-  it('conforms to the slice-711 Ruby Appraisals min-Ruby prune policy acceptance fixture', () => {
+  it('conforms to the slice-711 Ruby Appraisals min-ruby prune policy acceptance fixture', () => {
     const fixture = readFixture<{
       cases: readonly {
         label: string;
@@ -14684,6 +14684,7 @@ describe('ast-merge shared fixtures', () => {
         expect(report.final_content).toContain('ruby-3-2');
         expect(report.final_content).toContain('appraise "style"');
         expect(report.step_reports[0]?.metadata?.operation).toBe('delete');
+        expect(report.final_content).not.toContain('\n\n\n');
       }
       if (entry.label === 'missing-min-ruby-fails-closed') {
         expect(report.step_reports[0]?.status).toBe('failed');
