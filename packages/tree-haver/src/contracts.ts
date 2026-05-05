@@ -79,6 +79,50 @@ export interface SourceSpan {
   readonly endPoint: SourcePoint;
 }
 
+export type BinaryScalarValue =
+  | { readonly kind: 'string'; readonly value: string }
+  | { readonly kind: 'integer'; readonly value: number }
+  | { readonly kind: 'float'; readonly value: number }
+  | { readonly kind: 'boolean'; readonly value: boolean }
+  | { readonly kind: 'enum'; readonly symbol: string; readonly rawValue: number }
+  | { readonly kind: 'bytes'; readonly encoding: string; readonly value: string }
+  | { readonly kind: 'timestamp'; readonly value: string }
+  | { readonly kind: 'opaque'; readonly format: string; readonly description: string }
+  | { readonly kind: 'null' };
+
+export interface BinaryRenderPolicy {
+  readonly schemaPath: string;
+  readonly byteRange?: ByteRange;
+  readonly operation: string;
+  readonly disposition: string;
+  readonly reason: string;
+}
+
+export interface BinaryDiagnostic {
+  readonly severity: string;
+  readonly category: string;
+  readonly message: string;
+  readonly schemaPath: string;
+  readonly byteRange?: ByteRange;
+}
+
+export interface BinaryNestedDispatch {
+  readonly schemaPath: string;
+  readonly family: string;
+  readonly status: string;
+}
+
+export interface BinaryMergeReport {
+  readonly format: string;
+  readonly schema: string;
+  readonly matchedSchemaPaths: readonly string[];
+  readonly preservedRanges: readonly ByteRange[];
+  readonly rewrittenNodes: readonly string[];
+  readonly checksumUpdates: readonly string[];
+  readonly nestedDispatches: readonly BinaryNestedDispatch[];
+  readonly diagnostics: readonly BinaryDiagnostic[];
+}
+
 export function byteRangeLength(range: ByteRange): number {
   return byteRangeIsValid(range) ? range.endByte - range.startByte : 0;
 }
