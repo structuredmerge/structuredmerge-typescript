@@ -8,7 +8,6 @@ import type {
 } from '@structuredmerge/ast-merge';
 import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
-  languagePackAdapterInfo,
   parseWithLanguagePack,
   processWithLanguagePack,
   type BackendReference,

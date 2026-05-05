@@ -36,7 +36,10 @@ function normalizeFixtureValue<T>(value: T): T {
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [toCamelCaseKey(key), normalizeFixtureValue(entry)])
+      Object.entries(value).map(([key, entry]) => [
+        toCamelCaseKey(key),
+        normalizeFixtureValue(entry)
+      ])
     ) as T;
   }
   return value;
@@ -46,11 +49,7 @@ describe('js-yaml-merge shared fixtures', () => {
   it('conforms to the provider feature-profile and plan-context fixtures', () => {
     const familyFixture = readFixture<{
       feature_profile: Record<string, unknown>;
-    }>(
-      'diagnostics',
-      'slice-95-yaml-family-feature-profile',
-      'yaml-feature-profile.json'
-    );
+    }>('diagnostics', 'slice-95-yaml-family-feature-profile', 'yaml-feature-profile.json');
     const featureFixture = readFixture<{
       providers: {
         js_yaml: {
@@ -177,10 +176,12 @@ describe('js-yaml-merge shared fixtures', () => {
       ),
       (run) => {
         const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-        return reportFixture.executions.js_yaml[key] ?? {
-          outcome: 'failed',
-          messages: ['missing execution']
-        };
+        return (
+          reportFixture.executions.js_yaml[key] ?? {
+            outcome: 'failed',
+            messages: ['missing execution']
+          }
+        );
       }
     );
 

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, expect, it } from 'vitest';
 import { registeredBackends } from '@structuredmerge/tree-haver';
 import {

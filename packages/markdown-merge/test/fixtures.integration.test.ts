@@ -892,7 +892,10 @@ describe('markdown-merge shared fixtures', () => {
             case_ids: string[];
             delegated_case_ids: string[];
           };
-          action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+          action_offers: Array<{
+            action: 'apply_delegated_child_group';
+            requires_context: boolean;
+          }>;
           default_action: 'apply_delegated_child_group';
         }>;
         accepted_groups: Array<{
@@ -966,8 +969,15 @@ describe('markdown-merge shared fixtures', () => {
       template: string;
       destination: string;
       replay_bundle: {
-        replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
-        decisions: Array<{ request_id: string; action: 'accept_default_context' | 'apply_delegated_child_group' }>;
+        replay_context: {
+          surface: 'conformance_manifest';
+          families: string[];
+          require_explicit_contexts: boolean;
+        };
+        decisions: Array<{
+          request_id: string;
+          action: 'accept_default_context' | 'apply_delegated_child_group';
+        }>;
         reviewed_nested_executions: Array<{
           family: string;
           review_state: {
@@ -985,7 +995,10 @@ describe('markdown-merge shared fixtures', () => {
                 case_ids: string[];
                 delegated_case_ids: string[];
               };
-              action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+              action_offers: Array<{
+                action: 'apply_delegated_child_group';
+                requires_context: boolean;
+              }>;
               default_action: 'apply_delegated_child_group';
             }>;
             accepted_groups: Array<{
@@ -1008,7 +1021,11 @@ describe('markdown-merge shared fixtures', () => {
         requests: [];
         applied_decisions: [];
         host_hints: { interactive: boolean; require_explicit_contexts: boolean };
-        replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+        replay_context: {
+          surface: 'conformance_manifest';
+          families: string[];
+          require_explicit_contexts: boolean;
+        };
         reviewed_nested_executions: Array<{
           family: string;
           review_state: {
@@ -1026,7 +1043,10 @@ describe('markdown-merge shared fixtures', () => {
                 case_ids: string[];
                 delegated_case_ids: string[];
               };
-              action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+              action_offers: Array<{
+                action: 'apply_delegated_child_group';
+                requires_context: boolean;
+              }>;
               default_action: 'apply_delegated_child_group';
             }>;
             accepted_groups: Array<{
@@ -1064,48 +1084,51 @@ describe('markdown-merge shared fixtures', () => {
           requestId: decision.request_id,
           action: decision.action
         })),
-        reviewedNestedExecutions: fixture.replay_bundle.reviewed_nested_executions.map((execution) => ({
-          family: execution.family,
-          reviewState: {
-            requests: execution.review_state.requests.map((request) => ({
-              id: request.id,
-              kind: request.kind,
-              family: request.family,
-              message: request.message,
-              blocking: request.blocking,
-              delegatedGroup: {
-                delegatedApplyGroup: request.delegated_group.delegated_apply_group,
-                parentOperationId: request.delegated_group.parent_operation_id,
-                childOperationId: request.delegated_group.child_operation_id,
-                delegatedRuntimeSurfacePath: request.delegated_group.delegated_runtime_surface_path,
-                caseIds: request.delegated_group.case_ids,
-                delegatedCaseIds: request.delegated_group.delegated_case_ids
-              },
-              actionOffers: request.action_offers.map((offer) => ({
-                action: offer.action,
-                requiresContext: offer.requires_context
+        reviewedNestedExecutions: fixture.replay_bundle.reviewed_nested_executions.map(
+          (execution) => ({
+            family: execution.family,
+            reviewState: {
+              requests: execution.review_state.requests.map((request) => ({
+                id: request.id,
+                kind: request.kind,
+                family: request.family,
+                message: request.message,
+                blocking: request.blocking,
+                delegatedGroup: {
+                  delegatedApplyGroup: request.delegated_group.delegated_apply_group,
+                  parentOperationId: request.delegated_group.parent_operation_id,
+                  childOperationId: request.delegated_group.child_operation_id,
+                  delegatedRuntimeSurfacePath:
+                    request.delegated_group.delegated_runtime_surface_path,
+                  caseIds: request.delegated_group.case_ids,
+                  delegatedCaseIds: request.delegated_group.delegated_case_ids
+                },
+                actionOffers: request.action_offers.map((offer) => ({
+                  action: offer.action,
+                  requiresContext: offer.requires_context
+                })),
+                defaultAction: request.default_action
               })),
-              defaultAction: request.default_action
-            })),
-            acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
-              delegatedApplyGroup: group.delegated_apply_group,
-              parentOperationId: group.parent_operation_id,
-              childOperationId: group.child_operation_id,
-              delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
-              caseIds: group.case_ids,
-              delegatedCaseIds: group.delegated_case_ids
-            })),
-            appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
-              requestId: decision.request_id,
-              action: decision.action
-            })),
-            diagnostics: execution.review_state.diagnostics
-          },
-          appliedChildren: execution.applied_children.map((entry) => ({
-            operationId: entry.operation_id,
-            output: entry.output
-          }))
-        }))
+              acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+                delegatedApplyGroup: group.delegated_apply_group,
+                parentOperationId: group.parent_operation_id,
+                childOperationId: group.child_operation_id,
+                delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+                caseIds: group.case_ids,
+                delegatedCaseIds: group.delegated_case_ids
+              })),
+              appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+                requestId: decision.request_id,
+                action: decision.action
+              })),
+              diagnostics: execution.review_state.diagnostics
+            },
+            appliedChildren: execution.applied_children.map((entry) => ({
+              operationId: entry.operation_id,
+              output: entry.output
+            }))
+          })
+        )
       }
     );
 
@@ -1127,48 +1150,51 @@ describe('markdown-merge shared fixtures', () => {
           families: fixture.review_state.replay_context.families,
           requireExplicitContexts: fixture.review_state.replay_context.require_explicit_contexts
         },
-        reviewedNestedExecutions: fixture.review_state.reviewed_nested_executions.map((execution) => ({
-          family: execution.family,
-          reviewState: {
-            requests: execution.review_state.requests.map((request) => ({
-              id: request.id,
-              kind: request.kind,
-              family: request.family,
-              message: request.message,
-              blocking: request.blocking,
-              delegatedGroup: {
-                delegatedApplyGroup: request.delegated_group.delegated_apply_group,
-                parentOperationId: request.delegated_group.parent_operation_id,
-                childOperationId: request.delegated_group.child_operation_id,
-                delegatedRuntimeSurfacePath: request.delegated_group.delegated_runtime_surface_path,
-                caseIds: request.delegated_group.case_ids,
-                delegatedCaseIds: request.delegated_group.delegated_case_ids
-              },
-              actionOffers: request.action_offers.map((offer) => ({
-                action: offer.action,
-                requiresContext: offer.requires_context
+        reviewedNestedExecutions: fixture.review_state.reviewed_nested_executions.map(
+          (execution) => ({
+            family: execution.family,
+            reviewState: {
+              requests: execution.review_state.requests.map((request) => ({
+                id: request.id,
+                kind: request.kind,
+                family: request.family,
+                message: request.message,
+                blocking: request.blocking,
+                delegatedGroup: {
+                  delegatedApplyGroup: request.delegated_group.delegated_apply_group,
+                  parentOperationId: request.delegated_group.parent_operation_id,
+                  childOperationId: request.delegated_group.child_operation_id,
+                  delegatedRuntimeSurfacePath:
+                    request.delegated_group.delegated_runtime_surface_path,
+                  caseIds: request.delegated_group.case_ids,
+                  delegatedCaseIds: request.delegated_group.delegated_case_ids
+                },
+                actionOffers: request.action_offers.map((offer) => ({
+                  action: offer.action,
+                  requiresContext: offer.requires_context
+                })),
+                defaultAction: request.default_action
               })),
-              defaultAction: request.default_action
-            })),
-            acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
-              delegatedApplyGroup: group.delegated_apply_group,
-              parentOperationId: group.parent_operation_id,
-              childOperationId: group.child_operation_id,
-              delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
-              caseIds: group.case_ids,
-              delegatedCaseIds: group.delegated_case_ids
-            })),
-            appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
-              requestId: decision.request_id,
-              action: decision.action
-            })),
-            diagnostics: execution.review_state.diagnostics
-          },
-          appliedChildren: execution.applied_children.map((entry) => ({
-            operationId: entry.operation_id,
-            output: entry.output
-          }))
-        }))
+              acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+                delegatedApplyGroup: group.delegated_apply_group,
+                parentOperationId: group.parent_operation_id,
+                childOperationId: group.child_operation_id,
+                delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+                caseIds: group.case_ids,
+                delegatedCaseIds: group.delegated_case_ids
+              })),
+              appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+                requestId: decision.request_id,
+                action: decision.action
+              })),
+              diagnostics: execution.review_state.diagnostics
+            },
+            appliedChildren: execution.applied_children.map((entry) => ({
+              operationId: entry.operation_id,
+              output: entry.output
+            }))
+          })
+        )
       }
     );
 
@@ -1223,8 +1249,15 @@ describe('markdown-merge shared fixtures', () => {
         kind: 'review_replay_bundle';
         version: 1;
         replay_bundle: {
-          replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
-          decisions: Array<{ request_id: string; action: 'accept_default_context' | 'apply_delegated_child_group' }>;
+          replay_context: {
+            surface: 'conformance_manifest';
+            families: string[];
+            require_explicit_contexts: boolean;
+          };
+          decisions: Array<{
+            request_id: string;
+            action: 'accept_default_context' | 'apply_delegated_child_group';
+          }>;
           reviewed_nested_executions: Array<{
             family: string;
             review_state: {
@@ -1242,11 +1275,17 @@ describe('markdown-merge shared fixtures', () => {
                   case_ids: string[];
                   delegated_case_ids: string[];
                 };
-                action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+                action_offers: Array<{
+                  action: 'apply_delegated_child_group';
+                  requires_context: boolean;
+                }>;
                 default_action: 'apply_delegated_child_group';
               }>;
               accepted_groups: Array<FixtureProjectedChildGroup>;
-              applied_decisions: Array<{ request_id: string; action: 'apply_delegated_child_group' }>;
+              applied_decisions: Array<{
+                request_id: string;
+                action: 'apply_delegated_child_group';
+              }>;
               diagnostics: [];
             };
             applied_children: Array<{ operation_id: string; output: string }>;
@@ -1262,7 +1301,11 @@ describe('markdown-merge shared fixtures', () => {
           requests: [];
           applied_decisions: [];
           host_hints: { interactive: boolean; require_explicit_contexts: boolean };
-          replay_context: { surface: 'conformance_manifest'; families: string[]; require_explicit_contexts: boolean };
+          replay_context: {
+            surface: 'conformance_manifest';
+            families: string[];
+            require_explicit_contexts: boolean;
+          };
           reviewed_nested_executions: Array<{
             family: string;
             review_state: {
@@ -1280,11 +1323,17 @@ describe('markdown-merge shared fixtures', () => {
                   case_ids: string[];
                   delegated_case_ids: string[];
                 };
-                action_offers: Array<{ action: 'apply_delegated_child_group'; requires_context: boolean }>;
+                action_offers: Array<{
+                  action: 'apply_delegated_child_group';
+                  requires_context: boolean;
+                }>;
                 default_action: 'apply_delegated_child_group';
               }>;
               accepted_groups: Array<FixtureProjectedChildGroup>;
-              applied_decisions: Array<{ request_id: string; action: 'apply_delegated_child_group' }>;
+              applied_decisions: Array<{
+                request_id: string;
+                action: 'apply_delegated_child_group';
+              }>;
               diagnostics: [];
             };
             applied_children: Array<{ operation_id: string; output: string }>;
@@ -1312,48 +1361,52 @@ describe('markdown-merge shared fixtures', () => {
           requestId: decision.request_id,
           action: decision.action
         })),
-        reviewedNestedExecutions: fixture.replay_bundle_envelope.replay_bundle.reviewed_nested_executions.map((execution) => ({
-          family: execution.family,
-          reviewState: {
-            requests: execution.review_state.requests.map((request) => ({
-              id: request.id,
-              kind: request.kind,
-              family: request.family,
-              message: request.message,
-              blocking: request.blocking,
-              delegatedGroup: {
-                delegatedApplyGroup: request.delegated_group.delegated_apply_group,
-                parentOperationId: request.delegated_group.parent_operation_id,
-                childOperationId: request.delegated_group.child_operation_id,
-                delegatedRuntimeSurfacePath: request.delegated_group.delegated_runtime_surface_path,
-                caseIds: request.delegated_group.case_ids,
-                delegatedCaseIds: request.delegated_group.delegated_case_ids
+        reviewedNestedExecutions:
+          fixture.replay_bundle_envelope.replay_bundle.reviewed_nested_executions.map(
+            (execution) => ({
+              family: execution.family,
+              reviewState: {
+                requests: execution.review_state.requests.map((request) => ({
+                  id: request.id,
+                  kind: request.kind,
+                  family: request.family,
+                  message: request.message,
+                  blocking: request.blocking,
+                  delegatedGroup: {
+                    delegatedApplyGroup: request.delegated_group.delegated_apply_group,
+                    parentOperationId: request.delegated_group.parent_operation_id,
+                    childOperationId: request.delegated_group.child_operation_id,
+                    delegatedRuntimeSurfacePath:
+                      request.delegated_group.delegated_runtime_surface_path,
+                    caseIds: request.delegated_group.case_ids,
+                    delegatedCaseIds: request.delegated_group.delegated_case_ids
+                  },
+                  actionOffers: request.action_offers.map((offer) => ({
+                    action: offer.action,
+                    requiresContext: offer.requires_context
+                  })),
+                  defaultAction: request.default_action
+                })),
+                acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
+                  delegatedApplyGroup: group.delegated_apply_group,
+                  parentOperationId: group.parent_operation_id,
+                  childOperationId: group.child_operation_id,
+                  delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
+                  caseIds: group.case_ids,
+                  delegatedCaseIds: group.delegated_case_ids
+                })),
+                appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
+                  requestId: decision.request_id,
+                  action: decision.action
+                })),
+                diagnostics: execution.review_state.diagnostics
               },
-              actionOffers: request.action_offers.map((offer) => ({
-                action: offer.action,
-                requiresContext: offer.requires_context
-              })),
-              defaultAction: request.default_action
-            })),
-            acceptedGroups: execution.review_state.accepted_groups.map((group) => ({
-              delegatedApplyGroup: group.delegated_apply_group,
-              parentOperationId: group.parent_operation_id,
-              childOperationId: group.child_operation_id,
-              delegatedRuntimeSurfacePath: group.delegated_runtime_surface_path,
-              caseIds: group.case_ids,
-              delegatedCaseIds: group.delegated_case_ids
-            })),
-            appliedDecisions: execution.review_state.applied_decisions.map((decision) => ({
-              requestId: decision.request_id,
-              action: decision.action
-            })),
-            diagnostics: execution.review_state.diagnostics
-          },
-          appliedChildren: execution.applied_children.map((entry) => ({
-            operationId: entry.operation_id,
-            output: entry.output
-          }))
-        }))
+              appliedChildren: execution.applied_children.map((entry) => ({
+                operationId: entry.operation_id,
+                output: entry.output
+              }))
+            })
+          )
       }
     };
 
@@ -1430,7 +1483,12 @@ describe('markdown-merge shared fixtures', () => {
         'markdown',
         replayBundleEnvelope
       )
-    ).toEqual({ ok: fixture.expected.ok, output: fixture.expected.output, diagnostics: [], policies: [] });
+    ).toEqual({
+      ok: fixture.expected.ok,
+      output: fixture.expected.output,
+      diagnostics: [],
+      policies: []
+    });
 
     expect(
       mergeMarkdownWithReviewedNestedOutputsFromReviewStateEnvelope(
@@ -1439,7 +1497,12 @@ describe('markdown-merge shared fixtures', () => {
         'markdown',
         reviewStateEnvelope
       )
-    ).toEqual({ ok: fixture.expected.ok, output: fixture.expected.output, diagnostics: [], policies: [] });
+    ).toEqual({
+      ok: fixture.expected.ok,
+      output: fixture.expected.output,
+      diagnostics: [],
+      policies: []
+    });
   });
 
   it('conforms to the slice-315 reviewed nested review artifact envelope rejection fixture', () => {

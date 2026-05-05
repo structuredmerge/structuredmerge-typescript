@@ -165,9 +165,7 @@ function validateYamlNode(
 
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const mapping: YamlMapping = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort((left, right) =>
-      left.localeCompare(right)
-    )) {
+    for (const key of Object.keys(value as Record<string, unknown>)) {
       const nextPath = `${path}/${key}`;
       const validated = validateYamlNode((value as Record<string, unknown>)[key], nextPath);
       if (!validated.ok) {
@@ -216,7 +214,7 @@ function renderYamlNode(key: string, value: YamlNode, indent: number): string[] 
 function renderYamlMapping(mapping: YamlMapping, indent = 0): string[] {
   const lines: string[] = [];
 
-  for (const key of Object.keys(mapping).sort((left, right) => left.localeCompare(right))) {
+  for (const key of Object.keys(mapping)) {
     lines.push(...renderYamlNode(key, mapping[key], indent));
   }
 
@@ -256,9 +254,12 @@ function collectYamlOwners(mapping: YamlMapping, prefix = ''): YamlOwner[] {
 
 function mergeYamlMappings(template: YamlMapping, destination: YamlMapping): YamlMapping {
   const merged: YamlMapping = {};
-  const keys = new Set([...Object.keys(template), ...Object.keys(destination)]);
+  const keys = [
+    ...Object.keys(template),
+    ...Object.keys(destination).filter((key) => !(key in template))
+  ];
 
-  for (const key of Array.from(keys).sort((left, right) => left.localeCompare(right))) {
+  for (const key of keys) {
     const templateValue = template[key];
     const destinationValue = destination[key];
 

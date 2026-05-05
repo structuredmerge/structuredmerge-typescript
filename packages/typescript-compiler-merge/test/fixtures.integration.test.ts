@@ -78,7 +78,9 @@ describe('typescript-compiler-merge shared fixtures', () => {
     );
 
     expect(availableTypeScriptBackends()).toEqual(['typescript-compiler']);
-    expect(typeScriptFeatureProfile()).toEqual(normalizeFixtureValue(familyFixture.feature_profile));
+    expect(typeScriptFeatureProfile()).toEqual(
+      normalizeFixtureValue(familyFixture.feature_profile)
+    );
     expect(typeScriptBackendFeatureProfile()).toEqual(
       normalizeFixtureValue(featureFixture.providers.typescript_compiler.feature_profile)
     );
@@ -122,12 +124,21 @@ describe('typescript-compiler-merge shared fixtures', () => {
     const destination = parseTypeScript(matchingFixture.destination, 'typescript');
     const matchResult = matchTypeScriptOwners(template.analysis!, destination.analysis!);
     expect(
-      matchResult.matched.map(({ templatePath, destinationPath }) => [templatePath, destinationPath])
+      matchResult.matched.map(({ templatePath, destinationPath }) => [
+        templatePath,
+        destinationPath
+      ])
     ).toEqual(matchingFixture.expected.matched);
     expect(matchResult.unmatchedTemplate).toEqual(matchingFixture.expected.unmatched_template);
-    expect(matchResult.unmatchedDestination).toEqual(matchingFixture.expected.unmatched_destination);
+    expect(matchResult.unmatchedDestination).toEqual(
+      matchingFixture.expected.unmatched_destination
+    );
 
-    const mergeResult = mergeTypeScript(mergeFixture.template, mergeFixture.destination, 'typescript');
+    const mergeResult = mergeTypeScript(
+      mergeFixture.template,
+      mergeFixture.destination,
+      'typescript'
+    );
     expect(mergeResult.ok).toBe(mergeFixture.expected.ok);
     expect(mergeResult.output).toBe(mergeFixture.expected.output);
   });
@@ -183,25 +194,27 @@ describe('typescript-compiler-merge shared fixtures', () => {
     expect(
       planNamedConformanceSuites(
         plansFixture.manifest,
-        normalizeFixtureValue(
-          plansFixture.contexts.typescript_compiler
-        ) as Readonly<Record<string, ConformanceFamilyPlanContext>>
+        normalizeFixtureValue(plansFixture.contexts.typescript_compiler) as Readonly<
+          Record<string, ConformanceFamilyPlanContext>
+        >
       )
     ).toEqual(normalizeFixtureValue(plansFixture.expected_entries.typescript_compiler));
 
     const entries = reportPlannedNamedConformanceSuites(
       planNamedConformanceSuites(
         reportFixture.manifest,
-        normalizeFixtureValue(
-          reportFixture.options.typescript_compiler.contexts
-        ) as Readonly<Record<string, ConformanceFamilyPlanContext>>
+        normalizeFixtureValue(reportFixture.options.typescript_compiler.contexts) as Readonly<
+          Record<string, ConformanceFamilyPlanContext>
+        >
       ),
       (run) => {
         const key = `${run.ref.family}:${run.ref.role}:${run.ref.case}`;
-        return reportFixture.executions.typescript_compiler[key] ?? {
-          outcome: 'failed',
-          messages: ['missing execution']
-        };
+        return (
+          reportFixture.executions.typescript_compiler[key] ?? {
+            outcome: 'failed',
+            messages: ['missing execution']
+          }
+        );
       }
     );
 

@@ -11,7 +11,8 @@ export type DiagnosticCategory =
   | 'ambiguity'
   | 'assumed_default'
   | 'configuration_error'
-  | 'replay_rejected';
+  | 'replay_rejected'
+  | ReviewTransportImportErrorCategory;
 
 export type ReviewDiagnosticReason =
   | 'missing_required_payload'
@@ -101,6 +102,162 @@ export interface ParseResult<TAnalysis> {
   readonly diagnostics: readonly Diagnostic[];
   readonly analysis?: TAnalysis;
   readonly policies?: readonly PolicyReference[];
+}
+
+export interface CompactRulesetDirective {
+  readonly name: string;
+  readonly arguments: readonly string[];
+  readonly line: number;
+}
+
+export interface CompactRuleset {
+  readonly directives: readonly CompactRulesetDirective[];
+  readonly comments: readonly string[];
+}
+
+const compactRulesetIdentifierPattern = /^[A-Za-z][A-Za-z0-9_.-]*$/;
+const compactRulesetTokenPattern = /^[\x21\x24-\x7e]+$/;
+const compactRulesetRequiredDirectives = ['format', 'owners', 'match', 'read', 'attach'] as const;
+const compactRulesetSingletonDirectives = new Set([
+  'format',
+  'owners',
+  'match',
+  'read',
+  'attach',
+  'comment_style',
+  'render'
+]);
+const compactRulesetRepeatableKeyedDirectives = new Set([
+  'capability',
+  'logical_owner',
+  'repair',
+  'surface',
+  'delegate'
+]);
+const compactRulesetReadValues = new Set([
+  'source_augmented_portable_write',
+  'native_read_portable_write',
+  'native_mutation'
+]);
+const compactRulesetAttachValues = new Set([
+  'layout_only',
+  'tracker_layout_merge',
+  'augmenter_preferred_tracker_layout',
+  'normalize_tracked_layout_merge'
+]);
+
+export function parseCompactRuleset(source: string): ParseResult<CompactRuleset> {
+  const ruleset: CompactRuleset = { directives: [], comments: [] };
+  const directives: CompactRulesetDirective[] = [];
+  const comments: string[] = [];
+  const diagnostics: Diagnostic[] = [];
+  const seenDirectives = new Map<string, number>();
+  const seenRepeatableKeys = new Set<string>();
+
+  source.split('\n').forEach((rawLine, index) => {
+    const lineNumber = index + 1;
+    const line = rawLine.trim();
+    if (line.length === 0) return;
+    if (line.startsWith('#')) {
+      comments.push(line);
+      return;
+    }
+
+    const [name, ...args] = line.split(/\s+/);
+    const path = String(lineNumber);
+    if (!compactRulesetIdentifierPattern.test(name)) {
+      diagnostics.push(
+        compactRulesetDiagnostic(`invalid directive token ${JSON.stringify(name)}`, path)
+      );
+      return;
+    }
+    if (!compactRulesetKnownDirective(name)) {
+      diagnostics.push(compactRulesetDiagnostic(`unknown directive ${JSON.stringify(name)}`, path));
+      return;
+    }
+    if (args.length === 0) {
+      diagnostics.push(
+        compactRulesetDiagnostic(
+          `directive ${JSON.stringify(name)} requires at least one argument`,
+          path
+        )
+      );
+      return;
+    }
+    for (const arg of args) {
+      if (
+        arg !== 'true' &&
+        arg !== 'false' &&
+        !compactRulesetIdentifierPattern.test(arg) &&
+        !compactRulesetTokenPattern.test(arg)
+      ) {
+        diagnostics.push(
+          compactRulesetDiagnostic(`invalid argument token ${JSON.stringify(arg)}`, path)
+        );
+      }
+    }
+
+    if (compactRulesetSingletonDirectives.has(name) && seenDirectives.has(name)) {
+      diagnostics.push(
+        compactRulesetDiagnostic(
+          `repeated singleton directive ${JSON.stringify(name)} first seen on line ${seenDirectives.get(name)}`,
+          path
+        )
+      );
+    }
+    if (compactRulesetRepeatableKeyedDirectives.has(name)) {
+      const key = `${name}\u0000${args[0]}`;
+      if (seenRepeatableKeys.has(key)) {
+        diagnostics.push(
+          compactRulesetDiagnostic(
+            `repeated ${JSON.stringify(name)} key ${JSON.stringify(args[0])}`,
+            path
+          )
+        );
+      }
+      seenRepeatableKeys.add(key);
+    }
+    if (name === 'read' && !compactRulesetReadValues.has(args[0])) {
+      diagnostics.push(
+        compactRulesetDiagnostic(`unknown read value ${JSON.stringify(args[0])}`, path)
+      );
+    }
+    if (name === 'attach' && !compactRulesetAttachValues.has(args[0])) {
+      diagnostics.push(
+        compactRulesetDiagnostic(`unknown attach value ${JSON.stringify(args[0])}`, path)
+      );
+    }
+
+    seenDirectives.set(name, lineNumber);
+    directives.push({ name, arguments: args, line: lineNumber });
+  });
+
+  for (const required of compactRulesetRequiredDirectives) {
+    if (!seenDirectives.has(required)) {
+      diagnostics.push(
+        compactRulesetDiagnostic(`missing required directive ${JSON.stringify(required)}`)
+      );
+    }
+  }
+
+  return diagnostics.length === 0
+    ? { ok: true, diagnostics: [], analysis: { ...ruleset, directives, comments }, policies: [] }
+    : { ok: false, diagnostics, policies: [] };
+}
+
+function compactRulesetKnownDirective(name: string): boolean {
+  return (
+    compactRulesetSingletonDirectives.has(name) || compactRulesetRepeatableKeyedDirectives.has(name)
+  );
+}
+
+function compactRulesetDiagnostic(message: string, path?: string): Diagnostic {
+  return {
+    severity: 'error',
+    category: 'configuration_error',
+    message,
+    path
+  };
 }
 
 export interface MergeResult<TOutput> {
@@ -5201,7 +5358,6 @@ export function applyTemplateTreeExecutionToDirectory(
 }
 
 export function reportTemplateTreeRun(result: TemplateTreeRunResult): TemplateTreeRunReport {
-  const created = new Set(result.applyResult.createdPaths);
   const updated = new Set(result.applyResult.updatedPaths);
   const kept = new Set(result.applyResult.keptPaths);
   const blocked = new Set(result.applyResult.blockedPaths);
