@@ -16,12 +16,25 @@ Project links:
 
 This is a pnpm workspace for StructuredMerge packages.
 
-Initial packages:
+Package directories:
 
-- `@structuredmerge/tree-haver`
-- `@structuredmerge/ast-merge`
-- `@structuredmerge/text-merge`
-- `@structuredmerge/json-merge`
+- [`@structuredmerge/ast-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ast-merge)
+- [`@structuredmerge/ast-template`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ast-template)
+- [`@structuredmerge/go-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/go-merge)
+- [`@structuredmerge/json-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/json-merge)
+- [`@structuredmerge/js-yaml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/js-yaml-merge)
+- [`@structuredmerge/kettle-nodule`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/kettle-nodule)
+- [`@structuredmerge/markdown-it-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/markdown-it-merge)
+- [`@structuredmerge/markdown-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/markdown-merge)
+- [`@structuredmerge/peggy-toml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/peggy-toml-merge)
+- [`@structuredmerge/ruby-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ruby-merge)
+- [`@structuredmerge/rust-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/rust-merge)
+- [`@structuredmerge/text-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/text-merge)
+- [`@structuredmerge/toml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/toml-merge)
+- [`@structuredmerge/tree-haver`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/tree-haver)
+- [`@structuredmerge/typescript-compiler-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-compiler-merge)
+- [`@structuredmerge/typescript-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-merge)
+- [`@structuredmerge/yaml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/yaml-merge)
 
 ## Conformance
 
