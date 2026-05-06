@@ -92,8 +92,12 @@ export function planZipMerge(
   const ancestorEntries = entriesByPath(ancestor.entries);
   const currentEntries = entriesByPath(current.entries);
   const incomingEntries = entriesByPath(incoming.entries);
-  const unsafeByPath = new Map((incoming.unsafeEntries ?? []).map((entry) => [entry.normalizedPath, entry]));
-  const paths = [...new Set([...ancestorEntries.keys(), ...currentEntries.keys(), ...incomingEntries.keys()])].sort();
+  const unsafeByPath = new Map(
+    (incoming.unsafeEntries ?? []).map((entry) => [entry.normalizedPath, entry])
+  );
+  const paths = [
+    ...new Set([...ancestorEntries.keys(), ...currentEntries.keys(), ...incomingEntries.keys()])
+  ].sort();
   const report: MutableReport = {
     archive: incoming.archive,
     entries: incoming.entries,
@@ -108,20 +112,57 @@ export function planZipMerge(
     const incomingEntry = incomingEntries.get(path);
     const unsafe = unsafeByPath.get(path);
     if (unsafe) {
-      report.memberDecisions.push({ normalizedPath: path, operation: 'reject', disposition: 'unsafe', reason: unsafe.reason });
-      report.mergeReport.diagnostics.push(diagnostic(unsafe.category, schemaPath(path), unsafe.reason));
+      report.memberDecisions.push({
+        normalizedPath: path,
+        operation: 'reject',
+        disposition: 'unsafe',
+        reason: unsafe.reason
+      });
+      report.mergeReport.diagnostics.push(
+        diagnostic(unsafe.category, schemaPath(path), unsafe.reason)
+      );
     } else if (!currentEntry && incomingEntry) {
       decision(report, path, 'add', 'requires_renderer', 'member exists only in incoming archive');
     } else if (currentEntry && !incomingEntry) {
-      decision(report, path, 'delete', 'requires_renderer', 'member was removed from incoming archive');
-    } else if (ancestorEntry && currentEntry && incomingEntry && sameEntry(currentEntry, ancestorEntry) && sameEntry(incomingEntry, ancestorEntry)) {
-      report.memberDecisions.push({ normalizedPath: path, operation: 'preserve', disposition: 'safe', reason: 'member is unchanged from ancestor' });
-      report.mergeReport.preservedRanges.push(currentEntry.localHeaderRange, currentEntry.dataRange);
+      decision(
+        report,
+        path,
+        'delete',
+        'requires_renderer',
+        'member was removed from incoming archive'
+      );
+    } else if (
+      ancestorEntry &&
+      currentEntry &&
+      incomingEntry &&
+      sameEntry(currentEntry, ancestorEntry) &&
+      sameEntry(incomingEntry, ancestorEntry)
+    ) {
+      report.memberDecisions.push({
+        normalizedPath: path,
+        operation: 'preserve',
+        disposition: 'safe',
+        reason: 'member is unchanged from ancestor'
+      });
+      report.mergeReport.preservedRanges.push(
+        currentEntry.localHeaderRange,
+        currentEntry.dataRange
+      );
     } else {
       const family = nestedFamily(path);
       if (family) {
-        report.memberDecisions.push({ normalizedPath: path, operation: 'delegate', disposition: 'requires_renderer', nestedFamily: family, reason: 'structured member can be merged by a nested family before ZIP rendering' });
-        report.mergeReport.nestedDispatches.push({ schemaPath: `${schemaPath(path)}/data`, family, status: 'planned' } satisfies BinaryNestedDispatch);
+        report.memberDecisions.push({
+          normalizedPath: path,
+          operation: 'delegate',
+          disposition: 'requires_renderer',
+          nestedFamily: family,
+          reason: 'structured member can be merged by a nested family before ZIP rendering'
+        });
+        report.mergeReport.nestedDispatches.push({
+          schemaPath: `${schemaPath(path)}/data`,
+          family,
+          status: 'planned'
+        } satisfies BinaryNestedDispatch);
         report.mergeReport.rewrittenNodes.push(schemaPath(path));
         report.mergeReport.checksumUpdates.push(`${schemaPath(path)}/crc32`);
       } else {
@@ -131,7 +172,10 @@ export function planZipMerge(
     }
     report.mergeReport.matchedSchemaPaths.push(schemaPath(path));
   }
-  if (report.mergeReport.rewrittenNodes.length > 0 || report.mergeReport.checksumUpdates.length > 0) {
+  if (
+    report.mergeReport.rewrittenNodes.length > 0 ||
+    report.mergeReport.checksumUpdates.length > 0
+  ) {
     report.mergeReport.rewrittenNodes.push('/central_directory');
     report.mergeReport.checksumUpdates.push('/central_directory/size', '/central_directory/offset');
   }
@@ -168,7 +212,12 @@ export function renderWithRawPreservation(
     } else {
       const entry = plannedEntries.get(member.normalizedPath)!;
       const content = memberBytes.get(member.normalizedPath);
-      if (!content) throw renderError('missing_member_bytes', schemaPath(member.normalizedPath), 'missing rendered ZIP member bytes');
+      if (!content)
+        throw renderError(
+          'missing_member_bytes',
+          schemaPath(member.normalizedPath),
+          'missing rendered ZIP member bytes'
+        );
       const local = renderedLocalRecord(entry, content, offset);
       chunks.push(local.bytes);
       records.push(local.record);
@@ -183,7 +232,12 @@ export function renderWithRawPreservation(
   }
   chunks.push(eocdRecord(records.length, offset - centralStart, centralStart));
   const bytes = Buffer.concat(chunks);
-  const report = { ...plan.mergeReport, preservedRanges: plan.memberDecisions.flatMap((member) => (member.operation === 'preserve' ? [ranges.get(member.normalizedPath)!] : [])) };
+  const report = {
+    ...plan.mergeReport,
+    preservedRanges: plan.memberDecisions.flatMap((member) =>
+      member.operation === 'preserve' ? [ranges.get(member.normalizedPath)!] : []
+    )
+  };
   return { bytes, inventory: parseZipInventory(bytes), report };
 }
 
@@ -229,7 +283,8 @@ function scanCentralDirectory(source: Buffer): CentralScan {
   const records = new Map<string, CentralInfo>();
   let cursor = offset;
   while (cursor < offset + size) {
-    if (source.readUInt32LE(cursor) !== CENTRAL) throw new Error('unexpected central directory record');
+    if (source.readUInt32LE(cursor) !== CENTRAL)
+      throw new Error('unexpected central directory record');
     const nameLength = source.readUInt16LE(cursor + 28);
     const extraLength = source.readUInt16LE(cursor + 30);
     const commentLength = source.readUInt16LE(cursor + 32);
@@ -248,7 +303,11 @@ function scanCentralDirectory(source: Buffer): CentralScan {
     });
     cursor = endByte;
   }
-  return { range: { startByte: offset, endByte: offset + size }, records, archiveComment: commentLength > 0 };
+  return {
+    range: { startByte: offset, endByte: offset + size },
+    records,
+    archiveComment: commentLength > 0
+  };
 }
 
 function localDataStart(source: Buffer, offset: number): number {
@@ -257,15 +316,44 @@ function localDataStart(source: Buffer, offset: number): number {
 }
 
 function validateRawPreserveEntry(central: CentralScan, entry: ZipArchiveEntry): void {
-  if (central.archiveComment) throw renderError('archive_comment', '/archive/comment', 'raw-preserving ZIP renderer does not yet preserve archive comments');
+  if (central.archiveComment)
+    throw renderError(
+      'archive_comment',
+      '/archive/comment',
+      'raw-preserving ZIP renderer does not yet preserve archive comments'
+    );
   const record = central.records.get(entry.path)!;
-  if ((record.flags & 0x1) !== 0) throw renderError('encrypted_member', schemaPath(entry.normalizedPath), 'raw-preserving ZIP renderer rejects encrypted member');
-  if (![0, 8].includes(record.method)) throw renderError('unsupported_compression', schemaPath(entry.normalizedPath), 'raw-preserving ZIP renderer rejects unsupported compression');
-  if (record.extraLength !== 0) throw renderError('central_directory_extra_field', schemaPath(entry.normalizedPath), 'raw-preserving ZIP renderer does not yet preserve central-directory extra fields');
-  if (record.commentLength !== 0) throw renderError('member_comment', schemaPath(entry.normalizedPath), 'raw-preserving ZIP renderer does not yet preserve member comments');
+  if ((record.flags & 0x1) !== 0)
+    throw renderError(
+      'encrypted_member',
+      schemaPath(entry.normalizedPath),
+      'raw-preserving ZIP renderer rejects encrypted member'
+    );
+  if (![0, 8].includes(record.method))
+    throw renderError(
+      'unsupported_compression',
+      schemaPath(entry.normalizedPath),
+      'raw-preserving ZIP renderer rejects unsupported compression'
+    );
+  if (record.extraLength !== 0)
+    throw renderError(
+      'central_directory_extra_field',
+      schemaPath(entry.normalizedPath),
+      'raw-preserving ZIP renderer does not yet preserve central-directory extra fields'
+    );
+  if (record.commentLength !== 0)
+    throw renderError(
+      'member_comment',
+      schemaPath(entry.normalizedPath),
+      'raw-preserving ZIP renderer does not yet preserve member comments'
+    );
 }
 
-function renderedLocalRecord(entry: ZipArchiveEntry, content: Buffer, offset: number): { bytes: Buffer; record: CentralRecord } {
+function renderedLocalRecord(
+  entry: ZipArchiveEntry,
+  content: Buffer,
+  offset: number
+): { bytes: Buffer; record: CentralRecord } {
   const crc = crc32(content);
   const name = Buffer.from(entry.path);
   const header = Buffer.alloc(30);
@@ -281,7 +369,15 @@ function renderedLocalRecord(entry: ZipArchiveEntry, content: Buffer, offset: nu
   header.writeUInt16LE(0, 28);
   return {
     bytes: Buffer.concat([header, name, content]),
-    record: { name: entry.path, method: 0, crc32: crc, compressedSize: content.length, uncompressedSize: content.length, offset, flags: 0 }
+    record: {
+      name: entry.path,
+      method: 0,
+      crc32: crc,
+      compressedSize: content.length,
+      uncompressedSize: content.length,
+      offset,
+      flags: 0
+    }
   };
 }
 
@@ -313,32 +409,79 @@ function eocdRecord(entries: number, size: number, offset: number): Buffer {
 }
 
 function rawLocalRecordRanges(entries: Map<string, ZipArchiveEntry>): Map<string, ByteRange> {
-  const ordered = [...entries.values()].sort((left, right) => left.localHeaderRange.startByte - right.localHeaderRange.startByte);
-  return new Map(ordered.map((entry, index) => [entry.normalizedPath, { startByte: entry.localHeaderRange.startByte, endByte: ordered[index + 1]?.localHeaderRange.startByte ?? entry.centralDirectoryRange.startByte }]));
+  const ordered = [...entries.values()].sort(
+    (left, right) => left.localHeaderRange.startByte - right.localHeaderRange.startByte
+  );
+  return new Map(
+    ordered.map((entry, index) => [
+      entry.normalizedPath,
+      {
+        startByte: entry.localHeaderRange.startByte,
+        endByte:
+          ordered[index + 1]?.localHeaderRange.startByte ?? entry.centralDirectoryRange.startByte
+      }
+    ])
+  );
 }
 
-function unsafeEntries(entries: readonly ZipArchiveEntry[], records: Map<string, CentralInfo>): ZipUnsafeEntry[] {
+function unsafeEntries(
+  entries: readonly ZipArchiveEntry[],
+  records: Map<string, CentralInfo>
+): ZipUnsafeEntry[] {
   const seen = new Map<string, string>();
   const result: ZipUnsafeEntry[] = [];
   for (const entry of entries) {
-    if (escapesRoot(entry.path)) result.push(unsafeEntry(entry, 'path_traversal', 'entry escapes the archive root'));
-    if (seen.has(entry.normalizedPath) && seen.get(entry.normalizedPath) !== entry.path) result.push(unsafeEntry(entry, 'duplicate_normalized_path', 'normalized path collides with an existing entry'));
+    if (escapesRoot(entry.path))
+      result.push(unsafeEntry(entry, 'path_traversal', 'entry escapes the archive root'));
+    if (seen.has(entry.normalizedPath) && seen.get(entry.normalizedPath) !== entry.path)
+      result.push(
+        unsafeEntry(
+          entry,
+          'duplicate_normalized_path',
+          'normalized path collides with an existing entry'
+        )
+      );
     seen.set(entry.normalizedPath, entry.path);
-    if ((records.get(entry.path)!.flags & 0x1) !== 0) result.push(unsafeEntry(entry, 'encrypted_member', 'encrypted member cannot be rendered by the default provider'));
-    if (signingSensitive(entry.normalizedPath)) result.push(unsafeEntry(entry, 'signing_sensitive_member', 'signature-bearing member mutation is not enabled'));
+    if ((records.get(entry.path)!.flags & 0x1) !== 0)
+      result.push(
+        unsafeEntry(
+          entry,
+          'encrypted_member',
+          'encrypted member cannot be rendered by the default provider'
+        )
+      );
+    if (signingSensitive(entry.normalizedPath))
+      result.push(
+        unsafeEntry(
+          entry,
+          'signing_sensitive_member',
+          'signature-bearing member mutation is not enabled'
+        )
+      );
   }
   return result;
 }
 
-function emptyReport(): BinaryMergeReport {
-  return { format: 'zip', schema: 'zip.ksy', matchedSchemaPaths: [], preservedRanges: [], rewrittenNodes: [], checksumUpdates: [], nestedDispatches: [], diagnostics: [] };
-}
-
 function emptyMutableReport(): MutableReport['mergeReport'] {
-  return { format: 'zip', schema: 'zip.ksy', matchedSchemaPaths: [], preservedRanges: [], rewrittenNodes: [], checksumUpdates: [], nestedDispatches: [], diagnostics: [] };
+  return {
+    format: 'zip',
+    schema: 'zip.ksy',
+    matchedSchemaPaths: [],
+    preservedRanges: [],
+    rewrittenNodes: [],
+    checksumUpdates: [],
+    nestedDispatches: [],
+    diagnostics: []
+  };
 }
 
-function decision(report: MutableReport, path: string, operation: string, disposition: string, reason: string): void {
+function decision(
+  report: MutableReport,
+  path: string,
+  operation: string,
+  disposition: string,
+  reason: string
+): void {
   report.memberDecisions.push({ normalizedPath: path, operation, disposition, reason });
   report.mergeReport.rewrittenNodes.push(schemaPath(path));
 }
@@ -348,7 +491,13 @@ function entriesByPath(entries: readonly ZipArchiveEntry[]): Map<string, ZipArch
 }
 
 function sameEntry(left: ZipArchiveEntry, right: ZipArchiveEntry): boolean {
-  return left.path === right.path && left.compression === right.compression && left.compressedSize === right.compressedSize && left.uncompressedSize === right.uncompressedSize && left.crc32 === right.crc32;
+  return (
+    left.path === right.path &&
+    left.compression === right.compression &&
+    left.compressedSize === right.compressedSize &&
+    left.uncompressedSize === right.uncompressedSize &&
+    left.crc32 === right.crc32
+  );
 }
 
 function normalizeZipPath(zipPath: string): string {
@@ -374,7 +523,10 @@ function escapesRoot(zipPath: string): boolean {
 
 function signingSensitive(zipPath: string): boolean {
   const upper = zipPath.toUpperCase();
-  return upper.startsWith('META-INF/') && ['.RSA', '.DSA', '.EC', '.SF'].some((suffix) => upper.endsWith(suffix));
+  return (
+    upper.startsWith('META-INF/') &&
+    ['.RSA', '.DSA', '.EC', '.SF'].some((suffix) => upper.endsWith(suffix))
+  );
 }
 
 function nestedFamily(zipPath: string): string | undefined {
@@ -393,11 +545,30 @@ function compressionName(method: number): string {
 }
 
 function recordFromEntry(entry: ZipArchiveEntry, offset: number): CentralRecord {
-  return { name: entry.path, method: entry.compression === 'deflate' ? 8 : 0, crc32: Number.parseInt(entry.crc32, 16), compressedSize: entry.compressedSize, uncompressedSize: entry.uncompressedSize, offset, flags: 0 };
+  return {
+    name: entry.path,
+    method: entry.compression === 'deflate' ? 8 : 0,
+    crc32: Number.parseInt(entry.crc32, 16),
+    compressedSize: entry.compressedSize,
+    uncompressedSize: entry.uncompressedSize,
+    offset,
+    flags: 0
+  };
 }
 
 function minimalEntry(name: string, content: Buffer): ZipArchiveEntry {
-  return { path: name, normalizedPath: normalizeZipPath(name), directory: name.endsWith('/'), compression: 'stored', compressedSize: content.length, uncompressedSize: content.length, crc32: crc32(content).toString(16).padStart(8, '0'), localHeaderRange: { startByte: 0, endByte: 0 }, dataRange: { startByte: 0, endByte: 0 }, centralDirectoryRange: { startByte: 0, endByte: 0 } };
+  return {
+    path: name,
+    normalizedPath: normalizeZipPath(name),
+    directory: name.endsWith('/'),
+    compression: 'stored',
+    compressedSize: content.length,
+    uncompressedSize: content.length,
+    crc32: crc32(content).toString(16).padStart(8, '0'),
+    localHeaderRange: { startByte: 0, endByte: 0 },
+    dataRange: { startByte: 0, endByte: 0 },
+    centralDirectoryRange: { startByte: 0, endByte: 0 }
+  };
 }
 
 function unsafeEntry(entry: ZipArchiveEntry, category: string, reason: string): ZipUnsafeEntry {

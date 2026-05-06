@@ -14,7 +14,9 @@ interface Slice736Fixture {
 }
 
 function readFixture<T>(...segments: string[]): T {
-  return JSON.parse(readFileSync(path.resolve(process.cwd(), '..', 'fixtures', ...segments), 'utf8')) as T;
+  return JSON.parse(
+    readFileSync(path.resolve(process.cwd(), '..', 'fixtures', ...segments), 'utf8')
+  ) as T;
 }
 
 describe('zip-merge shared fixtures', () => {
