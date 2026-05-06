@@ -79,6 +79,15 @@ export interface SourceSpan {
   readonly endPoint: SourcePoint;
 }
 
+export interface ByteEditSpan {
+  readonly startByte: number;
+  readonly oldEndByte: number;
+  readonly newEndByte: number;
+  readonly startPoint: SourcePoint;
+  readonly oldEndPoint: SourcePoint;
+  readonly newEndPoint: SourcePoint;
+}
+
 export type BinaryScalarValue =
   | { readonly kind: 'string'; readonly value: string }
   | { readonly kind: 'integer'; readonly value: number }
@@ -112,6 +121,20 @@ export interface BinaryNestedDispatch {
   readonly status: string;
 }
 
+export interface BinaryPayloadRegion {
+  readonly kind: string;
+  readonly schemaPath: string;
+  readonly byteRange: ByteRange;
+  readonly expectedHex: string;
+}
+
+export interface BinaryRawPayload {
+  readonly encoding: string;
+  readonly value: string;
+  readonly byteLength: number;
+  readonly regions: readonly BinaryPayloadRegion[];
+}
+
 export interface BinaryMergeReport {
   readonly format: string;
   readonly schema: string;
@@ -121,6 +144,49 @@ export interface BinaryMergeReport {
   readonly checksumUpdates: readonly string[];
   readonly nestedDispatches: readonly BinaryNestedDispatch[];
   readonly diagnostics: readonly BinaryDiagnostic[];
+}
+
+export interface ZipArchiveInfo {
+  readonly format: string;
+  readonly schema: string;
+  readonly entryCount: number;
+  readonly centralDirectoryRange: ByteRange;
+}
+
+export interface ZipArchiveEntry {
+  readonly path: string;
+  readonly normalizedPath: string;
+  readonly directory: boolean;
+  readonly compression: string;
+  readonly compressedSize: number;
+  readonly uncompressedSize: number;
+  readonly crc32: string;
+  readonly localHeaderRange: ByteRange;
+  readonly dataRange: ByteRange;
+  readonly centralDirectoryRange: ByteRange;
+}
+
+export interface ZipMemberDecision {
+  readonly normalizedPath: string;
+  readonly operation: string;
+  readonly disposition: string;
+  readonly nestedFamily?: string;
+  readonly reason: string;
+}
+
+export interface ZipUnsafeEntry {
+  readonly path: string;
+  readonly normalizedPath: string;
+  readonly category: string;
+  readonly reason: string;
+}
+
+export interface ZipFamilyReport {
+  readonly archive: ZipArchiveInfo;
+  readonly entries: readonly ZipArchiveEntry[];
+  readonly memberDecisions: readonly ZipMemberDecision[];
+  readonly unsafeEntries?: readonly ZipUnsafeEntry[];
+  readonly mergeReport: BinaryMergeReport;
 }
 
 export function byteRangeLength(range: ByteRange): number {
@@ -190,6 +256,18 @@ export function byteOffsetForPoint(source: string, point: SourcePoint): number {
   throw new RangeError(`source point (${point.row}, ${point.column}) is outside source`);
 }
 
+export function byteEditOldRange(edit: ByteEditSpan): ByteRange {
+  return { startByte: edit.startByte, endByte: edit.oldEndByte };
+}
+
+export function byteEditNewRange(edit: ByteEditSpan): ByteRange {
+  return { startByte: edit.startByte, endByte: edit.newEndByte };
+}
+
+export function byteEditDelta(edit: ByteEditSpan): number {
+  return edit.newEndByte - edit.oldEndByte;
+}
+
 export interface ProcessStructureItem {
   readonly kind: string;
   readonly name?: string;
@@ -241,8 +319,10 @@ export interface KaitaiTreeNode {
 export interface KaitaiTreeAnalysis extends AnalysisHandle {
   readonly kind: 'kaitai-tree';
   readonly schema: string;
+  readonly sourceByteLength?: number;
   readonly root: KaitaiTreeNode;
   readonly backendRef: BackendReference;
+  readonly diagnostics?: readonly BinaryDiagnostic[];
 }
 
 export interface PeggyParser {

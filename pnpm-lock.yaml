@@ -60,6 +60,15 @@ importers:
         specifier: workspace:*
         version: link:../toml-merge
 
+  packages/binary-merge:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
+
   packages/go-merge:
     dependencies:
       '@structuredmerge/ast-merge':
@@ -212,6 +221,12 @@ importers:
       yaml:
         specifier: ^2.8.1
         version: 2.8.3
+
+  packages/zip-merge:
+    dependencies:
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
 
 packages:
 

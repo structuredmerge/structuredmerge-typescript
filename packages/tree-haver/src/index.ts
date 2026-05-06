@@ -6,9 +6,12 @@ export type {
   BinaryDiagnostic,
   BinaryMergeReport,
   BinaryNestedDispatch,
+  BinaryPayloadRegion,
+  BinaryRawPayload,
   BinaryRenderPolicy,
   BinaryScalarValue,
   BackendReference,
+  ByteEditSpan,
   ByteRange,
   FeatureProfile,
   KaitaiByteSpan,
@@ -25,10 +28,18 @@ export type {
   ProcessSpan,
   ProcessStructureItem,
   SourcePoint,
-  SourceSpan
+  SourceSpan,
+  ZipArchiveEntry,
+  ZipArchiveInfo,
+  ZipFamilyReport,
+  ZipMemberDecision,
+  ZipUnsafeEntry
 } from './contracts';
 export {
   backendReference,
+  byteEditDelta,
+  byteEditNewRange,
+  byteEditOldRange,
   byteOffsetForPoint,
   byteRangeContainsByte,
   byteRangeContainsRange,

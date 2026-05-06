@@ -7,10 +7,13 @@ import type {
   BinaryDiagnostic,
   BinaryMergeReport,
   BinaryNestedDispatch,
+  BinaryRawPayload,
   BinaryRenderPolicy,
   BinaryScalarValue,
+  ByteEditSpan,
   FeatureProfile,
-  ParserRequest
+  ParserRequest,
+  ZipUnsafeEntry
 } from '../src/index';
 import {
   conformanceFixturePath,
@@ -19,6 +22,9 @@ import {
 } from '@structuredmerge/ast-merge';
 import { processWithLanguagePack } from '../src/index';
 import {
+  byteEditDelta,
+  byteEditNewRange,
+  byteEditOldRange,
   byteOffsetForPoint,
   byteRangeContainsByte,
   byteRangeLength,
@@ -84,12 +90,31 @@ interface KaitaiSubstrateFixture {
     fields: Record<string, unknown>;
     children: KaitaiSubstrateFixture['tree_node'][];
   };
+  analysis: {
+    schema: string;
+    source_byte_length: number;
+    diagnostics: Array<{
+      severity: string;
+      category: string;
+      message: string;
+      schema_path: string;
+      byte_range: { start_byte: number; end_byte: number };
+    }>;
+  };
 }
 
 interface ByteLocationFixture {
   source: string;
   byte_range: { start_byte: number; end_byte: number };
   source_point: { row: number; column: number };
+  edit_span: {
+    start_byte: number;
+    old_end_byte: number;
+    new_end_byte: number;
+    start_point: { row: number; column: number };
+    old_end_point: { row: number; column: number };
+    new_end_point: { row: number; column: number };
+  };
   expected: {
     length: number;
     slice: string;
@@ -98,6 +123,10 @@ interface ByteLocationFixture {
     overlaps: boolean;
     disjoint: boolean;
     line_column_offset: number;
+    old_edit_length: number;
+    new_edit_length: number;
+    edit_delta: number;
+    old_edit_slice: string;
   };
   comparison_ranges: {
     overlapping: { start_byte: number; end_byte: number };
@@ -106,6 +135,17 @@ interface ByteLocationFixture {
 }
 
 interface BinaryCoreFixture {
+  raw_payload: {
+    encoding: string;
+    value: string;
+    byte_length: number;
+    regions: Array<{
+      kind: string;
+      schema_path: string;
+      byte_range: { start_byte: number; end_byte: number };
+      expected_hex: string;
+    }>;
+  };
   scalar_values: Array<
     | { kind: 'string'; value: string }
     | { kind: 'integer'; value: number }
@@ -140,6 +180,15 @@ interface BinaryCoreFixture {
       byte_range?: { start_byte: number; end_byte: number };
     }>;
   };
+}
+
+interface ZipFamilyFixture {
+  unsafe_entries: Array<{
+    path: string;
+    normalized_path: string;
+    category: string;
+    reason: string;
+  }>;
 }
 
 function readFixture<T>(...segments: string[]): T {
@@ -299,9 +348,20 @@ describe('tree-haver shared fixtures', () => {
     });
     const analysis: KaitaiTreeAnalysis = {
       kind: 'kaitai-tree',
-      schema: 'png.ksy',
+      schema: fixture.analysis.schema,
+      sourceByteLength: fixture.analysis.source_byte_length,
       root: toNode(fixture.tree_node),
-      backendRef: KAITAI_STRUCT_BACKEND
+      backendRef: KAITAI_STRUCT_BACKEND,
+      diagnostics: fixture.analysis.diagnostics.map((diagnostic) => ({
+        severity: diagnostic.severity,
+        category: diagnostic.category,
+        message: diagnostic.message,
+        schemaPath: diagnostic.schema_path,
+        byteRange: {
+          startByte: diagnostic.byte_range.start_byte,
+          endByte: diagnostic.byte_range.end_byte
+        }
+      }))
     };
 
     expect(KAITAI_STRUCT_BACKEND).toEqual(fixture.backend);
@@ -315,6 +375,10 @@ describe('tree-haver shared fixtures', () => {
       backendRef: fixture.feature_profile.backend_ref,
       supportsDialects: fixture.feature_profile.supports_dialects
     });
+    expect(analysis.sourceByteLength).toBe(fixture.analysis.source_byte_length);
+    expect(analysis.diagnostics?.[0]?.schemaPath).toBe(
+      fixture.analysis.diagnostics[0]?.schema_path
+    );
     expect(analysis.root.schemaPath).toBe('/chunks/1');
     expect(analysis.root.children[0]?.fields.value).toBe('Template');
   });
@@ -330,6 +394,14 @@ describe('tree-haver shared fixtures', () => {
     const point = {
       row: fixture.source_point.row,
       column: fixture.source_point.column
+    };
+    const editSpan: ByteEditSpan = {
+      startByte: fixture.edit_span.start_byte,
+      oldEndByte: fixture.edit_span.old_end_byte,
+      newEndByte: fixture.edit_span.new_end_byte,
+      startPoint: fixture.edit_span.start_point,
+      oldEndPoint: fixture.edit_span.old_end_point,
+      newEndPoint: fixture.edit_span.new_end_point
     };
     const overlappingRange = {
       startByte: fixture.comparison_ranges.overlapping.start_byte,
@@ -349,12 +421,32 @@ describe('tree-haver shared fixtures', () => {
     expect(byteRangeOverlaps(byteRange, overlappingRange)).toBe(fixture.expected.overlaps);
     expect(byteRangeOverlaps(byteRange, disjointRange)).toBe(fixture.expected.disjoint);
     expect(byteOffsetForPoint(fixture.source, point)).toBe(fixture.expected.line_column_offset);
+    expect(byteRangeLength(byteEditOldRange(editSpan))).toBe(fixture.expected.old_edit_length);
+    expect(byteRangeLength(byteEditNewRange(editSpan))).toBe(fixture.expected.new_edit_length);
+    expect(byteEditDelta(editSpan)).toBe(fixture.expected.edit_delta);
+    expect(sliceByteRange(fixture.source, byteEditOldRange(editSpan))).toBe(
+      fixture.expected.old_edit_slice
+    );
   });
 
   it('conforms to the slice-723 binary core contract fixture', () => {
     const fixture = readFixture<BinaryCoreFixture>(
       ...diagnosticsFixturePath('binary_core_contract')
     );
+    const rawPayload: BinaryRawPayload = {
+      encoding: fixture.raw_payload.encoding,
+      value: fixture.raw_payload.value,
+      byteLength: fixture.raw_payload.byte_length,
+      regions: fixture.raw_payload.regions.map((region) => ({
+        kind: region.kind,
+        schemaPath: region.schema_path,
+        byteRange: {
+          startByte: region.byte_range.start_byte,
+          endByte: region.byte_range.end_byte
+        },
+        expectedHex: region.expected_hex
+      }))
+    };
     const scalarValues: BinaryScalarValue[] = fixture.scalar_values.map((item) => {
       if (item.kind === 'enum') {
         return { kind: item.kind, symbol: item.symbol, rawValue: item.raw_value };
@@ -401,6 +493,22 @@ describe('tree-haver shared fixtures', () => {
       )
     };
 
+    const rawBytes = Buffer.from(rawPayload.value, 'hex');
+    const checksumRegion = rawPayload.regions[3]!;
+    expect(rawPayload.encoding).toBe('hex');
+    expect(rawBytes.byteLength).toBe(rawPayload.byteLength);
+    expect(rawPayload.regions.map((region) => region.kind)).toEqual([
+      'header',
+      'length',
+      'body',
+      'checksum'
+    ]);
+    expect(rawPayload.regions[0]?.byteRange.endByte).toBe(8);
+    expect(
+      rawBytes
+        .subarray(checksumRegion.byteRange.startByte, checksumRegion.byteRange.endByte)
+        .toString('hex')
+    ).toBe(checksumRegion.expectedHex);
     expect(scalarValues).toHaveLength(9);
     expect(scalarValues[0]?.kind).toBe('string');
     expect(scalarValues[8]?.kind).toBe('null');
@@ -411,6 +519,20 @@ describe('tree-haver shared fixtures', () => {
     expect(byteRangeLength(report.preservedRanges[0]!)).toBe(25);
     expect(report.nestedDispatches[0]?.family).toBe('text');
     expect(report.diagnostics[0]?.category).toBe('unsupported_checksum_rewrite');
+  });
+
+  it('conforms to the slice-729 ZIP unsafe entries fixture', () => {
+    const fixture = readFixture<ZipFamilyFixture>(...diagnosticsFixturePath('zip_family_contract'));
+    const unsafeEntries: ZipUnsafeEntry[] = fixture.unsafe_entries.map((entry) => ({
+      path: entry.path,
+      normalizedPath: entry.normalized_path,
+      category: entry.category,
+      reason: entry.reason
+    }));
+
+    expect(unsafeEntries[0]?.category).toBe('path_traversal');
+    expect(unsafeEntries[1]?.normalizedPath).toBe('config/settings.yml');
+    expect(unsafeEntries[2]?.category).toBe('encrypted_member');
   });
 
   it('supports temporary backend context selection', () => {
