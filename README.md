@@ -30,7 +30,7 @@ Package directories:
 - [`@structuredmerge/peggy-toml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/peggy-toml-merge)
 - [`@structuredmerge/ruby-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ruby-merge)
 - [`@structuredmerge/rust-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/rust-merge)
-- [`@structuredmerge/text-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/text-merge)
+- [`@structuredmerge/plain-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/plain-merge)
 - [`@structuredmerge/toml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/toml-merge)
 - [`@structuredmerge/tree-haver`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/tree-haver)
 - [`@structuredmerge/typescript-compiler-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-compiler-merge)

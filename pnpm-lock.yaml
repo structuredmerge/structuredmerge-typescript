@@ -138,6 +138,15 @@ importers:
         specifier: workspace:*
         version: link:../tree-haver
 
+  packages/plain-merge:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/tree-haver':
+        specifier: workspace:*
+        version: link:../tree-haver
+
   packages/ruby-merge:
     dependencies:
       '@structuredmerge/ast-merge':
@@ -148,15 +157,6 @@ importers:
         version: link:../tree-haver
 
   packages/rust-merge:
-    dependencies:
-      '@structuredmerge/ast-merge':
-        specifier: workspace:*
-        version: link:../ast-merge
-      '@structuredmerge/tree-haver':
-        specifier: workspace:*
-        version: link:../tree-haver
-
-  packages/text-merge:
     dependencies:
       '@structuredmerge/ast-merge':
         specifier: workspace:*

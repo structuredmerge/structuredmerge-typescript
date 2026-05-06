@@ -109,7 +109,7 @@ function textFixturePath(role: string): string[] {
   return [...entry];
 }
 
-describe('text-merge shared fixtures', () => {
+describe('plain-merge shared fixtures', () => {
   it('conforms to the slice-03 analysis fixture', () => {
     const fixture = readFixture<TextAnalysisFixture>(...textFixturePath('analysis'));
 

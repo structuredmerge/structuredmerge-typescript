@@ -1,4 +1,4 @@
-export const packageName = '@structuredmerge/text-merge';
+export const packageName = '@structuredmerge/plain-merge';
 
 export {
   analyzeText,

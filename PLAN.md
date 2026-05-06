@@ -28,7 +28,7 @@ Initial focus:
 
 1. parser/runtime adapter
 2. merge core abstractions
-3. text merge MVP
+3. plain text merge MVP
 4. JSON and JSONC merge MVP
 5. shared-fixture conformance runner
 
@@ -47,7 +47,7 @@ Initial package candidates:
 
 - `@structuredmerge/tree-haver`
 - `@structuredmerge/ast-merge`
-- `@structuredmerge/text-merge`
+- `@structuredmerge/plain-merge`
 - `@structuredmerge/json-merge`
 
 Possible later packages:
@@ -74,7 +74,7 @@ For MVP, the critical mapping is:
 
 - `tree_haver` -> tree-sitter runtime/load API
 - `ast-merge` -> shared merge model and diagnostics
-- text merge behavior in Ruby stack -> portable text merge MVP
+- plain text merge behavior in Ruby stack -> portable plain text merge MVP
 - `json-merge` -> JSON/JSONC merge semantics
 
 ## Tree-Sitter Strategy
@@ -125,7 +125,7 @@ Requirements:
 - freeze-region model
 - node matching/refinement interfaces
 
-### 3. `text-merge`
+### 3. `plain-merge`
 
 - normalized text segmentation
 - paragraph/block matching
@@ -153,7 +153,7 @@ Requirements:
 
 1. Publish under one npm scope or multiple scopes?
 2. How much of the Ruby comment capability model should be ported in v1?
-3. Should text merge expose a matcher-only API before a full merge API?
+3. Should plain text merge expose a matcher-only API before a full merge API?
 
 ## Decisions
 
@@ -169,5 +169,5 @@ Requirements:
 1. define TypeScript node/diagnostic interfaces
 2. implement `tree-haver`
 3. implement shared fixture runner
-4. implement `text-merge`
+4. implement `plain-merge`
 5. implement `json-merge`

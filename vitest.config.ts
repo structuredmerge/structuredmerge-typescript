@@ -12,8 +12,8 @@ export default defineConfig({
       '@structuredmerge/tree-haver': fileURLToPath(
         new URL('./packages/tree-haver/src/index.ts', import.meta.url)
       ),
-      '@structuredmerge/text-merge': fileURLToPath(
-        new URL('./packages/text-merge/src/index.ts', import.meta.url)
+      '@structuredmerge/plain-merge': fileURLToPath(
+        new URL('./packages/plain-merge/src/index.ts', import.meta.url)
       ),
       '@structuredmerge/json-merge': fileURLToPath(
         new URL('./packages/json-merge/src/index.ts', import.meta.url)

@@ -7,7 +7,7 @@ import {
   DEFAULT_TEXT_REFINEMENT_WEIGHTS
 } from '../src/index';
 
-describe('text-merge', () => {
+describe('plain-merge', () => {
   it('matches text blocks by exact normalized content', () => {
     const result = matchTextBlocks(
       'Alpha\n\nBeta\n\nAlpha\n\nTemplate only',
