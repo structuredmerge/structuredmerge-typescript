@@ -1,4 +1,3 @@
-import type { Diagnostic, ParseResult, PolicyReference } from '@structuredmerge/ast-merge';
 import peggy from 'peggy';
 import {
   hasLanguage,
@@ -22,6 +21,31 @@ export interface ParserRequest {
 export interface BackendReference {
   readonly id: string;
   readonly family: string;
+}
+
+export type DiagnosticSeverity = 'info' | 'warning' | 'error';
+
+export type DiagnosticCategory = 'parse_error' | 'unsupported_feature';
+
+export interface Diagnostic {
+  readonly severity: DiagnosticSeverity;
+  readonly category: DiagnosticCategory;
+  readonly message: string;
+  readonly path?: string;
+}
+
+export type PolicySurface = 'fallback' | 'array';
+
+export interface PolicyReference {
+  readonly surface: PolicySurface;
+  readonly name: string;
+}
+
+export interface ParseResult<TAnalysis> {
+  readonly ok: boolean;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly analysis?: TAnalysis;
+  readonly policies?: readonly PolicyReference[];
 }
 
 export interface AdapterInfo {

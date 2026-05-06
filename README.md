@@ -20,6 +20,7 @@ Package directories:
 
 - [`@structuredmerge/ast-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ast-merge)
 - [`@structuredmerge/ast-template`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ast-template)
+- [`@structuredmerge/binary-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/binary-merge)
 - [`@structuredmerge/go-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/go-merge)
 - [`@structuredmerge/json-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/json-merge)
 - [`@structuredmerge/js-yaml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/js-yaml-merge)
@@ -35,6 +36,7 @@ Package directories:
 - [`@structuredmerge/typescript-compiler-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-compiler-merge)
 - [`@structuredmerge/typescript-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-merge)
 - [`@structuredmerge/yaml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/yaml-merge)
+- [`@structuredmerge/zip-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/zip-merge)
 
 ## Conformance
 

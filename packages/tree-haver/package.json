@@ -1,12 +1,11 @@
 {
   "name": "@structuredmerge/tree-haver",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
     "@kreuzberg/tree-sitter-language-pack": "1.6.2",
-    "@structuredmerge/ast-merge": "workspace:*",
     "peggy": "^5.1.0"
   }
 }

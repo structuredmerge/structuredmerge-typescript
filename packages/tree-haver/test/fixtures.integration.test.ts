@@ -13,13 +13,9 @@ import type {
   ByteEditSpan,
   FeatureProfile,
   ParserRequest,
+  PolicyReference,
   ZipUnsafeEntry
 } from '../src/index';
-import {
-  conformanceFixturePath,
-  type ConformanceManifest,
-  type PolicyReference
-} from '@structuredmerge/ast-merge';
 import { processWithLanguagePack } from '../src/index';
 import {
   byteEditDelta,
@@ -191,6 +187,12 @@ interface ZipFamilyFixture {
   }>;
 }
 
+interface ConformanceManifest {
+  readonly families: Readonly<
+    Record<string, readonly { readonly role: string; readonly path: readonly string[] }[]>
+  >;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -203,13 +205,13 @@ function diagnosticsFixturePath(role: string): string[] {
     'slice-24-manifest',
     'family-feature-profiles.json'
   );
-  const entry = conformanceFixturePath(manifest, 'diagnostics', role);
+  const entry = manifest.families.diagnostics?.find((candidate) => candidate.role === role);
 
   if (!entry) {
     throw new Error(`missing diagnostics fixture entry for ${role}`);
   }
 
-  return [...entry];
+  return [...entry.path];
 }
 
 describe('tree-haver shared fixtures', () => {
