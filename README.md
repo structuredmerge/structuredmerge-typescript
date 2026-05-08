@@ -42,6 +42,7 @@ Format libraries:
 - [`@structuredmerge/markdown-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/markdown-merge)
 - [`@structuredmerge/ruby-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ruby-merge)
 - [`@structuredmerge/go-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/go-merge)
+- [`@structuredmerge/javascript-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/javascript-merge)
 - [`@structuredmerge/rust-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/rust-merge)
 - [`@structuredmerge/typescript-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-merge)
 - [`@structuredmerge/binary-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/binary-merge)
