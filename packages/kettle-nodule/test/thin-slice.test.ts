@@ -276,7 +276,8 @@ describe('kettle-nodule thin vertical slice', () => {
       'https://logos.galtzo.com/assets/images/tree-sitter/tree-sitter/avatar-192px.svg',
       'StructuredMerge packages provide fixture-backed merge behavior',
       '| tree-sitter-language-pack | Go, Ruby, Rust, TypeScript | markdown, toml, yaml, source |',
-      '| bash-merge, dotenv-merge, rbs-merge | Excluded from generated support tables until explicit scope decisions exist |'
+      '| bash-merge, dotenv-merge, rbs-merge | Excluded from generated support tables until explicit scope decisions exist |',
+      '| Freeze tokens | Show how destination-owned regions are preserved without filling project-specific usage sections |'
     ]) {
       expect(plan.finalContent).toContain(snippet);
     }
