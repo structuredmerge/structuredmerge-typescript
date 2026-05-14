@@ -121,7 +121,8 @@ describe('kettle-nodule thin vertical slice', () => {
       '.github/workflows/ci.yml',
       '.gitignore',
       '.npmrc',
-      '.prettierrc.json'
+      '.prettierrc.json',
+      'README.md'
     ];
     const plan = planPackagedTemplateInventory(projectRoot);
     expect(plan.recipePack.name).toBe('kettle-nodule-packaged-template-inventory');
@@ -132,10 +133,18 @@ describe('kettle-nodule thin vertical slice', () => {
     const ci = readFileSync(path.join(projectRoot, '.github/workflows/ci.yml'), 'utf8');
     expect(ci).toContain('node-version: "20"');
     expect(ci).toContain('- run: pnpm test');
+    const readme = readFileSync(path.join(projectRoot, 'README.md'), 'utf8');
+    expect(readme).toContain('# @acme/widget');
+    expect(readme).toContain('## Synopsis');
+    expect(readme).toContain('## Installation');
+    expect(readme).toContain('pnpm add @acme/widget');
+    expect(readme).toContain('## Configuration');
+    expect(readme).toContain('## Basic Usage');
 
     const second = applyPackagedTemplateInventory(projectRoot);
     expect(second.changedFiles).toEqual([]);
     expect(readFileSync(path.join(projectRoot, '.github/workflows/ci.yml'), 'utf8')).toBe(ci);
+    expect(readFileSync(path.join(projectRoot, 'README.md'), 'utf8')).toBe(readme);
     rmSync(projectRoot, { force: true, recursive: true });
   });
 

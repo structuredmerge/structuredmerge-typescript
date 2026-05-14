@@ -207,7 +207,8 @@ export function packagedTemplateInventoryPack(): RecipePack {
       templateRecipe('.github/workflows/ci.yml'),
       templateRecipe('.gitignore'),
       templateRecipe('.npmrc'),
-      templateRecipe('.prettierrc.json')
+      templateRecipe('.prettierrc.json'),
+      templateRecipe('README.md')
     ]
   };
 }
@@ -548,6 +549,8 @@ function packagedTemplateContent(targetPath: string): string {
       return 'engine-strict=true\nfund=true\n';
     case '.prettierrc.json':
       return '{\n  "singleQuote": true,\n  "trailingComma": "none"\n}\n';
+    case 'README.md':
+      return '# {{PACKAGE_NAME}}\n\n## Synopsis\n\n## Installation\n\n```sh\n{{PACKAGE_MANAGER_COMMAND}} add {{PACKAGE_NAME}}\n```\n\n## Configuration\n\n## Basic Usage\n';
     default:
       return '';
   }
