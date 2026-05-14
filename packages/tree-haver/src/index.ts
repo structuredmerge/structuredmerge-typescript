@@ -42,6 +42,7 @@ export type {
   SourceFragment,
   SourcePoint,
   SourceSpan,
+  TreeHaverProfile,
   ZipArchiveEntry,
   ZipArchiveInfo,
   ZipFamilyReport,

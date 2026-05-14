@@ -20,6 +20,7 @@ import type {
   ParserRequest,
   PolicyReference,
   SourceSpan,
+  TreeHaverProfile,
   ZipUnsafeEntry
 } from '../src/index';
 import { processWithLanguagePack } from '../src/index';
@@ -297,6 +298,20 @@ interface NormalizedParseResultFixture {
   readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
+interface TreeHaverProfileFixture {
+  readonly profile_id: string;
+  readonly language: string;
+  readonly backend_ref: BackendReference;
+  readonly provider_id: string;
+  readonly node_roles: readonly NormalizedTreeNode['role'][];
+  readonly normalized_node_fields: readonly string[];
+  readonly optional_node_features: readonly string[];
+  readonly unsupported_defaults: Readonly<Record<string, string>>;
+  readonly capability: BackendCapabilityFixture;
+  readonly fixture_slices: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -417,6 +432,22 @@ function normalizedParseResult(fixture: NormalizedParseResultFixture): Normalize
   };
 }
 
+function treeHaverProfile(fixture: TreeHaverProfileFixture): TreeHaverProfile {
+  return {
+    profileId: fixture.profile_id,
+    language: fixture.language,
+    backendRef: fixture.backend_ref,
+    providerId: fixture.provider_id,
+    nodeRoles: fixture.node_roles,
+    normalizedNodeFields: fixture.normalized_node_fields,
+    optionalNodeFeatures: fixture.optional_node_features,
+    unsupportedDefaults: fixture.unsupported_defaults,
+    capability: backendCapability(fixture.capability),
+    fixtureSlices: fixture.fixture_slices,
+    diagnostics: fixture.diagnostics
+  };
+}
+
 describe('tree-haver shared fixtures', () => {
   it('conforms to the slice-06 parser request fixture', () => {
     const fixture = readFixture<ParserAdapterFixture>(...diagnosticsFixturePath('parser_request'));
@@ -488,6 +519,23 @@ describe('tree-haver shared fixtures', () => {
     expect(result.nodes[1]?.semanticRoles[1]).toBe('function');
     expect(result.metadata.go_dst?.native_tree_visibility).toBe('provider_internal');
     expect(result.sourceFragmentsAvailable).toBe(true);
+  });
+
+  it('conforms to the slice-788 tree-haver profile fixture', () => {
+    const fixture = readFixture<{ profile: TreeHaverProfileFixture }>(
+      'diagnostics',
+      'slice-788-tree-haver-profile',
+      'tree-haver-profile.json'
+    );
+    const profile = treeHaverProfile(fixture.profile);
+
+    expect(profile.profileId).toBe('go-dst-normalized-tree-v1');
+    expect(profile.backendRef.id).toBe('go-dst');
+    expect(profile.nodeRoles[0]).toBe('structural');
+    expect(profile.normalizedNodeFields.at(-1)).toBe('metadata');
+    expect(profile.unsupportedDefaults.field_name).toBe('null');
+    expect(profile.capability.parserIdentity.name).toBe('github.com/dave/dst');
+    expect(profile.fixtureSlices[0]).toBe('slice-782-normalized-tree-node');
   });
 
   it('conforms to the slice-783 backend capability report fixture', () => {

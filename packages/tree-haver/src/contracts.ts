@@ -124,6 +124,20 @@ export interface NormalizedParseResult {
   readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
+export interface TreeHaverProfile {
+  readonly profileId: string;
+  readonly language: string;
+  readonly backendRef: BackendReference;
+  readonly providerId: string;
+  readonly nodeRoles: readonly NodeRole[];
+  readonly normalizedNodeFields: readonly string[];
+  readonly optionalNodeFeatures: readonly string[];
+  readonly unsupportedDefaults: Readonly<Record<string, string>>;
+  readonly capability: BackendCapability;
+  readonly fixtureSlices: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
   readonly info: AdapterInfo;
   parse(request: ParserRequest): ParseResult<TAnalysis>;
