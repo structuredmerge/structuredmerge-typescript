@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
@@ -75,6 +75,7 @@ import {
   importSessionInvocationEnvelope,
   reportTemplateDirectorySessionStatus,
   applyReadmeFamilySection,
+  applyReadmeFamilySectionsToPackageDirectories,
   readmeFamilyLanguageAliases,
   readmeFamilyTokenValues,
   renderReadmeFamilySection,
@@ -120,6 +121,17 @@ interface ReadmeFamilySectionTemplateContractFixture {
     expected_content: string;
     changed: boolean;
   }>;
+  package_directory_case: {
+    packages: Array<{
+      id: string;
+      readme_path: string;
+      package: Record<string, unknown>;
+      family: Record<string, unknown>;
+      initial_content: string | null;
+      expected_content: string;
+    }>;
+    expected_report: unknown;
+  };
 }
 
 describe('README family section template contract fixture', () => {
@@ -162,6 +174,33 @@ describe('README family section template contract fixture', () => {
       expect(actual.content).toBe(testCase.expected_content);
       expect(actual.changed).toBe(testCase.changed);
     }
+
+    const tempRoot = path.resolve(
+      process.cwd(),
+      'packages',
+      'ast-template',
+      'tmp',
+      'readme-family-packages'
+    );
+    rmSync(tempRoot, { recursive: true, force: true });
+    for (const packageCase of fixture.package_directory_case.packages) {
+      if (packageCase.initial_content !== null) {
+        const readmePath = path.join(tempRoot, ...packageCase.readme_path.split('/'));
+        mkdirSync(path.dirname(readmePath), { recursive: true });
+        writeFileSync(readmePath, packageCase.initial_content);
+      }
+    }
+    const report = applyReadmeFamilySectionsToPackageDirectories(
+      tempRoot,
+      fixture.template_partial,
+      fixture.package_directory_case.packages
+    );
+    expect(report).toEqual(fixture.package_directory_case.expected_report);
+    for (const packageCase of fixture.package_directory_case.packages) {
+      const readmePath = path.join(tempRoot, ...packageCase.readme_path.split('/'));
+      expect(readFileSync(readmePath, 'utf8')).toBe(packageCase.expected_content);
+    }
+    rmSync(tempRoot, { recursive: true, force: true });
   });
 });
 

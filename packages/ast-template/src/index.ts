@@ -7,6 +7,8 @@ import type {
   TemplateTokenConfig,
   TemplateTreeRunResult
 } from '@structuredmerge/ast-merge';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   DEFAULT_TEMPLATE_TOKEN_CONFIG,
   applyTemplateTreeExecutionToDirectory,
@@ -124,6 +126,80 @@ export function applyReadmeFamilySection(
   );
 
   return { content, changed: content !== baseContent };
+}
+
+export interface ReadmeFamilyPackage {
+  id: string;
+  readme_path: string;
+  package: Readonly<Record<string, unknown>>;
+  family: Readonly<Record<string, unknown>>;
+}
+
+export interface ReadmeFamilyPackageReportEntry {
+  id: string;
+  readme_path: string;
+  changed: boolean;
+  created: boolean;
+}
+
+export interface ReadmeFamilyPackageReport {
+  package_count: number;
+  changed_count: number;
+  created_count: number;
+  entries: ReadmeFamilyPackageReportEntry[];
+}
+
+export function applyReadmeFamilySectionsToPackageDirectories(
+  root: string,
+  templatePartial: string,
+  packages: readonly ReadmeFamilyPackage[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilyPackageReport {
+  const report: ReadmeFamilyPackageReport = {
+    package_count: packages.length,
+    changed_count: 0,
+    created_count: 0,
+    entries: []
+  };
+
+  for (const packageEntry of packages) {
+    const readmePath = path.join(root, ...packageEntry.readme_path.split('/'));
+    let destinationContent: string | null = null;
+    let created = false;
+    try {
+      destinationContent = readFileSync(readmePath, 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        created = true;
+      } else {
+        throw error;
+      }
+    }
+
+    const application = applyReadmeFamilySection(
+      templatePartial,
+      packageEntry.package,
+      packageEntry.family,
+      destinationContent,
+      config
+    );
+    if (application.changed) {
+      mkdirSync(path.dirname(readmePath), { recursive: true });
+      writeFileSync(readmePath, application.content);
+      report.changed_count += 1;
+      if (created) {
+        report.created_count += 1;
+      }
+    }
+    report.entries.push({
+      id: packageEntry.id,
+      readme_path: packageEntry.readme_path,
+      changed: application.changed,
+      created: created && application.changed
+    });
+  }
+
+  return report;
 }
 
 function replaceOrInsertMarkdownHeadingSection(
