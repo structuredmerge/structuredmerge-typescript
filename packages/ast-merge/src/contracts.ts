@@ -464,6 +464,24 @@ export interface MergeIR {
   readonly diagnostics: readonly string[];
 }
 
+export interface PairwiseNodeMatch {
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly class_id: string;
+  readonly strategy: string;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface PairwiseMatching {
+  readonly matching_id: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly matches: readonly PairwiseNodeMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

@@ -38,6 +38,7 @@ import type {
   DiscoveredSurface,
   FamilyFeatureProfile,
   MergeIR,
+  PairwiseMatching,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -5581,6 +5582,29 @@ describe('ast-merge shared fixtures', () => {
     expect(mergeIR.changes.map((change) => change.kind)).toEqual(fixture.expected.change_kinds);
     expect(mergeIR.node_classes[0]?.node_ids.left).toBe('left-import-fmt');
     expect(mergeIR.changes[1]?.class_id).toBe('class-import-strings');
+  });
+
+  it('conforms to the slice-791 pairwise matchings fixture', () => {
+    const fixture = readFixture<{
+      pairwise_matchings: readonly PairwiseMatching[];
+      expected: {
+        matching_ids: readonly string[];
+        total_match_count: number;
+        unmatched_insertions: readonly string[];
+        unmatched_deletions: readonly string[];
+      };
+    }>('diagnostics', 'slice-791-pairwise-matchings', 'pairwise-matchings.json');
+    const matchings = fixture.pairwise_matchings;
+
+    expect(matchings.map((matching) => matching.matching_id)).toEqual(
+      fixture.expected.matching_ids
+    );
+    expect(matchings.reduce((sum, matching) => sum + matching.matches.length, 0)).toBe(
+      fixture.expected.total_match_count
+    );
+    expect(matchings[0]?.unmatched_to[0]).toBe('left-import-os');
+    expect(matchings[1]?.unmatched_from[0]).toBe('base-decl-greet');
+    expect(matchings[2]?.matches[1]?.diagnostics[0]).toBe('sibling position changed');
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

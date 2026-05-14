@@ -52,6 +52,8 @@ export type {
   MergeIRNodeClass,
   MergeIROrderedNode,
   MergeResult,
+  PairwiseMatching,
+  PairwiseNodeMatch,
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
