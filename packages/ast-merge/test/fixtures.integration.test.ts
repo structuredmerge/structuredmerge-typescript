@@ -37,6 +37,7 @@ import type {
   DiagnosticSeverity,
   DiscoveredSurface,
   FamilyFeatureProfile,
+  MergeIR,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -5562,6 +5563,26 @@ function normalizeProjectedChildReviewGroupProgress(
 }
 
 describe('ast-merge shared fixtures', () => {
+  it('conforms to the slice-790 generic merge IR fixture', () => {
+    const fixture = readFixture<{
+      merge_ir: MergeIR;
+      expected: {
+        version: string;
+        node_class_count: number;
+        change_kinds: readonly string[];
+        ordered_node_count: number;
+      };
+    }>('diagnostics', 'slice-790-generic-merge-ir', 'generic-merge-ir.json');
+    const mergeIR = fixture.merge_ir;
+
+    expect(mergeIR.version).toBe(fixture.expected.version);
+    expect(mergeIR.node_classes).toHaveLength(fixture.expected.node_class_count);
+    expect(mergeIR.ordered_nodes).toHaveLength(fixture.expected.ordered_node_count);
+    expect(mergeIR.changes.map((change) => change.kind)).toEqual(fixture.expected.change_kinds);
+    expect(mergeIR.node_classes[0]?.node_ids.left).toBe('left-import-fmt');
+    expect(mergeIR.changes[1]?.class_id).toBe('class-import-strings');
+  });
+
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
     const fixture = readFixture<DiagnosticFixture>(
       ...diagnosticsFixturePath('diagnostic_vocabulary')

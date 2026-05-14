@@ -359,7 +359,8 @@ export function compactRulesetFeatureProfile(ruleset: CompactRuleset): CompactRu
         if (args.length > 1) profile.node_roles.push({ selector: args[0], role: args[1] });
         break;
       case 'atomic':
-        if (args.length > 1) profile.atomic_nodes.push({ selector: args[0], atomic: args[1] === 'true' });
+        if (args.length > 1)
+          profile.atomic_nodes.push({ selector: args[0], atomic: args[1] === 'true' });
         break;
       case 'child_group':
         if (args.length > 2) {
@@ -424,6 +425,43 @@ export interface MergeResult<TOutput> {
   readonly diagnostics: readonly Diagnostic[];
   readonly output?: TOutput;
   readonly policies?: readonly PolicyReference[];
+}
+
+export interface MergeIRNodeClass {
+  readonly class_id: string;
+  readonly signature: string;
+  readonly node_ids: Readonly<Record<string, string>>;
+  readonly roles: readonly string[];
+}
+
+export interface MergeIROrderedNode {
+  readonly node_id: string;
+  readonly parent_id: string;
+  readonly child_ids: readonly string[];
+  readonly previous_sibling_id: string | null;
+  readonly next_sibling_id: string | null;
+}
+
+export interface MergeIRChange {
+  readonly change_id: string;
+  readonly side: string;
+  readonly kind: string;
+  readonly node_id: string;
+  readonly class_id: string | null;
+  readonly parent_id: string;
+  readonly previous_sibling_id: string | null;
+  readonly next_sibling_id: string | null;
+  readonly content_hash: string;
+}
+
+export interface MergeIR {
+  readonly version: string;
+  readonly tree_id: string;
+  readonly source: string;
+  readonly node_classes: readonly MergeIRNodeClass[];
+  readonly ordered_nodes: readonly MergeIROrderedNode[];
+  readonly changes: readonly MergeIRChange[];
+  readonly diagnostics: readonly string[];
 }
 
 export type PolicySurface = 'fallback' | 'array';
