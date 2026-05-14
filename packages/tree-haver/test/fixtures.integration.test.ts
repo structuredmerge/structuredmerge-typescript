@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
   AdapterInfo,
+  BackendCapability,
   BackendReference,
   BinaryDiagnostic,
   BinaryMergeReport,
@@ -213,6 +214,28 @@ interface NormalizedTreeNodeFixture {
   readonly source_fragment: string;
 }
 
+interface BackendCapabilityFixture {
+  readonly backend_ref: BackendReference;
+  readonly language: string;
+  readonly parser_identity: {
+    readonly name: string;
+    readonly version: string;
+    readonly implementation: string;
+  };
+  readonly language_version: {
+    readonly version: string;
+    readonly dialect: string | null;
+  };
+  readonly parse_error_behavior: string;
+  readonly source_span_support: string;
+  readonly source_fragment_support: string;
+  readonly render_strategies: readonly string[];
+  readonly semantic_role_support: string;
+  readonly normalized_tree_support: boolean;
+  readonly native_node_access: boolean;
+  readonly diagnostics: readonly string[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -257,6 +280,26 @@ function normalizedTreeNode(fixture: NormalizedTreeNodeFixture): NormalizedTreeN
   };
 }
 
+function backendCapability(fixture: BackendCapabilityFixture): BackendCapability {
+  return {
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    parserIdentity: fixture.parser_identity,
+    languageVersion: {
+      version: fixture.language_version.version,
+      dialect: fixture.language_version.dialect ?? undefined
+    },
+    parseErrorBehavior: fixture.parse_error_behavior,
+    sourceSpanSupport: fixture.source_span_support,
+    sourceFragmentSupport: fixture.source_fragment_support,
+    renderStrategies: fixture.render_strategies,
+    semanticRoleSupport: fixture.semantic_role_support,
+    normalizedTreeSupport: fixture.normalized_tree_support,
+    nativeNodeAccess: fixture.native_node_access,
+    diagnostics: fixture.diagnostics
+  };
+}
+
 describe('tree-haver shared fixtures', () => {
   it('conforms to the slice-06 parser request fixture', () => {
     const fixture = readFixture<ParserAdapterFixture>(...diagnosticsFixturePath('parser_request'));
@@ -295,6 +338,23 @@ describe('tree-haver shared fixtures', () => {
     expect(child.parentId).toBe(node.id);
     expect(child.fieldName).toBe('declaration');
     expect(child.hasSourceText).toBe(true);
+  });
+
+  it('conforms to the slice-783 backend capability report fixture', () => {
+    const fixture = readFixture<{ capability: BackendCapabilityFixture }>(
+      'diagnostics',
+      'slice-783-backend-capability-report',
+      'backend-capability-report.json'
+    );
+    const capability = backendCapability(fixture.capability);
+
+    expect(capability.backendRef).toEqual({ id: 'go-dst', family: 'native' });
+    expect(capability.language).toBe('go');
+    expect(capability.parserIdentity.name).toBe('github.com/dave/dst');
+    expect(capability.parseErrorBehavior).toBe('diagnostic_and_partial_tree');
+    expect(capability.renderStrategies[0]).toBe('source_fragment_reuse');
+    expect(capability.normalizedTreeSupport).toBe(true);
+    expect(capability.nativeNodeAccess).toBe(true);
   });
 
   it('conforms to the slice-19 adapter policy support fixture', () => {

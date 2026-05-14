@@ -62,6 +62,32 @@ export interface FeatureProfile {
   readonly supportedPolicies?: readonly PolicyReference[];
 }
 
+export interface ParserIdentity {
+  readonly name: string;
+  readonly version: string;
+  readonly implementation: string;
+}
+
+export interface LanguageVersion {
+  readonly version: string;
+  readonly dialect?: string;
+}
+
+export interface BackendCapability {
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly parserIdentity: ParserIdentity;
+  readonly languageVersion: LanguageVersion;
+  readonly parseErrorBehavior: string;
+  readonly sourceSpanSupport: string;
+  readonly sourceFragmentSupport: string;
+  readonly renderStrategies: readonly string[];
+  readonly semanticRoleSupport: string;
+  readonly normalizedTreeSupport: boolean;
+  readonly nativeNodeAccess: boolean;
+  readonly diagnostics: readonly string[];
+}
+
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
   readonly info: AdapterInfo;
   parse(request: ParserRequest): ParseResult<TAnalysis>;

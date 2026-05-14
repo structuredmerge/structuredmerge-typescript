@@ -3,6 +3,8 @@ export const packageName = '@structuredmerge/tree-haver';
 export type {
   AdapterInfo,
   AnalysisHandle,
+  BackendCapability,
+  BackendReference,
   BinaryDiagnostic,
   BinaryMergeReport,
   BinaryNestedDispatch,
@@ -10,7 +12,6 @@ export type {
   BinaryRawPayload,
   BinaryRenderPolicy,
   BinaryScalarValue,
-  BackendReference,
   ByteEditSpan,
   ByteRange,
   Diagnostic,
