@@ -105,6 +105,96 @@ export function renderReadmeFamilySection(
   return resolveTemplateTokens(templatePartial, replacements, config);
 }
 
+export function applyReadmeFamilySection(
+  templatePartial: string,
+  packageMetadata: Readonly<Record<string, unknown>>,
+  family: Readonly<Record<string, unknown>>,
+  destinationContent: string | null,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): { content: string; changed: boolean } {
+  const renderedSection = renderReadmeFamilySection(templatePartial, family, config).replace(/\n+$/u, '');
+  const baseContent =
+    destinationContent ??
+    `# ${stringField(packageMetadata.name)}\n\n${stringField(packageMetadata.summary)}\n`;
+  const content = replaceOrInsertMarkdownHeadingSection(
+    baseContent,
+    stringField(family.section_heading),
+    2,
+    renderedSection
+  );
+
+  return { content, changed: content !== baseContent };
+}
+
+function replaceOrInsertMarkdownHeadingSection(
+  content: string,
+  headingText: string,
+  headingLevel: number,
+  replacement: string
+): string {
+  const normalized = content.replace(/\n+$/u, '');
+  if (normalized === '') {
+    return `${replacement}\n`;
+  }
+
+  const lines = normalized.split('\n');
+  const headingPrefix = `${'#'.repeat(headingLevel)} `;
+  const headingIndex = lines.findIndex((line) => line.trim() === `${headingPrefix}${headingText}`);
+  if (headingIndex >= 0) {
+    let end = lines.length;
+    for (let index = headingIndex + 1; index < lines.length; index += 1) {
+      const level = markdownHeadingLevel(lines[index]);
+      if (level > 0 && level <= headingLevel) {
+        end = index;
+        break;
+      }
+    }
+    const outputLines = [
+      ...lines.slice(0, headingIndex),
+      ...replacement.split('\n'),
+      ...(end < lines.length && lines[end] !== '' ? [''] : []),
+      ...lines.slice(end)
+    ];
+    return `${outputLines.join('\n')}\n`;
+  }
+
+  const insertAt = readmeFamilySectionInsertIndex(lines);
+  const outputLines = [
+    ...lines.slice(0, insertAt),
+    ...(insertAt > 0 && lines[insertAt - 1] !== '' ? [''] : []),
+    ...replacement.split('\n'),
+    ...(insertAt < lines.length && lines[insertAt] !== '' ? [''] : []),
+    ...lines.slice(insertAt)
+  ];
+  return `${outputLines.join('\n')}\n`;
+}
+
+function markdownHeadingLevel(line: string): number {
+  const trimmed = line.trim();
+  const match = /^(#{1,6})\s/u.exec(trimmed);
+  return match ? match[1].length : 0;
+}
+
+function readmeFamilySectionInsertIndex(lines: readonly string[]): number {
+  let index = 0;
+  if (markdownHeadingLevel(lines[0] ?? '') === 1) {
+    index = 1;
+    while (index < lines.length && lines[index] === '') {
+      index += 1;
+    }
+  }
+  while (index < lines.length) {
+    if (lines[index] === '') {
+      while (index < lines.length && lines[index] === '') {
+        index += 1;
+      }
+      return index;
+    }
+    index += 1;
+  }
+  return lines.length;
+}
+
 export type DirectorySessionMode = 'plan' | 'apply' | 'reapply';
 
 export interface TemplateDirectorySessionReport {

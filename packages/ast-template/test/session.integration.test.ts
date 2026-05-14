@@ -74,6 +74,7 @@ import {
   reportDefaultAdapterCapabilitiesFromDirectories,
   importSessionInvocationEnvelope,
   reportTemplateDirectorySessionStatus,
+  applyReadmeFamilySection,
   readmeFamilyLanguageAliases,
   readmeFamilyTokenValues,
   renderReadmeFamilySection,
@@ -107,11 +108,18 @@ interface ReadmeFamilySectionTemplateContractFixture {
     expected_alternative_ids: string[];
   }>;
   metadata_case: {
+    package: Record<string, unknown>;
     family: Record<string, unknown>;
     expected_token_values: Record<string, string>;
   };
   template_partial: string;
   expected_rendered_partial: string;
+  readme_application_cases: Array<{
+    label: string;
+    destination_content: string | null;
+    expected_content: string;
+    changed: boolean;
+  }>;
 }
 
 describe('README family section template contract fixture', () => {
@@ -143,6 +151,17 @@ describe('README family section template contract fixture', () => {
     expect(renderReadmeFamilySection(fixture.template_partial, fixture.metadata_case.family)).toBe(
       fixture.expected_rendered_partial
     );
+
+    for (const testCase of fixture.readme_application_cases) {
+      const actual = applyReadmeFamilySection(
+        fixture.template_partial,
+        fixture.metadata_case.package,
+        fixture.metadata_case.family,
+        testCase.destination_content
+      );
+      expect(actual.content).toBe(testCase.expected_content);
+      expect(actual.changed).toBe(testCase.changed);
+    }
   });
 });
 
