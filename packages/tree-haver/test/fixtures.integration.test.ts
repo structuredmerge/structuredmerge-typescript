@@ -13,6 +13,8 @@ import type {
   BinaryScalarValue,
   ByteEditSpan,
   FeatureProfile,
+  NativeParserProvider,
+  NormalizedParseResult,
   NormalizedTreeNode,
   ParseErrorTolerance,
   ParserRequest,
@@ -274,6 +276,27 @@ interface ParseErrorToleranceFixture {
   readonly diagnostics: readonly string[];
 }
 
+interface NativeParserProviderFixture {
+  readonly id: string;
+  readonly family: string;
+  readonly language: string;
+  readonly operations: readonly string[];
+  readonly retains_native_tree: boolean;
+  readonly native_tree_visibility: string;
+  readonly metadata_policy: string;
+}
+
+interface NormalizedParseResultFixture {
+  readonly ok: boolean;
+  readonly backend_capability: BackendCapabilityFixture;
+  readonly root_id: string;
+  readonly nodes: readonly NormalizedTreeNodeFixture[];
+  readonly parse_error_tolerance: ParseErrorToleranceFixture;
+  readonly source_fragments_available: boolean;
+  readonly diagnostics: readonly string[];
+  readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -369,6 +392,31 @@ function parseErrorTolerance(fixture: ParseErrorToleranceFixture): ParseErrorTol
   };
 }
 
+function nativeParserProvider(fixture: NativeParserProviderFixture): NativeParserProvider {
+  return {
+    id: fixture.id,
+    family: fixture.family,
+    language: fixture.language,
+    operations: fixture.operations,
+    retainsNativeTree: fixture.retains_native_tree,
+    nativeTreeVisibility: fixture.native_tree_visibility,
+    metadataPolicy: fixture.metadata_policy
+  };
+}
+
+function normalizedParseResult(fixture: NormalizedParseResultFixture): NormalizedParseResult {
+  return {
+    ok: fixture.ok,
+    backendCapability: backendCapability(fixture.backend_capability),
+    rootId: fixture.root_id,
+    nodes: fixture.nodes.map(normalizedTreeNode),
+    parseErrorTolerance: parseErrorTolerance(fixture.parse_error_tolerance),
+    sourceFragmentsAvailable: fixture.source_fragments_available,
+    diagnostics: fixture.diagnostics,
+    metadata: fixture.metadata
+  };
+}
+
 describe('tree-haver shared fixtures', () => {
   it('conforms to the slice-06 parser request fixture', () => {
     const fixture = readFixture<ParserAdapterFixture>(...diagnosticsFixturePath('parser_request'));
@@ -423,6 +471,23 @@ describe('tree-haver shared fixtures', () => {
     expect(limited.hasSourceText).toBe(false);
     expect(limited.unsupportedFeatures[1]).toBe('source_fragment');
     expect(limited.metadata.psych?.location_support).toBe('line_column_only');
+  });
+
+  it('conforms to the slice-787 native parser adapter contract fixture', () => {
+    const fixture = readFixture<{
+      provider: NativeParserProviderFixture;
+      parse_result: NormalizedParseResultFixture;
+    }>('diagnostics', 'slice-787-native-parser-adapter-contract', 'native-parser-adapter-contract.json');
+    const provider = nativeParserProvider(fixture.provider);
+    const result = normalizedParseResult(fixture.parse_result);
+
+    expect(provider.id).toBe('go-dst');
+    expect(provider.retainsNativeTree).toBe(true);
+    expect(provider.nativeTreeVisibility).toBe('provider_internal');
+    expect(result.rootId).toBe(result.nodes[0]?.id);
+    expect(result.nodes[1]?.semanticRoles[1]).toBe('function');
+    expect(result.metadata.go_dst?.native_tree_visibility).toBe('provider_internal');
+    expect(result.sourceFragmentsAvailable).toBe(true);
   });
 
   it('conforms to the slice-783 backend capability report fixture', () => {

@@ -103,6 +103,27 @@ export interface ParseErrorTolerance {
   readonly diagnostics: readonly string[];
 }
 
+export interface NativeParserProvider {
+  readonly id: string;
+  readonly family: string;
+  readonly language: string;
+  readonly operations: readonly string[];
+  readonly retainsNativeTree: boolean;
+  readonly nativeTreeVisibility: string;
+  readonly metadataPolicy: string;
+}
+
+export interface NormalizedParseResult {
+  readonly ok: boolean;
+  readonly backendCapability: BackendCapability;
+  readonly rootId: string;
+  readonly nodes: readonly NormalizedTreeNode[];
+  readonly parseErrorTolerance: ParseErrorTolerance;
+  readonly sourceFragmentsAvailable: boolean;
+  readonly diagnostics: readonly string[];
+  readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
   readonly info: AdapterInfo;
   parse(request: ParserRequest): ParseResult<TAnalysis>;

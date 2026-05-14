@@ -23,6 +23,8 @@ export type {
   KaitaiTreeNode,
   LanguagePackAnalysis,
   LanguagePackProcessAnalysis,
+  NativeParserProvider,
+  NormalizedParseResult,
   NodeRole,
   NormalizedTreeNode,
   ParseErrorTolerance,
