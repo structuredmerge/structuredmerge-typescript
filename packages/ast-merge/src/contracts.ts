@@ -573,6 +573,32 @@ export interface InconsistencyReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface MergeIRComparisonCase {
+  readonly case_id: string;
+  readonly family: string;
+  readonly scenario: string;
+  readonly owner_path_outcome: string;
+  readonly merge_ir_outcome: string;
+  readonly merge_ir_advantage: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface MergeIRComparisonSummary {
+  readonly owner_path_wins: number;
+  readonly merge_ir_wins: number;
+  readonly neutral: number;
+  readonly defer: number;
+  readonly recommendation: string;
+}
+
+export interface MergeIRComparisonReport {
+  readonly comparison_id: string;
+  readonly baseline: string;
+  readonly prototype: string;
+  readonly cases: readonly MergeIRComparisonCase[];
+  readonly summary: MergeIRComparisonSummary;
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

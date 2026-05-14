@@ -41,6 +41,7 @@ import type {
   FamilyFeatureProfile,
   InconsistencyReport,
   MergeIR,
+  MergeIRComparisonReport,
   PairwiseMatching,
   PCS,
   RawMerge,
@@ -5709,6 +5710,25 @@ describe('ast-merge shared fixtures', () => {
       fixture.expected.blocking_count
     );
     expect(report.inconsistencies[1]?.change_ids[1]).toBe('right-delete-greet');
+  });
+
+  it('conforms to the slice-796 merge IR comparison fixture', () => {
+    const fixture = readFixture<{
+      comparison: MergeIRComparisonReport;
+      expected: {
+        case_count: number;
+        families: readonly string[];
+        merge_ir_wins: number;
+        recommendation: string;
+      };
+    }>('diagnostics', 'slice-796-merge-ir-comparison', 'merge-ir-comparison.json');
+    const report = fixture.comparison;
+
+    expect(report.cases).toHaveLength(fixture.expected.case_count);
+    expect(report.cases.map((testCase) => testCase.family)).toEqual(fixture.expected.families);
+    expect(report.summary.merge_ir_wins).toBe(fixture.expected.merge_ir_wins);
+    expect(report.summary.recommendation).toBe(fixture.expected.recommendation);
+    expect(report.cases[4]?.merge_ir_advantage).toBe('defer');
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
