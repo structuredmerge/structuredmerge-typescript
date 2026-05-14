@@ -115,6 +115,62 @@ export interface CompactRuleset {
   readonly comments: readonly string[];
 }
 
+export interface CompactRulesetBackendDeclaration {
+  readonly backend: string;
+  readonly support: string;
+}
+
+export interface CompactRulesetNodeRole {
+  readonly selector: string;
+  readonly role: string;
+}
+
+export interface CompactRulesetAtomicNode {
+  readonly selector: string;
+  readonly atomic: boolean;
+}
+
+export interface CompactRulesetChildGroup {
+  readonly parent_selector: string;
+  readonly name: string;
+  readonly policy: string;
+}
+
+export interface CompactRulesetNamedValue {
+  readonly name: string;
+  readonly value: string;
+}
+
+export interface CompactRulesetSurfaceDeclaration {
+  readonly name: string;
+  readonly selector: string;
+}
+
+export interface CompactRulesetDelegateDeclaration {
+  readonly surface: string;
+  readonly policy: string;
+}
+
+export interface CompactRulesetProfile {
+  readonly format: string;
+  readonly owners: string;
+  readonly match: string;
+  readonly read: string;
+  readonly attach: string;
+  readonly comment_style?: string;
+  readonly render?: string;
+  readonly render_strategy?: string;
+  readonly backends: readonly CompactRulesetBackendDeclaration[];
+  readonly node_roles: readonly CompactRulesetNodeRole[];
+  readonly atomic_nodes: readonly CompactRulesetAtomicNode[];
+  readonly child_groups: readonly CompactRulesetChildGroup[];
+  readonly capabilities: readonly CompactRulesetNamedValue[];
+  readonly logical_owners: readonly CompactRulesetNamedValue[];
+  readonly repairs: readonly CompactRulesetNamedValue[];
+  readonly surfaces: readonly CompactRulesetSurfaceDeclaration[];
+  readonly delegates: readonly CompactRulesetDelegateDeclaration[];
+}
+
 const compactRulesetIdentifierPattern = /^[A-Za-z][A-Za-z0-9_.-]*$/;
 const compactRulesetTokenPattern = /^[\x21\x24-\x7e]+$/;
 const compactRulesetRequiredDirectives = ['format', 'owners', 'match', 'read', 'attach'] as const;
@@ -249,6 +305,97 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
     ? { ok: true, diagnostics: [], analysis: { ...ruleset, directives, comments }, policies: [] }
     : { ok: false, diagnostics, policies: [] };
 }
+
+export function compactRulesetFeatureProfile(ruleset: CompactRuleset): CompactRulesetProfile {
+  const profile: MutableCompactRulesetProfile = {
+    format: '',
+    owners: '',
+    match: '',
+    read: '',
+    attach: '',
+    backends: [],
+    node_roles: [],
+    atomic_nodes: [],
+    child_groups: [],
+    capabilities: [],
+    logical_owners: [],
+    repairs: [],
+    surfaces: [],
+    delegates: []
+  };
+
+  for (const directive of ruleset.directives) {
+    const args = directive.arguments;
+    if (args.length === 0) continue;
+    switch (directive.name) {
+      case 'format':
+        profile.format = args[0];
+        break;
+      case 'owners':
+        profile.owners = args[0];
+        break;
+      case 'match':
+        profile.match = args[0];
+        break;
+      case 'read':
+        profile.read = args[0];
+        break;
+      case 'attach':
+        profile.attach = args[0];
+        break;
+      case 'comment_style':
+        profile.comment_style = args[0];
+        break;
+      case 'render':
+        profile.render = args[0];
+        break;
+      case 'render_strategy':
+        profile.render_strategy = args[0];
+        break;
+      case 'backend':
+        if (args.length > 1) profile.backends.push({ backend: args[0], support: args[1] });
+        break;
+      case 'node_role':
+        if (args.length > 1) profile.node_roles.push({ selector: args[0], role: args[1] });
+        break;
+      case 'atomic':
+        if (args.length > 1) profile.atomic_nodes.push({ selector: args[0], atomic: args[1] === 'true' });
+        break;
+      case 'child_group':
+        if (args.length > 2) {
+          profile.child_groups.push({
+            parent_selector: args[0],
+            name: args[1],
+            policy: args[2]
+          });
+        }
+        break;
+      case 'capability':
+        if (args.length > 1) profile.capabilities.push({ name: args[0], value: args[1] });
+        break;
+      case 'logical_owner':
+        if (args.length > 1) profile.logical_owners.push({ name: args[0], value: args[1] });
+        break;
+      case 'repair':
+        if (args.length > 1) profile.repairs.push({ name: args[0], value: args[1] });
+        break;
+      case 'surface':
+        if (args.length > 1) profile.surfaces.push({ name: args[0], selector: args[1] });
+        break;
+      case 'delegate':
+        if (args.length > 1) profile.delegates.push({ surface: args[0], policy: args[1] });
+        break;
+    }
+  }
+
+  return profile;
+}
+
+type MutableCompactRulesetProfile = {
+  -readonly [K in keyof CompactRulesetProfile]: CompactRulesetProfile[K] extends readonly (infer T)[]
+    ? T[]
+    : CompactRulesetProfile[K];
+};
 
 function compactRulesetKnownDirective(name: string): boolean {
   return (
