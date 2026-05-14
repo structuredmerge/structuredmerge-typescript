@@ -538,6 +538,25 @@ export interface ChangeSet {
   readonly diagnostics: readonly string[];
 }
 
+export interface RawMergeChange {
+  readonly change_id: string;
+  readonly source_change_set_id: string;
+  readonly side: string;
+  readonly kind: string;
+  readonly class_id: string;
+  readonly parent_class_id: string;
+  readonly predecessor_class_id: string | null;
+  readonly successor_class_id: string | null;
+  readonly content_hash: string;
+}
+
+export interface RawMerge {
+  readonly raw_merge_id: string;
+  readonly input_change_set_ids: readonly string[];
+  readonly changes: readonly RawMergeChange[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

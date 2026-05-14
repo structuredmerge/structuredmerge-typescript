@@ -42,6 +42,7 @@ import type {
   MergeIR,
   PairwiseMatching,
   PCS,
+  RawMerge,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -5657,6 +5658,35 @@ describe('ast-merge shared fixtures', () => {
     expect(diagnosticCount).toBe(fixture.expected.diagnostic_count);
     expect(fixture.pcs.constraints[2]?.predecessor_class_id).toBe('class-import-strings');
     expect(fixture.change_sets[1]?.changes[1]?.kind).toBe('delete');
+  });
+
+  it('conforms to the slice-794 raw merge change-set union fixture', () => {
+    const fixture = readFixture<{
+      raw_merge: RawMerge;
+      expected: {
+        raw_change_count: number;
+        input_change_set_count: number;
+        sides: readonly string[];
+        conflicting_class_candidates: readonly string[];
+      };
+    }>('diagnostics', 'slice-794-raw-merge-change-set-union', 'raw-merge-change-set-union.json');
+    const sides = fixture.raw_merge.changes.reduce<string[]>((memo, change) => {
+      if (!memo.includes(change.side)) memo.push(change.side);
+      return memo;
+    }, []);
+    const classDeclGreetCount = fixture.raw_merge.changes.filter(
+      (change) => change.class_id === 'class-decl-greet'
+    ).length;
+
+    expect(fixture.raw_merge.changes).toHaveLength(fixture.expected.raw_change_count);
+    expect(fixture.raw_merge.input_change_set_ids).toHaveLength(
+      fixture.expected.input_change_set_count
+    );
+    expect(sides).toEqual(fixture.expected.sides);
+    expect(classDeclGreetCount).toBe(2);
+    expect(fixture.raw_merge.diagnostics[0]).toBe(
+      'raw merge intentionally preserves both sides before inconsistency detection'
+    );
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

@@ -61,6 +61,8 @@ export type {
   PairwiseNodeMatch,
   PCS,
   PCSConstraint,
+  RawMerge,
+  RawMergeChange,
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
