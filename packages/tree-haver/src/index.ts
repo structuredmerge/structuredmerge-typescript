@@ -27,6 +27,8 @@ export type {
   NormalizedParseResult,
   NodeRole,
   NormalizedTreeNode,
+  OrderedSiblingEdge,
+  OrderedTreePrimitives,
   ParseErrorTolerance,
   ParserAdapter,
   ParserDiagnostics,

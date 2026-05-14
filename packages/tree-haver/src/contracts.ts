@@ -138,6 +138,20 @@ export interface TreeHaverProfile {
   readonly diagnostics: readonly string[];
 }
 
+export interface OrderedSiblingEdge {
+  readonly parentId: string;
+  readonly nodeId: string;
+  readonly previousSiblingId?: string;
+  readonly nextSiblingId?: string;
+}
+
+export interface OrderedTreePrimitives {
+  readonly rootId: string;
+  readonly childOrder: Readonly<Record<string, readonly string[]>>;
+  readonly siblingEdges: readonly OrderedSiblingEdge[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
   readonly info: AdapterInfo;
   parse(request: ParserRequest): ParseResult<TAnalysis>;

@@ -16,6 +16,7 @@ import type {
   NativeParserProvider,
   NormalizedParseResult,
   NormalizedTreeNode,
+  OrderedTreePrimitives,
   ParseErrorTolerance,
   ParserRequest,
   PolicyReference,
@@ -312,6 +313,18 @@ interface TreeHaverProfileFixture {
   readonly diagnostics: readonly string[];
 }
 
+interface OrderedTreePrimitivesFixture {
+  readonly root_id: string;
+  readonly child_order: Readonly<Record<string, readonly string[]>>;
+  readonly sibling_edges: readonly {
+    readonly parent_id: string;
+    readonly node_id: string;
+    readonly previous_sibling_id: string | null;
+    readonly next_sibling_id: string | null;
+  }[];
+  readonly diagnostics: readonly string[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -448,6 +461,20 @@ function treeHaverProfile(fixture: TreeHaverProfileFixture): TreeHaverProfile {
   };
 }
 
+function orderedTreePrimitives(fixture: OrderedTreePrimitivesFixture): OrderedTreePrimitives {
+  return {
+    rootId: fixture.root_id,
+    childOrder: fixture.child_order,
+    siblingEdges: fixture.sibling_edges.map((edge) => ({
+      parentId: edge.parent_id,
+      nodeId: edge.node_id,
+      previousSiblingId: edge.previous_sibling_id ?? undefined,
+      nextSiblingId: edge.next_sibling_id ?? undefined
+    })),
+    diagnostics: fixture.diagnostics
+  };
+}
+
 describe('tree-haver shared fixtures', () => {
   it('conforms to the slice-06 parser request fixture', () => {
     const fixture = readFixture<ParserAdapterFixture>(...diagnosticsFixturePath('parser_request'));
@@ -508,7 +535,11 @@ describe('tree-haver shared fixtures', () => {
     const fixture = readFixture<{
       provider: NativeParserProviderFixture;
       parse_result: NormalizedParseResultFixture;
-    }>('diagnostics', 'slice-787-native-parser-adapter-contract', 'native-parser-adapter-contract.json');
+    }>(
+      'diagnostics',
+      'slice-787-native-parser-adapter-contract',
+      'native-parser-adapter-contract.json'
+    );
     const provider = nativeParserProvider(fixture.provider);
     const result = normalizedParseResult(fixture.parse_result);
 
@@ -538,6 +569,27 @@ describe('tree-haver shared fixtures', () => {
     expect(profile.fixtureSlices[0]).toBe('slice-782-normalized-tree-node');
   });
 
+  it('conforms to the slice-789 ordered tree primitives fixture', () => {
+    const fixture = readFixture<{
+      root_id: string;
+      ordered_tree: OrderedTreePrimitivesFixture;
+      forbidden_merge_terms: readonly string[];
+    }>('diagnostics', 'slice-789-ordered-tree-primitives', 'ordered-tree-primitives.json');
+    const ordered = orderedTreePrimitives(fixture.ordered_tree);
+
+    for (const diagnostic of ordered.diagnostics) {
+      for (const term of fixture.forbidden_merge_terms) {
+        expect(diagnostic.toLowerCase()).not.toContain(term.toLowerCase());
+      }
+    }
+
+    expect(ordered.rootId).toBe(fixture.root_id);
+    expect(ordered.childOrder.file?.[0]).toBe('imports');
+    expect(ordered.childOrder.imports?.[1]).toBe('import-strings');
+    expect(ordered.siblingEdges[2]?.previousSiblingId).toBeUndefined();
+    expect(ordered.siblingEdges[2]?.nextSiblingId).toBe('import-strings');
+  });
+
   it('conforms to the slice-783 backend capability report fixture', () => {
     const fixture = readFixture<{ capability: BackendCapabilityFixture }>(
       'diagnostics',
@@ -561,7 +613,11 @@ describe('tree-haver shared fixtures', () => {
       'slice-784-source-fragment-extraction',
       'source-fragment-extraction.json'
     );
-    const fragment = extractSourceFragment(fixture.source, sourceSpan(fixture.span), fixture.strategy);
+    const fragment = extractSourceFragment(
+      fixture.source,
+      sourceSpan(fixture.span),
+      fixture.strategy
+    );
 
     expect(fragment.text).toBe(fixture.fragment.text);
     expect(fragment.available).toBe(fixture.fragment.available);
