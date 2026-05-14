@@ -125,9 +125,14 @@ const compactRulesetSingletonDirectives = new Set([
   'read',
   'attach',
   'comment_style',
-  'render'
+  'render',
+  'render_strategy'
 ]);
 const compactRulesetRepeatableKeyedDirectives = new Set([
+  'backend',
+  'node_role',
+  'atomic',
+  'child_group',
   'capability',
   'logical_owner',
   'repair',
@@ -206,7 +211,7 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
       );
     }
     if (compactRulesetRepeatableKeyedDirectives.has(name)) {
-      const key = `${name}\u0000${args[0]}`;
+      const key = compactRulesetRepeatableKey(name, args);
       if (seenRepeatableKeys.has(key)) {
         diagnostics.push(
           compactRulesetDiagnostic(
@@ -249,6 +254,13 @@ function compactRulesetKnownDirective(name: string): boolean {
   return (
     compactRulesetSingletonDirectives.has(name) || compactRulesetRepeatableKeyedDirectives.has(name)
   );
+}
+
+function compactRulesetRepeatableKey(name: string, args: readonly string[]): string {
+  if (name === 'child_group' && args.length > 1) {
+    return `${name}\u0000${args[0]}\u0000${args[1]}`;
+  }
+  return `${name}\u0000${args[0]}`;
 }
 
 function compactRulesetDiagnostic(message: string, path?: string): Diagnostic {
