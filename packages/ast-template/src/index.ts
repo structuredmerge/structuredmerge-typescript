@@ -11,13 +11,99 @@ import {
   DEFAULT_TEMPLATE_TOKEN_CONFIG,
   applyTemplateTreeExecutionToDirectory,
   planTemplateTreeExecutionFromDirectories,
-  reportTemplateDirectoryRunner
+  reportTemplateDirectoryRunner,
+  resolveTemplateTokens
 } from '@structuredmerge/ast-merge';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 
 export const packageName = '@structuredmerge/ast-template';
+
+export const README_FAMILY_LANGUAGE_ORDER = ['go', 'ruby', 'rust', 'typescript'] as const;
+
+const README_FAMILY_LANGUAGE_LABELS: Readonly<Record<string, string>> = {
+  go: 'Go',
+  ruby: 'Ruby',
+  rust: 'Rust',
+  typescript: 'TypeScript'
+};
+
+function readmeFamilyLabel(language: string): string {
+  return README_FAMILY_LANGUAGE_LABELS[language] ?? language;
+}
+
+function stringField(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function recordField(value: unknown): Readonly<Record<string, unknown>> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : {};
+}
+
+export function readmeFamilyLanguageAliases(
+  selfLanguage: string,
+  languageOrder: readonly string[] = README_FAMILY_LANGUAGE_ORDER
+): Readonly<Record<string, string>> {
+  const aliases: Record<string, string> = {
+    SELF_LANG: readmeFamilyLabel(selfLanguage),
+    SELF_LANG_ID: selfLanguage
+  };
+  languageOrder
+    .filter((language) => language !== selfLanguage)
+    .forEach((language, index) => {
+      const prefix = `IMP_LANG${index + 1}`;
+      aliases[prefix] = readmeFamilyLabel(language);
+      aliases[`${prefix}_ID`] = language;
+    });
+
+  return aliases;
+}
+
+export function readmeFamilyTokenValues(
+  family: Readonly<Record<string, unknown>>
+): Readonly<Record<string, string>> {
+  const self = recordField(family.self);
+  const selfId = stringField(self.id);
+  const implementations = new Map<string, Readonly<Record<string, unknown>>>();
+  const rawImplementations = Array.isArray(family.implementations) ? family.implementations : [];
+  for (const rawImplementation of rawImplementations) {
+    const implementation = recordField(rawImplementation);
+    implementations.set(stringField(implementation.id), implementation);
+  }
+
+  const tokens: Record<string, string> = {
+    ...readmeFamilyLanguageAliases(selfId),
+    FAMILY_SECTION_HEADING: stringField(family.section_heading),
+    FAMILY_DESCRIPTION: stringField(family.description),
+    SELF_PACKAGE_ROOT: stringField(self.package_root),
+    SELF_PACKAGE_MANAGER: stringField(self.package_manager)
+  };
+
+  README_FAMILY_LANGUAGE_ORDER.filter((language) => language !== selfId).forEach((language, index) => {
+    const implementation = implementations.get(language) ?? {};
+    const prefix = `IMP_LANG${index + 1}`;
+    tokens[`${prefix}_PACKAGE_ROOT`] = stringField(implementation.package_root);
+    tokens[`${prefix}_PACKAGE_MANAGER`] = stringField(implementation.package_manager);
+  });
+
+  return tokens;
+}
+
+export function renderReadmeFamilySection(
+  templatePartial: string,
+  family: Readonly<Record<string, unknown>>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): string {
+  const replacements: Record<string, string> = {};
+  for (const [key, value] of Object.entries(readmeFamilyTokenValues(family))) {
+    replacements[`SM|${key}`] = value;
+  }
+
+  return resolveTemplateTokens(templatePartial, replacements, config);
+}
 
 export type DirectorySessionMode = 'plan' | 'apply' | 'reapply';
 

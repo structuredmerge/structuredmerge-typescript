@@ -74,6 +74,9 @@ import {
   reportDefaultAdapterCapabilitiesFromDirectories,
   importSessionInvocationEnvelope,
   reportTemplateDirectorySessionStatus,
+  readmeFamilyLanguageAliases,
+  readmeFamilyTokenValues,
+  renderReadmeFamilySection,
   reapplyTemplateDirectorySessionToDirectory,
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
@@ -95,6 +98,53 @@ interface SessionFixtureSection {
   replacements: Record<string, string>;
   expected: unknown;
 }
+
+interface ReadmeFamilySectionTemplateContractFixture {
+  canonical_language_order: string[];
+  alias_derivation_cases: Array<{
+    self: string;
+    expected_aliases: Record<string, string>;
+    expected_alternative_ids: string[];
+  }>;
+  metadata_case: {
+    family: Record<string, unknown>;
+    expected_token_values: Record<string, string>;
+  };
+  template_partial: string;
+  expected_rendered_partial: string;
+}
+
+describe('README family section template contract fixture', () => {
+  it('conforms to the shared fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-738-readme-family-section-template-contract',
+      'readme-family-section-template-contract.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as ReadmeFamilySectionTemplateContractFixture;
+
+    for (const testCase of fixture.alias_derivation_cases) {
+      const aliases = readmeFamilyLanguageAliases(testCase.self, fixture.canonical_language_order);
+      for (const [key, expected] of Object.entries(testCase.expected_aliases)) {
+        expect(aliases[key]).toBe(expected);
+      }
+      expect([aliases.IMP_LANG1_ID, aliases.IMP_LANG2_ID, aliases.IMP_LANG3_ID]).toEqual(
+        testCase.expected_alternative_ids
+      );
+    }
+
+    const tokenValues = readmeFamilyTokenValues(fixture.metadata_case.family);
+    for (const [key, expected] of Object.entries(fixture.metadata_case.expected_token_values)) {
+      expect(tokenValues[key]).toBe(expected);
+    }
+    expect(renderReadmeFamilySection(fixture.template_partial, fixture.metadata_case.family)).toBe(
+      fixture.expected_rendered_partial
+    );
+  });
+});
 
 describe('template directory session report fixture', () => {
   it('conforms to the shared fixture', () => {
