@@ -273,7 +273,9 @@ describe('kettle-nodule thin vertical slice', () => {
       '## 🔐 Security\n\nSee [SECURITY.md](SECURITY.md).',
       '## 🦷 FLOSS Funding',
       'pnpm add @acme/widget',
-      'https://logos.galtzo.com/assets/images/tree-sitter/tree-sitter/avatar-192px.svg'
+      'https://logos.galtzo.com/assets/images/tree-sitter/tree-sitter/avatar-192px.svg',
+      'StructuredMerge packages provide fixture-backed merge behavior',
+      '| tree-sitter-language-pack | Go, Ruby, Rust, TypeScript | markdown, toml, yaml, source |'
     ]) {
       expect(plan.finalContent).toContain(snippet);
     }
