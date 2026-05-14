@@ -14,6 +14,7 @@ import type {
   ByteEditSpan,
   FeatureProfile,
   NormalizedTreeNode,
+  ParseErrorTolerance,
   ParserRequest,
   PolicyReference,
   SourceSpan,
@@ -255,6 +256,19 @@ interface SourceFragmentExtractionFixture {
   };
 }
 
+interface ParseErrorToleranceFixture {
+  readonly backend_ref: BackendReference;
+  readonly language: string;
+  readonly behavior: string;
+  readonly tolerates_errors: boolean;
+  readonly error_nodes: Array<{
+    readonly kind: string;
+    readonly span: SourceFragmentExtractionFixture['span'];
+    readonly message: string;
+  }>;
+  readonly diagnostics: readonly string[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -330,6 +344,21 @@ function sourceSpan(fixture: SourceFragmentExtractionFixture['span']): SourceSpa
   };
 }
 
+function parseErrorTolerance(fixture: ParseErrorToleranceFixture): ParseErrorTolerance {
+  return {
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    behavior: fixture.behavior,
+    toleratesErrors: fixture.tolerates_errors,
+    errorNodes: fixture.error_nodes.map((node) => ({
+      kind: node.kind,
+      span: sourceSpan(node.span),
+      message: node.message
+    })),
+    diagnostics: fixture.diagnostics
+  };
+}
+
 describe('tree-haver shared fixtures', () => {
   it('conforms to the slice-06 parser request fixture', () => {
     const fixture = readFixture<ParserAdapterFixture>(...diagnosticsFixturePath('parser_request'));
@@ -400,6 +429,21 @@ describe('tree-haver shared fixtures', () => {
     expect(fragment.strategy).toBe(fixture.fragment.strategy);
     expect(fragment.byteLength).toBe(fixture.fragment.byte_length);
     expect(fragment.diagnostics).toHaveLength(fixture.fragment.diagnostics.length);
+  });
+
+  it('conforms to the slice-785 parse error tolerance fixture', () => {
+    const fixture = readFixture<{ parse_error_tolerance: ParseErrorToleranceFixture }>(
+      'diagnostics',
+      'slice-785-parse-error-tolerance',
+      'parse-error-tolerance.json'
+    );
+    const tolerance = parseErrorTolerance(fixture.parse_error_tolerance);
+
+    expect(tolerance.backendRef.id).toBe('tree-sitter-go');
+    expect(tolerance.behavior).toBe('diagnostic_and_partial_tree');
+    expect(tolerance.toleratesErrors).toBe(true);
+    expect(tolerance.errorNodes[0]?.span.range.startByte).toBe(27);
+    expect(tolerance.diagnostics[0]).toBe('partial tree contains parser error nodes');
   });
 
   it('conforms to the slice-19 adapter policy support fixture', () => {

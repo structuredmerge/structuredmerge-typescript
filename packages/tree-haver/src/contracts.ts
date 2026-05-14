@@ -88,6 +88,21 @@ export interface BackendCapability {
   readonly diagnostics: readonly string[];
 }
 
+export interface ParseErrorNode {
+  readonly kind: string;
+  readonly span: SourceSpan;
+  readonly message: string;
+}
+
+export interface ParseErrorTolerance {
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly behavior: string;
+  readonly toleratesErrors: boolean;
+  readonly errorNodes: readonly ParseErrorNode[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
   readonly info: AdapterInfo;
   parse(request: ParserRequest): ParseResult<TAnalysis>;

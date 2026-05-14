@@ -25,6 +25,7 @@ export type {
   LanguagePackProcessAnalysis,
   NodeRole,
   NormalizedTreeNode,
+  ParseErrorTolerance,
   ParserAdapter,
   ParserDiagnostics,
   ParserRequest,
