@@ -36,6 +36,7 @@ import type {
   DiagnosticCategory,
   DiagnosticSeverity,
   DiscoveredSurface,
+  ClassMappingReport,
   FamilyFeatureProfile,
   MergeIR,
   PairwiseMatching,
@@ -5605,6 +5606,28 @@ describe('ast-merge shared fixtures', () => {
     expect(matchings[0]?.unmatched_to[0]).toBe('left-import-os');
     expect(matchings[1]?.unmatched_from[0]).toBe('base-decl-greet');
     expect(matchings[2]?.matches[1]?.diagnostics[0]).toBe('sibling position changed');
+  });
+
+  it('conforms to the slice-792 class mapping fixture', () => {
+    const fixture = readFixture<{
+      class_mapping: ClassMappingReport;
+      expected: {
+        class_count: number;
+        diagnostic_categories: readonly string[];
+        conflicted_class_ids: readonly string[];
+      };
+    }>('diagnostics', 'slice-792-class-mapping', 'class-mapping.json');
+    const report = fixture.class_mapping;
+
+    expect(report.node_classes).toHaveLength(fixture.expected.class_count);
+    expect(report.diagnostics.map((diagnostic) => diagnostic.category)).toEqual(
+      fixture.expected.diagnostic_categories
+    );
+    expect(report.diagnostics.map((diagnostic) => diagnostic.class_id)).toEqual(
+      fixture.expected.conflicted_class_ids
+    );
+    expect(report.node_classes[2]?.node_ids.right).toBeUndefined();
+    expect(report.diagnostics[1]?.category).toBe('delete_edit_disagreement');
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

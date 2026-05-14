@@ -482,6 +482,29 @@ export interface PairwiseMatching {
   readonly unmatched_to: readonly string[];
 }
 
+export interface ClassMappingNodeClass {
+  readonly class_id: string;
+  readonly signature: string;
+  readonly node_ids: Readonly<Record<string, string>>;
+  readonly matching_ids: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface ClassMappingDiagnostic {
+  readonly severity: string;
+  readonly category: string;
+  readonly class_id: string;
+  readonly message: string;
+  readonly matching_ids: readonly string[];
+}
+
+export interface ClassMappingReport {
+  readonly mapping_id: string;
+  readonly source_matching_ids: readonly string[];
+  readonly node_classes: readonly ClassMappingNodeClass[];
+  readonly diagnostics: readonly ClassMappingDiagnostic[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

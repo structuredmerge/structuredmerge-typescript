@@ -1,6 +1,9 @@
 export const packageName = '@structuredmerge/ast-merge';
 
 export type {
+  ClassMappingDiagnostic,
+  ClassMappingNodeClass,
+  ClassMappingReport,
   ConformanceCaseRef,
   ConformanceCaseRun,
   ConformanceCaseRequirements,
