@@ -149,10 +149,61 @@ export interface ReadmeFamilyPackageReport {
   entries: ReadmeFamilyPackageReportEntry[];
 }
 
+export interface ReadmeFamilySectionCommand {
+  profile_name: string;
+  mode?: DirectorySessionMode;
+  root: string;
+  template_partial: string;
+  packages: readonly ReadmeFamilyPackage[];
+}
+
+export interface ReadmeFamilySectionCommandReport {
+  profile_name: string;
+  mode: DirectorySessionMode;
+  runner: ReadmeFamilyPackageReport;
+}
+
 export function applyReadmeFamilySectionsToPackageDirectories(
   root: string,
   templatePartial: string,
   packages: readonly ReadmeFamilyPackage[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilyPackageReport {
+  return runReadmeFamilySectionsForPackageDirectories(root, templatePartial, packages, true, config);
+}
+
+export function planReadmeFamilySectionsForPackageDirectories(
+  root: string,
+  templatePartial: string,
+  packages: readonly ReadmeFamilyPackage[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilyPackageReport {
+  return runReadmeFamilySectionsForPackageDirectories(root, templatePartial, packages, false, config);
+}
+
+export function runReadmeFamilySectionCommand(
+  command: ReadmeFamilySectionCommand,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilySectionCommandReport {
+  const mode = command.mode ?? 'plan';
+  return {
+    profile_name: command.profile_name,
+    mode,
+    runner: runReadmeFamilySectionsForPackageDirectories(
+      command.root,
+      command.template_partial,
+      command.packages,
+      mode === 'apply' || mode === 'reapply',
+      config
+    )
+  };
+}
+
+function runReadmeFamilySectionsForPackageDirectories(
+  root: string,
+  templatePartial: string,
+  packages: readonly ReadmeFamilyPackage[],
+  writeChanges: boolean,
   config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
 ): ReadmeFamilyPackageReport {
   const report: ReadmeFamilyPackageReport = {
@@ -184,8 +235,10 @@ export function applyReadmeFamilySectionsToPackageDirectories(
       config
     );
     if (application.changed) {
-      mkdirSync(path.dirname(readmePath), { recursive: true });
-      writeFileSync(readmePath, application.content);
+      if (writeChanges) {
+        mkdirSync(path.dirname(readmePath), { recursive: true });
+        writeFileSync(readmePath, application.content);
+      }
       report.changed_count += 1;
       if (created) {
         report.created_count += 1;

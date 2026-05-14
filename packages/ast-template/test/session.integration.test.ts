@@ -79,6 +79,7 @@ import {
   readmeFamilyLanguageAliases,
   readmeFamilyTokenValues,
   renderReadmeFamilySection,
+  runReadmeFamilySectionCommand,
   reapplyTemplateDirectorySessionToDirectory,
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
@@ -196,6 +197,16 @@ describe('README family section template contract fixture', () => {
       fixture.package_directory_case.packages
     );
     expect(report).toEqual(fixture.package_directory_case.expected_report);
+    const commandReport = runReadmeFamilySectionCommand({
+      profile_name: 'update-readme-family-section',
+      mode: 'plan',
+      root: tempRoot,
+      template_partial: fixture.template_partial,
+      packages: fixture.package_directory_case.packages
+    });
+    expect(commandReport.profile_name).toBe('update-readme-family-section');
+    expect(commandReport.mode).toBe('plan');
+    expect(commandReport.runner.changed_count).toBe(0);
     for (const packageCase of fixture.package_directory_case.packages) {
       const readmePath = path.join(tempRoot, ...packageCase.readme_path.split('/'));
       expect(readFileSync(readmePath, 'utf8')).toBe(packageCase.expected_content);
