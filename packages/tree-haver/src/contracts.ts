@@ -154,6 +154,15 @@ export interface NormalizedTreeNode {
   readonly sourceFragment: string;
 }
 
+export interface SourceFragment {
+  readonly text: string;
+  readonly span: SourceSpan;
+  readonly available: boolean;
+  readonly strategy: string;
+  readonly byteLength: number;
+  readonly diagnostics: readonly string[];
+}
+
 export function nodeRoles(): readonly NodeRole[] {
   return [
     'structural',
@@ -317,6 +326,34 @@ export function sliceByteRange(source: string, range: ByteRange): string {
   }
 
   return sourceBytes.subarray(range.startByte, range.endByte).toString('utf8');
+}
+
+export function extractSourceFragment(
+  source: string,
+  span: SourceSpan,
+  strategy: string
+): SourceFragment {
+  try {
+    const text = sliceByteRange(source, span.range);
+
+    return {
+      text,
+      span,
+      available: true,
+      strategy,
+      byteLength: Buffer.from(text, 'utf8').length,
+      diagnostics: []
+    };
+  } catch (error) {
+    return {
+      text: '',
+      span,
+      available: false,
+      strategy,
+      byteLength: 0,
+      diagnostics: [error instanceof Error ? error.message : String(error)]
+    };
+  }
 }
 
 export function byteOffsetForPoint(source: string, point: SourcePoint): number {

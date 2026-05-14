@@ -16,6 +16,7 @@ import type {
   NormalizedTreeNode,
   ParserRequest,
   PolicyReference,
+  SourceSpan,
   ZipUnsafeEntry
 } from '../src/index';
 import { processWithLanguagePack } from '../src/index';
@@ -28,6 +29,7 @@ import {
   byteRangeLength,
   byteRangeOverlaps,
   currentBackendId,
+  extractSourceFragment,
   kaitaiAdapterInfo,
   kaitaiFeatureProfile,
   KAITAI_STRUCT_BACKEND,
@@ -236,6 +238,23 @@ interface BackendCapabilityFixture {
   readonly diagnostics: readonly string[];
 }
 
+interface SourceFragmentExtractionFixture {
+  readonly source: string;
+  readonly strategy: string;
+  readonly span: {
+    readonly range: { readonly start_byte: number; readonly end_byte: number };
+    readonly start_point: { readonly row: number; readonly column: number };
+    readonly end_point: { readonly row: number; readonly column: number };
+  };
+  readonly fragment: {
+    readonly text: string;
+    readonly available: boolean;
+    readonly strategy: string;
+    readonly byte_length: number;
+    readonly diagnostics: readonly string[];
+  };
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -300,6 +319,17 @@ function backendCapability(fixture: BackendCapabilityFixture): BackendCapability
   };
 }
 
+function sourceSpan(fixture: SourceFragmentExtractionFixture['span']): SourceSpan {
+  return {
+    range: {
+      startByte: fixture.range.start_byte,
+      endByte: fixture.range.end_byte
+    },
+    startPoint: fixture.start_point,
+    endPoint: fixture.end_point
+  };
+}
+
 describe('tree-haver shared fixtures', () => {
   it('conforms to the slice-06 parser request fixture', () => {
     const fixture = readFixture<ParserAdapterFixture>(...diagnosticsFixturePath('parser_request'));
@@ -355,6 +385,21 @@ describe('tree-haver shared fixtures', () => {
     expect(capability.renderStrategies[0]).toBe('source_fragment_reuse');
     expect(capability.normalizedTreeSupport).toBe(true);
     expect(capability.nativeNodeAccess).toBe(true);
+  });
+
+  it('conforms to the slice-784 source fragment extraction fixture', () => {
+    const fixture = readFixture<SourceFragmentExtractionFixture>(
+      'diagnostics',
+      'slice-784-source-fragment-extraction',
+      'source-fragment-extraction.json'
+    );
+    const fragment = extractSourceFragment(fixture.source, sourceSpan(fixture.span), fixture.strategy);
+
+    expect(fragment.text).toBe(fixture.fragment.text);
+    expect(fragment.available).toBe(fixture.fragment.available);
+    expect(fragment.strategy).toBe(fixture.fragment.strategy);
+    expect(fragment.byteLength).toBe(fixture.fragment.byte_length);
+    expect(fragment.diagnostics).toHaveLength(fixture.fragment.diagnostics.length);
   });
 
   it('conforms to the slice-19 adapter policy support fixture', () => {
