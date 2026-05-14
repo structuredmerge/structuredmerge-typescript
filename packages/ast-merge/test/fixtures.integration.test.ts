@@ -39,6 +39,7 @@ import type {
   ChangeSet,
   ClassMappingReport,
   FamilyFeatureProfile,
+  InconsistencyReport,
   MergeIR,
   PairwiseMatching,
   PCS,
@@ -5687,6 +5688,27 @@ describe('ast-merge shared fixtures', () => {
     expect(fixture.raw_merge.diagnostics[0]).toBe(
       'raw merge intentionally preserves both sides before inconsistency detection'
     );
+  });
+
+  it('conforms to the slice-795 inconsistency detection fixture', () => {
+    const fixture = readFixture<{
+      inconsistency_report: InconsistencyReport;
+      expected: {
+        inconsistency_count: number;
+        categories: readonly string[];
+        blocking_count: number;
+      };
+    }>('diagnostics', 'slice-795-inconsistency-detection', 'inconsistency-detection.json');
+    const report = fixture.inconsistency_report;
+
+    expect(report.inconsistencies).toHaveLength(fixture.expected.inconsistency_count);
+    expect(report.inconsistencies.map((item) => item.category)).toEqual(
+      fixture.expected.categories
+    );
+    expect(report.inconsistencies.filter((item) => item.severity === 'error')).toHaveLength(
+      fixture.expected.blocking_count
+    );
+    expect(report.inconsistencies[1]?.change_ids[1]).toBe('right-delete-greet');
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

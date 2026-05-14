@@ -39,6 +39,8 @@ export type {
   Diagnostic,
   DiagnosticCategory,
   DiagnosticSeverity,
+  InconsistencyReport,
+  MergeInconsistency,
   CompactRuleset,
   CompactRulesetAtomicNode,
   CompactRulesetBackendDeclaration,

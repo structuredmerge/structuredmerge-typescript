@@ -557,6 +557,22 @@ export interface RawMerge {
   readonly diagnostics: readonly string[];
 }
 
+export interface MergeInconsistency {
+  readonly inconsistency_id: string;
+  readonly category: string;
+  readonly severity: string;
+  readonly class_ids: readonly string[];
+  readonly change_ids: readonly string[];
+  readonly message: string;
+}
+
+export interface InconsistencyReport {
+  readonly report_id: string;
+  readonly raw_merge_id: string;
+  readonly inconsistencies: readonly MergeInconsistency[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {
