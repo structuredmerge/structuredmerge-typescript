@@ -505,6 +505,39 @@ export interface ClassMappingReport {
   readonly diagnostics: readonly ClassMappingDiagnostic[];
 }
 
+export interface PCSConstraint {
+  readonly constraint_id: string;
+  readonly revision: string;
+  readonly parent_class_id: string;
+  readonly predecessor_class_id: string | null;
+  readonly successor_class_id: string | null;
+  readonly relation: string;
+}
+
+export interface PCS {
+  readonly pcs_id: string;
+  readonly tree_id: string;
+  readonly base_revision: string;
+  readonly constraints: readonly PCSConstraint[];
+}
+
+export interface ChangeSetChange {
+  readonly change_id: string;
+  readonly kind: string;
+  readonly class_id: string;
+  readonly parent_class_id: string;
+  readonly predecessor_class_id: string | null;
+  readonly successor_class_id: string | null;
+  readonly content_hash: string;
+}
+
+export interface ChangeSet {
+  readonly change_set_id: string;
+  readonly side: string;
+  readonly changes: readonly ChangeSetChange[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

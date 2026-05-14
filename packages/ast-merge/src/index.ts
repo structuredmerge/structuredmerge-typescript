@@ -1,6 +1,8 @@
 export const packageName = '@structuredmerge/ast-merge';
 
 export type {
+  ChangeSet,
+  ChangeSetChange,
   ClassMappingDiagnostic,
   ClassMappingNodeClass,
   ClassMappingReport,
@@ -57,6 +59,8 @@ export type {
   MergeResult,
   PairwiseMatching,
   PairwiseNodeMatch,
+  PCS,
+  PCSConstraint,
   FamilyFeatureProfile,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,

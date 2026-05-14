@@ -36,10 +36,12 @@ import type {
   DiagnosticCategory,
   DiagnosticSeverity,
   DiscoveredSurface,
+  ChangeSet,
   ClassMappingReport,
   FamilyFeatureProfile,
   MergeIR,
   PairwiseMatching,
+  PCS,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -5628,6 +5630,33 @@ describe('ast-merge shared fixtures', () => {
     );
     expect(report.node_classes[2]?.node_ids.right).toBeUndefined();
     expect(report.diagnostics[1]?.category).toBe('delete_edit_disagreement');
+  });
+
+  it('conforms to the slice-793 PCS change-set generation fixture', () => {
+    const fixture = readFixture<{
+      pcs: PCS;
+      change_sets: readonly ChangeSet[];
+      expected: {
+        pcs_constraint_count: number;
+        change_set_count: number;
+        change_kinds: readonly string[];
+        diagnostic_count: number;
+      };
+    }>('diagnostics', 'slice-793-pcs-change-set-generation', 'pcs-change-set-generation.json');
+    const changeKinds = fixture.change_sets.flatMap((changeSet) =>
+      changeSet.changes.map((change) => change.kind)
+    );
+    const diagnosticCount = fixture.change_sets.reduce(
+      (sum, changeSet) => sum + changeSet.diagnostics.length,
+      0
+    );
+
+    expect(fixture.pcs.constraints).toHaveLength(fixture.expected.pcs_constraint_count);
+    expect(fixture.change_sets).toHaveLength(fixture.expected.change_set_count);
+    expect(changeKinds).toEqual(fixture.expected.change_kinds);
+    expect(diagnosticCount).toBe(fixture.expected.diagnostic_count);
+    expect(fixture.pcs.constraints[2]?.predecessor_class_id).toBe('class-import-strings');
+    expect(fixture.change_sets[1]?.changes[1]?.kind).toBe('delete');
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
