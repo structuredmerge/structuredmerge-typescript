@@ -83,6 +83,53 @@ export interface ProjectReport {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export interface ReadmeStyleReport {
+  readonly readmePath: string;
+  readonly changed: boolean;
+  readonly style: string;
+  readonly preservedSections: readonly string[];
+  readonly renderedSections: readonly string[];
+  readonly omittedSections: readonly string[];
+  readonly missingIntegrations: readonly string[];
+  readonly disabledIntegrations: readonly string[];
+  readonly unresolvedLogoSlugs: readonly string[];
+  readonly licenseFilesChanged: boolean;
+  readonly copyrightAuthors: readonly string[];
+  readonly finalContent: string;
+}
+
+interface KettleConfig {
+  readonly readme?: ReadmeConfig;
+}
+
+interface ReadmeConfig {
+  readonly style?: string;
+  readonly project_emoji?: string;
+  readonly logo_row?: {
+    readonly enabled?: boolean;
+    readonly max_count?: number;
+    readonly logos?: readonly ReadmeLogo[];
+  };
+  readonly badges?: {
+    readonly disabled?: readonly string[];
+  };
+  readonly preserve_sections?: readonly string[];
+  readonly section_aliases?: Record<string, string>;
+  readonly conditional_sections?: {
+    readonly floss_funding?: string;
+  };
+  readonly license?: {
+    readonly spdx?: readonly string[];
+  };
+}
+
+interface ReadmeLogo {
+  readonly type?: string;
+  readonly slug?: string;
+  readonly alt?: string;
+  readonly href?: string;
+}
+
 interface PackageJson {
   readonly name?: string;
   readonly description?: string;
@@ -225,6 +272,23 @@ export function applyProject(projectRoot: string): ProjectReport {
     mkdirSync(path.dirname(targetPath), { recursive: true });
     writeFileSync(targetPath, recipeReport.finalContent);
   }
+  return report;
+}
+
+export function planReadmeStyle(projectRoot: string): ReadmeStyleReport {
+  const facts = discoverFacts(projectRoot);
+  const config = readKettleConfig(projectRoot).readme ?? {};
+  const readmePath = path.join(projectRoot, 'README.md');
+  const original = existsSync(readmePath) ? readFileSync(readmePath, 'utf8') : '';
+  const hasSecurity = existsSync(path.join(projectRoot, 'SECURITY.md'));
+  return renderReadmeStyle(original, facts, config, hasSecurity);
+}
+
+export function applyReadmeStyle(projectRoot: string): ReadmeStyleReport {
+  const report = planReadmeStyle(projectRoot);
+  if (!report.changed) return report;
+
+  writeFileSync(path.join(projectRoot, report.readmePath), report.finalContent);
   return report;
 }
 
@@ -551,6 +615,301 @@ function replaceBetweenMarkers(
 function repositoryUrl(repository: PackageJson['repository']): string | undefined {
   if (typeof repository === 'string') return repository;
   return repository?.url;
+}
+
+function readKettleConfig(projectRoot: string): KettleConfig {
+  const configPath = path.join(projectRoot, 'kettle.yml');
+  if (!existsSync(configPath)) return {};
+  return parseKettleConfig(readFileSync(configPath, 'utf8'));
+}
+
+function parseKettleConfig(source: string): KettleConfig {
+  const readme: {
+    style?: string;
+    project_emoji?: string;
+    logo_row?: { enabled?: boolean; max_count?: number; logos: ReadmeLogo[] };
+    badges?: { disabled: string[] };
+    preserve_sections?: string[];
+    section_aliases?: Record<string, string>;
+    conditional_sections?: { floss_funding?: string };
+    license?: { spdx: string[] };
+  } = {};
+  let section = '';
+  let list = '';
+  let currentLogo: Record<string, string> | undefined;
+  for (const rawLine of source.split('\n')) {
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed === 'readme:') continue;
+    if (trimmed.endsWith(':') && !trimmed.startsWith('- ')) {
+      const key = trimmed.slice(0, -1);
+      if (['logo_row', 'badges', 'section_aliases', 'conditional_sections', 'license'].includes(key)) {
+        section = key;
+        list = '';
+      } else if (section === 'logo_row' && key === 'logos') {
+        list = 'logos';
+        readme.logo_row ??= { logos: [] };
+      } else if (section === 'badges' && key === 'disabled') {
+        list = 'disabled';
+        readme.badges ??= { disabled: [] };
+      } else if (section === 'license' && key === 'spdx') {
+        list = 'spdx';
+        readme.license ??= { spdx: [] };
+      } else {
+        section = key;
+      }
+      continue;
+    }
+    if (trimmed.startsWith('- ')) {
+      const value = unquote(trimmed.slice(2));
+      if (section === 'logo_row' && list === 'logos') {
+        currentLogo = {};
+        readme.logo_row ??= { logos: [] };
+        readme.logo_row.logos.push(currentLogo);
+        const [key, rest] = splitYamlPair(value);
+        if (key) currentLogo[key] = rest;
+      } else if (section === 'badges' && list === 'disabled') {
+        readme.badges ??= { disabled: [] };
+        readme.badges.disabled.push(value);
+      } else if (section === 'license' && list === 'spdx') {
+        readme.license ??= { spdx: [] };
+        readme.license.spdx.push(value);
+      } else if (section === 'preserve_sections') {
+        readme.preserve_sections ??= [];
+        readme.preserve_sections.push(value);
+      }
+      continue;
+    }
+    const [key, value] = splitYamlPair(trimmed);
+    if (!key) continue;
+    if (section === '') {
+      if (key === 'style') readme.style = value;
+      if (key === 'project_emoji') readme.project_emoji = value;
+      if (key === 'preserve_sections') section = 'preserve_sections';
+    } else if (section === 'logo_row') {
+      readme.logo_row ??= { logos: [] };
+      if (currentLogo && list === 'logos') {
+        currentLogo[key] = value;
+      } else if (key === 'enabled') {
+        readme.logo_row.enabled = value === 'true';
+      } else if (key === 'max_count') {
+        readme.logo_row.max_count = Number.parseInt(value, 10);
+      }
+    } else if (section === 'section_aliases') {
+      readme.section_aliases ??= {};
+      readme.section_aliases[key] = value;
+    } else if (section === 'conditional_sections') {
+      readme.conditional_sections ??= {};
+      if (key === 'floss_funding') readme.conditional_sections.floss_funding = value;
+    }
+  }
+  return { readme };
+}
+
+function splitYamlPair(value: string): readonly [string, string] {
+  const index = value.indexOf(':');
+  if (index < 0) return ['', ''];
+  return [value.slice(0, index).trim(), unquote(value.slice(index + 1).trim())];
+}
+
+function unquote(value: string): string {
+  return value.replace(/^["']|["']$/g, '');
+}
+
+function renderReadmeStyle(
+  destination: string,
+  facts: PackageFacts,
+  rawConfig: ReadmeConfig,
+  hasSecurity: boolean
+): ReadmeStyleReport {
+  const config = defaultReadmeConfig(rawConfig);
+  const preserved = preservedReadmeSections(destination, config);
+  const license = readmeLicense(config, facts);
+  const [logoRow, unresolvedLogoSlugs] = readmeLogoRow(config);
+  const [badgeCloud, missingIntegrations, disabledIntegrations] = readmeBadgeCloud(
+    config,
+    facts,
+    license,
+    hasSecurity
+  );
+  const renderedSections = [
+    ...(logoRow ? ['Logos'] : []),
+    'Project Name',
+    'Badges',
+    'Synopsis',
+    'Info you can shake a stick at',
+    'Installation',
+    'Configuration',
+    'Basic Usage',
+    'Versioning',
+    'License',
+    'A request for help'
+  ];
+  const omittedSections = ['Hostile RubyGems Takeover', 'Secure Installation'];
+  const includeFunding = shouldIncludeFunding(config, license);
+  if (includeFunding) renderedSections.push('FLOSS Funding');
+  else omittedSections.push('FLOSS Funding');
+  if (hasSecurity) renderedSections.push('Security');
+  else omittedSections.push('Security');
+  renderedSections.push('Contributing');
+
+  const sections = [
+    ...(logoRow ? [logoRow] : []),
+    `# ${config.project_emoji} ${facts.package.name}`,
+    ...(badgeCloud ? [badgeCloud] : []),
+    `## 🌻 Synopsis\n\n${preserved.synopsis ?? ''}`,
+    `## 💡 Info you can shake a stick at\n\nCompatible with ${facts.npm.packageManager ?? 'the configured npm runtime'}.\n\n<details markdown="1">\n<summary>Compatibility, federated DVCS, and enterprise support</summary>\n\nAdditional compatibility and support details are generated from package metadata and shared fixtures.\n\n</details>`,
+    `## ✨ Installation\n\n\`\`\`console\n${packageManagerCommand(facts.npm.packageManager)} add ${facts.package.name}\n\`\`\``,
+    `## ⚙️ Configuration\n\n${preserved.configuration ?? ''}`,
+    `## 🔧 Basic Usage\n\n${preserved['basic usage'] ?? ''}`,
+    ...(includeFunding
+      ? [
+          '## 🦷 FLOSS Funding\n\nThis free software project accepts funding support when configured by the package maintainer.'
+        ]
+      : []),
+    ...(hasSecurity ? ['## 🔐 Security\n\nSee [SECURITY.md](SECURITY.md).'] : []),
+    '## 🤝 Contributing\n\nContributions are welcome. Missing optional service integrations are reported by the generator instead of rendered as broken badges.',
+    '## 📌 Versioning\n\nThis project follows semantic versioning for its public API where practical.',
+    `## 📄 License\n\n${licenseParagraph(license)}`,
+    '## 🤑 A request for help\n\nPlease support the project by using it, reporting issues, and contributing improvements.'
+  ];
+  const finalContent = ensureTrailingNewline(sections.join('\n\n'));
+  return {
+    readmePath: 'README.md',
+    changed: finalContent !== destination,
+    style: config.style,
+    preservedSections: ['Synopsis', 'Configuration', 'Basic Usage'],
+    renderedSections,
+    omittedSections,
+    missingIntegrations,
+    disabledIntegrations,
+    unresolvedLogoSlugs,
+    licenseFilesChanged: false,
+    copyrightAuthors: [],
+    finalContent
+  };
+}
+
+function defaultReadmeConfig(config: ReadmeConfig): Required<Pick<ReadmeConfig, 'style' | 'project_emoji' | 'preserve_sections' | 'section_aliases'>> & ReadmeConfig {
+  return {
+    ...config,
+    style: config.style ?? 'thin',
+    project_emoji: config.project_emoji ?? '💎',
+    preserve_sections: config.preserve_sections ?? ['Synopsis', 'Configuration', 'Basic Usage'],
+    section_aliases: {
+      summary: 'synopsis',
+      usage: 'basic usage',
+      'configuration options': 'configuration',
+      setup: 'basic usage',
+      ...Object.fromEntries(
+        Object.entries(config.section_aliases ?? {}).map(([from, to]) => [
+          normalizeReadmeHeading(from),
+          normalizeReadmeHeading(to)
+        ])
+      )
+    }
+  };
+}
+
+function preservedReadmeSections(
+  content: string,
+  config: Required<Pick<ReadmeConfig, 'preserve_sections' | 'section_aliases'>> & ReadmeConfig
+): Record<string, string> {
+  const sections = markdownSectionBodies(content);
+  return Object.fromEntries(
+    config.preserve_sections.map((section) => {
+      const key = normalizeReadmeHeading(section);
+      const alias = Object.entries(config.section_aliases).find(([, to]) => to === key)?.[0];
+      return [key, sections[key] ?? (alias ? sections[alias] : undefined) ?? ''];
+    })
+  );
+}
+
+function markdownSectionBodies(content: string): Record<string, string> {
+  const lines = content.split('\n');
+  const headings = lines.flatMap((line, index) => {
+    const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    return match ? [{ index, level: match[1]!.length, key: normalizeReadmeHeading(match[2]!) }] : [];
+  });
+  return Object.fromEntries(
+    headings.map((heading, index) => {
+      const next = headings.slice(index + 1).find((candidate) => candidate.level <= heading.level);
+      return [
+        heading.key,
+        lines
+          .slice(heading.index + 1, next?.index ?? lines.length)
+          .join('\n')
+          .trim()
+      ];
+    })
+  );
+}
+
+function normalizeReadmeHeading(value: string): string {
+  const fields = value.trim().split(/\s+/);
+  return fields.length > 1 && !/^[A-Za-z0-9]/.test(fields[0]!)
+    ? fields.slice(1).join(' ').toLowerCase()
+    : value.trim().toLowerCase();
+}
+
+function readmeLicense(config: ReadmeConfig, facts: PackageFacts): string {
+  return config.license?.spdx?.join(' OR ') || facts.package.licenseExpression || 'MIT';
+}
+
+function readmeLogoRow(config: ReadmeConfig): readonly [string, readonly string[]] {
+  if (config.logo_row?.enabled === false) return ['', []];
+  const maxCount = Math.min(Math.max(config.logo_row?.max_count ?? 3, 1), 3);
+  const unresolved: string[] = [];
+  const parts = (config.logo_row?.logos ?? []).slice(0, maxCount).flatMap((logo) => {
+    const type = logo.type?.trim().toLowerCase().replaceAll('-', '_') ?? '';
+    const slug = logo.slug?.trim() ?? '';
+    if (!['language', 'org', 'project', 'affiliated_project'].includes(type) || slug.length === 0) {
+      unresolved.push(slug);
+      return [];
+    }
+    const ref = slug.replaceAll('/', '-');
+    const alt = logo.alt?.trim() || slug;
+    const href = logo.href?.trim() || `https://logos.galtzo.com/assets/images/${slug}/`;
+    return [
+      `[![${alt}][🖼️${ref}-i]][🖼️${ref}]\n[🖼️${ref}-i]: https://logos.galtzo.com/assets/images/${slug}/avatar-192px.svg\n[🖼️${ref}]: ${href}`
+    ];
+  });
+  return [parts.join('\n'), unresolved];
+}
+
+function readmeBadgeCloud(
+  config: ReadmeConfig,
+  facts: PackageFacts,
+  license: string,
+  hasSecurity: boolean
+): readonly [string, readonly string[], readonly string[]] {
+  const disabled = [...(config.badges?.disabled ?? [])];
+  const missing = ['codecov', 'coveralls', 'qlty', 'codeql'].filter(
+    (integration) => !disabled.includes(integration)
+  );
+  const badges = [
+    ...(facts.package.sourceUrl
+      ? [`[![Source](https://img.shields.io/badge/source-github-238636.svg)](${facts.package.sourceUrl})`]
+      : []),
+    `![License](https://img.shields.io/badge/license-${license.replaceAll(' ', '%20')}-259D6C.svg)`,
+    ...(hasSecurity
+      ? ['[![Security](https://img.shields.io/badge/security-policy-259D6C.svg)](SECURITY.md)']
+      : [])
+  ];
+  return [badges.join(' '), missing, disabled];
+}
+
+function shouldIncludeFunding(config: ReadmeConfig, license: string): boolean {
+  const policy = config.conditional_sections?.floss_funding?.trim().toLowerCase();
+  if (['disabled', 'false', 'never'].includes(policy ?? '')) return false;
+  if (['enabled', 'true', 'always'].includes(policy ?? '')) return true;
+  return license === 'MIT';
+}
+
+function licenseParagraph(license: string): string {
+  return license === 'MIT'
+    ? 'This project is made available under the terms of the MIT License.'
+    : `This project is made available under the following license expression: ${license}.`;
 }
 
 function normalizeFundingUrls(funding: PackageJson['funding']): readonly string[] {
