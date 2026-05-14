@@ -215,6 +215,11 @@ interface NormalizedTreeNodeFixture {
   readonly anonymous: boolean;
   readonly has_source_text: boolean;
   readonly source_fragment: string;
+  readonly backend_kind?: string;
+  readonly semantic_roles?: readonly string[];
+  readonly backend_roles?: readonly string[];
+  readonly unsupported_features?: readonly string[];
+  readonly metadata?: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
 interface BackendCapabilityFixture {
@@ -309,7 +314,12 @@ function normalizedTreeNode(fixture: NormalizedTreeNodeFixture): NormalizedTreeN
     named: fixture.named,
     anonymous: fixture.anonymous,
     hasSourceText: fixture.has_source_text,
-    sourceFragment: fixture.source_fragment
+    sourceFragment: fixture.source_fragment,
+    backendKind: fixture.backend_kind,
+    semanticRoles: fixture.semantic_roles ?? [],
+    backendRoles: fixture.backend_roles ?? [],
+    unsupportedFeatures: fixture.unsupported_features ?? [],
+    metadata: fixture.metadata ?? {}
   };
 }
 
@@ -397,6 +407,22 @@ describe('tree-haver shared fixtures', () => {
     expect(child.parentId).toBe(node.id);
     expect(child.fieldName).toBe('declaration');
     expect(child.hasSourceText).toBe(true);
+  });
+
+  it('conforms to the slice-786 progressive node metadata fixture', () => {
+    const fixture = readFixture<{
+      enhanced_node: NormalizedTreeNodeFixture;
+      limited_node: NormalizedTreeNodeFixture;
+    }>('diagnostics', 'slice-786-progressive-node-metadata', 'progressive-node-metadata.json');
+    const enhanced = normalizedTreeNode(fixture.enhanced_node);
+    const limited = normalizedTreeNode(fixture.limited_node);
+
+    expect(enhanced.backendKind).toBe('FuncDecl');
+    expect(enhanced.semanticRoles[0]).toBe('declaration');
+    expect(enhanced.metadata.go_dst?.node_path).toBe('decls[0]');
+    expect(limited.hasSourceText).toBe(false);
+    expect(limited.unsupportedFeatures[1]).toBe('source_fragment');
+    expect(limited.metadata.psych?.location_support).toBe('line_column_only');
   });
 
   it('conforms to the slice-783 backend capability report fixture', () => {

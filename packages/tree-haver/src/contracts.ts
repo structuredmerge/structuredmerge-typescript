@@ -167,6 +167,11 @@ export interface NormalizedTreeNode {
   readonly anonymous: boolean;
   readonly hasSourceText: boolean;
   readonly sourceFragment: string;
+  readonly backendKind?: string;
+  readonly semanticRoles: readonly string[];
+  readonly backendRoles: readonly string[];
+  readonly unsupportedFeatures: readonly string[];
+  readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
 export interface SourceFragment {
