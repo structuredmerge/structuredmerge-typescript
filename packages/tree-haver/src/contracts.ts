@@ -103,6 +103,45 @@ export interface SourceSpan {
   readonly endPoint: SourcePoint;
 }
 
+export type NodeRole =
+  | 'structural'
+  | 'token'
+  | 'trivia'
+  | 'comment'
+  | 'delimiter'
+  | 'separator'
+  | 'virtual'
+  | 'error'
+  | 'opaque';
+
+export interface NormalizedTreeNode {
+  readonly id: string;
+  readonly kind: string;
+  readonly role: NodeRole;
+  readonly parentId?: string;
+  readonly childIds: readonly string[];
+  readonly span: SourceSpan;
+  readonly fieldName?: string;
+  readonly named: boolean;
+  readonly anonymous: boolean;
+  readonly hasSourceText: boolean;
+  readonly sourceFragment: string;
+}
+
+export function nodeRoles(): readonly NodeRole[] {
+  return [
+    'structural',
+    'token',
+    'trivia',
+    'comment',
+    'delimiter',
+    'separator',
+    'virtual',
+    'error',
+    'opaque'
+  ];
+}
+
 export interface ByteEditSpan {
   readonly startByte: number;
   readonly oldEndByte: number;

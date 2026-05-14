@@ -12,6 +12,7 @@ import type {
   BinaryScalarValue,
   ByteEditSpan,
   FeatureProfile,
+  NormalizedTreeNode,
   ParserRequest,
   PolicyReference,
   ZipUnsafeEntry
@@ -34,6 +35,7 @@ import {
   PEGGY_BACKEND,
   peggyAdapterInfo,
   peggyFeatureProfile,
+  nodeRoles,
   registerBackend,
   registeredBackends,
   sliceByteRange,
@@ -193,6 +195,24 @@ interface ConformanceManifest {
   >;
 }
 
+interface NormalizedTreeNodeFixture {
+  readonly id: string;
+  readonly kind: string;
+  readonly role: NormalizedTreeNode['role'];
+  readonly parent_id: string | null;
+  readonly child_ids: readonly string[];
+  readonly span: {
+    readonly range: { readonly start_byte: number; readonly end_byte: number };
+    readonly start_point: { readonly row: number; readonly column: number };
+    readonly end_point: { readonly row: number; readonly column: number };
+  };
+  readonly field_name: string | null;
+  readonly named: boolean;
+  readonly anonymous: boolean;
+  readonly has_source_text: boolean;
+  readonly source_fragment: string;
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -212,6 +232,29 @@ function diagnosticsFixturePath(role: string): string[] {
   }
 
   return [...entry.path];
+}
+
+function normalizedTreeNode(fixture: NormalizedTreeNodeFixture): NormalizedTreeNode {
+  return {
+    id: fixture.id,
+    kind: fixture.kind,
+    role: fixture.role,
+    parentId: fixture.parent_id ?? undefined,
+    childIds: fixture.child_ids,
+    span: {
+      range: {
+        startByte: fixture.span.range.start_byte,
+        endByte: fixture.span.range.end_byte
+      },
+      startPoint: fixture.span.start_point,
+      endPoint: fixture.span.end_point
+    },
+    fieldName: fixture.field_name ?? undefined,
+    named: fixture.named,
+    anonymous: fixture.anonymous,
+    hasSourceText: fixture.has_source_text,
+    sourceFragment: fixture.source_fragment
+  };
 }
 
 describe('tree-haver shared fixtures', () => {
@@ -234,6 +277,24 @@ describe('tree-haver shared fixtures', () => {
       backend: adapterInfo.backend,
       supports_dialects: adapterInfo.supportsDialects
     }).toEqual(fixture.adapter_info);
+  });
+
+  it('conforms to the slice-782 normalized tree node fixture', () => {
+    const fixture = readFixture<{
+      node_roles: string[];
+      node: NormalizedTreeNodeFixture;
+      child: NormalizedTreeNodeFixture;
+    }>('diagnostics', 'slice-782-normalized-tree-node', 'normalized-tree-node.json');
+
+    expect(nodeRoles()).toEqual(fixture.node_roles);
+    const node = normalizedTreeNode(fixture.node);
+    const child = normalizedTreeNode(fixture.child);
+
+    expect(node.role).toBe('structural');
+    expect(node.childIds[1]).toBe(child.id);
+    expect(child.parentId).toBe(node.id);
+    expect(child.fieldName).toBe('declaration');
+    expect(child.hasSourceText).toBe(true);
   });
 
   it('conforms to the slice-19 adapter policy support fixture', () => {
