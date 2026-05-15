@@ -1215,6 +1215,31 @@ export interface ProviderRichnessProjection {
   readonly diagnostics: readonly string[];
 }
 
+export interface BackendGapConformanceGap {
+  readonly capability: string;
+  readonly status: string;
+  readonly impact: string;
+  readonly diagnostic_code: string;
+  readonly normalized_fallback: string;
+}
+
+export interface BackendGapConformanceSummary {
+  readonly gap_count: number;
+  readonly fallback_count: number;
+  readonly silently_normalized: boolean;
+}
+
+export interface BackendGapConformanceReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly provider_id: string;
+  readonly compared_provider_id: string;
+  readonly gaps: readonly BackendGapConformanceGap[];
+  readonly summary: BackendGapConformanceSummary;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

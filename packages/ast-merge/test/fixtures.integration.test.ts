@@ -9,6 +9,7 @@ import { mergeRuby } from '../../ruby-merge/src/index';
 import { executeGenericConflictHandler } from '../src/index';
 import type {
   AmbiguityMatchingReport,
+  BackendGapConformanceReport,
   BackendParitySuite,
   ConformanceCaseRef,
   ConformanceCaseRun,
@@ -6601,6 +6602,34 @@ describe('ast-merge shared fixtures', () => {
     expect(projection.generic_signature.name).toBe(fixture.expected.signature_name);
     expect(projection.requires_private_fields).toBe(fixture.expected.requires_private_fields);
     expect(projection.private_metadata[fixture.expected.private_metadata_namespace]).toBeDefined();
+  });
+
+  it('conforms to the slice-829 backend gap conformance report fixture', () => {
+    const fixture = readFixture<{
+      report: BackendGapConformanceReport;
+      expected: {
+        language: string;
+        provider_id: string;
+        compared_provider_id: string;
+        gap_count: number;
+        fallback_count: number;
+        silently_normalized: boolean;
+        first_diagnostic_code: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-829-backend-gap-conformance-report',
+      'backend-gap-conformance-report.json'
+    );
+    const report = fixture.report;
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.provider_id).toBe(fixture.expected.provider_id);
+    expect(report.compared_provider_id).toBe(fixture.expected.compared_provider_id);
+    expect(report.gaps).toHaveLength(fixture.expected.gap_count);
+    expect(report.summary.fallback_count).toBe(fixture.expected.fallback_count);
+    expect(report.summary.silently_normalized).toBe(fixture.expected.silently_normalized);
+    expect(report.gaps[0]?.diagnostic_code).toBe(fixture.expected.first_diagnostic_code);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
