@@ -1,6 +1,9 @@
 export const packageName = '@structuredmerge/ast-merge';
 
 export type {
+  ActiveProfileRuleCounts,
+  ActiveProfileValidationSummary,
+  ActiveProfileView,
   AmbiguityMatchingReport,
   AtomicNodeRule,
   BackendGapConformanceGap,
@@ -158,6 +161,7 @@ export type {
   ProviderRichnessProjection,
   ProviderRichnessSignature,
   ProfileConformanceReport,
+  ProfileDebugOutput,
   ProfileValidationDiagnostic,
   ProfileValidationResult,
   ProfileSkippedRule,

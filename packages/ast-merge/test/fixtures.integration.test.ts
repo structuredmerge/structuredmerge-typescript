@@ -8,6 +8,7 @@ import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
 import { executeGenericConflictHandler, validateLanguageBackendProfile } from '../src/index';
 import type {
+  ActiveProfileView,
   AmbiguityMatchingReport,
   BackendGrammarInventory,
   BackendGapConformanceReport,
@@ -72,6 +73,7 @@ import type {
   PCS,
   PerformanceGuardrails,
   ProfileConformanceReport,
+  ProfileDebugOutput,
   ProfileValidationDiagnostic,
   RawMerge,
   RenameAwareMatchingReport,
@@ -513,6 +515,21 @@ interface ProfileValidationFixture {
     structural_errors: string[];
     exhaustive_backend_errors: string[];
     partial_backend_warnings: string[];
+  };
+}
+
+interface ActiveProfileReportingFixture {
+  active_profile: ActiveProfileView;
+  conformance_report: ProfileConformanceReport;
+  debug_output: ProfileDebugOutput;
+  expected: {
+    profile_id: string;
+    family: string;
+    backend: string;
+    parser: string;
+    signature_count: number;
+    validation_ok: boolean;
+    debug_mode: string;
   };
 }
 
@@ -7045,6 +7062,24 @@ describe('ast-merge shared fixtures', () => {
     expect(sortedProfileValidationMessages(partial.warnings)).toEqual(
       [...fixture.expected.partial_backend_warnings].sort()
     );
+  });
+
+  it('conforms to the slice-910 active profile reporting fixture', () => {
+    const fixture = readFixture<ActiveProfileReportingFixture>(
+      'diagnostics',
+      'slice-910-active-profile-reporting',
+      'active-profile-reporting.json'
+    );
+
+    expect(fixture.active_profile.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.active_profile.family).toBe(fixture.expected.family);
+    expect(fixture.active_profile.backend).toBe(fixture.expected.backend);
+    expect(fixture.active_profile.parser).toBe(fixture.expected.parser);
+    expect(fixture.active_profile.rule_counts.signatures).toBe(fixture.expected.signature_count);
+    expect(fixture.active_profile.validation.ok).toBe(fixture.expected.validation_ok);
+    expect(fixture.conformance_report.active_profile?.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.debug_output.mode).toBe(fixture.expected.debug_mode);
+    expect(fixture.debug_output.active_profile.profile_id).toBe(fixture.expected.profile_id);
   });
 
   it('conforms to the template source path mapping fixture', () => {

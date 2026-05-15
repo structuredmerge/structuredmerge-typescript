@@ -1460,14 +1460,50 @@ export interface ProfileSkippedRule {
   readonly reason: string;
 }
 
+export interface ActiveProfileRuleCounts {
+  readonly node_roles: number;
+  readonly atomic_nodes: number;
+  readonly signatures: number;
+  readonly commutative_parents: number;
+  readonly child_groups: number;
+  readonly comment_attachment: number;
+}
+
+export interface ActiveProfileValidationSummary {
+  readonly ok: boolean;
+  readonly error_count: number;
+  readonly warning_count: number;
+}
+
+export interface ActiveProfileView {
+  readonly profile_id: string;
+  readonly family: string;
+  readonly backend: string;
+  readonly backend_family: string;
+  readonly parser: string;
+  readonly parser_version: string;
+  readonly language_version: string;
+  readonly dialect: string;
+  readonly supported_dialects: readonly string[];
+  readonly rule_counts: ActiveProfileRuleCounts;
+  readonly validation: ActiveProfileValidationSummary;
+}
+
 export interface ProfileConformanceReport {
   readonly report_id: string;
   readonly version: string;
   readonly profile: string;
+  readonly active_profile?: ActiveProfileView;
   readonly enabled_rules: readonly string[];
   readonly skipped_rules: readonly ProfileSkippedRule[];
   readonly fallback_count: number;
   readonly unresolved_conflict_count: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProfileDebugOutput {
+  readonly mode: string;
+  readonly active_profile: ActiveProfileView;
   readonly diagnostics: readonly string[];
 }
 
