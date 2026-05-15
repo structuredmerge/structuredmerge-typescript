@@ -69,6 +69,7 @@ import type {
   SourceTextNormalizedMatchingReport,
   StructuralMatchingReport,
   TieBreakMatchingReport,
+  TokenSpanPreservationMetricsReport,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -6358,6 +6359,28 @@ describe('ast-merge shared fixtures', () => {
     expect(report.unchanged_line_churn).toBe(fixture.expected.unchanged_line_churn);
     expect(report.output_diff_size).toBe(fixture.expected.output_diff_size);
     expect(report.source_fragment_retention).toBe(fixture.expected.source_fragment_retention);
+    expect(report.weighted).toBe(fixture.expected.weighted);
+  });
+
+  it('conforms to the slice-819 token span preservation metrics fixture', () => {
+    const fixture = readFixture<{
+      token_span_metrics: TokenSpanPreservationMetricsReport;
+      expected: {
+        source_spans_available: boolean;
+        token_preservation: number;
+        span_preservation: number;
+        weighted: boolean;
+      };
+    }>(
+      'diagnostics',
+      'slice-819-token-span-preservation-metrics',
+      'token-span-preservation-metrics.json'
+    );
+    const report = fixture.token_span_metrics;
+
+    expect(report.source_spans_available).toBe(fixture.expected.source_spans_available);
+    expect(report.token_preservation).toBe(fixture.expected.token_preservation);
+    expect(report.span_preservation).toBe(fixture.expected.span_preservation);
     expect(report.weighted).toBe(fixture.expected.weighted);
   });
 

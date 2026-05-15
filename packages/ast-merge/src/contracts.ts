@@ -1087,6 +1087,16 @@ export interface SecondaryFormattingMetricsReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface TokenSpanPreservationMetricsReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly source_spans_available: boolean;
+  readonly token_preservation: number;
+  readonly span_preservation: number;
+  readonly weighted: boolean;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

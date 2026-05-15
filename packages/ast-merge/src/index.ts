@@ -99,6 +99,7 @@ export type {
   StructuralPathMatch,
   TieBreakMatch,
   TieBreakMatchingReport,
+  TokenSpanPreservationMetricsReport,
   CompactRuleset,
   CompactRulesetAtomicNode,
   CompactRulesetBackendDeclaration,
