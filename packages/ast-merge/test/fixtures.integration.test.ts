@@ -41,6 +41,7 @@ import type {
   ChangeSet,
   ClassMappingReport,
   ConflictCategoryReport,
+  ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
   InconsistencyReport,
   LocalLineFallbackReport,
@@ -6052,6 +6053,30 @@ describe('ast-merge shared fixtures', () => {
     expect(report.right_span.end_line - report.right_span.start_line + 1).toBe(
       fixture.expected.right_line_count
     );
+  });
+
+  it('conforms to the slice-808 conflict marker rendering fixture', () => {
+    const fixture = readFixture<{
+      rendering: ConflictMarkerRenderingReport;
+      expected: {
+        strategy: string;
+        marker_size: number;
+        path_label: string;
+        include_base: boolean;
+        starts_with: string;
+        contains_base_marker: string;
+        ends_with: string;
+      };
+    }>('diagnostics', 'slice-808-conflict-marker-rendering', 'conflict-marker-rendering.json');
+    const report = fixture.rendering;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.marker_size).toBe(fixture.expected.marker_size);
+    expect(report.path_label).toBe(fixture.expected.path_label);
+    expect(report.include_base).toBe(fixture.expected.include_base);
+    expect(report.output.startsWith(fixture.expected.starts_with)).toBe(true);
+    expect(report.output.includes(fixture.expected.contains_base_marker)).toBe(true);
+    expect(report.output.endsWith(fixture.expected.ends_with)).toBe(true);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

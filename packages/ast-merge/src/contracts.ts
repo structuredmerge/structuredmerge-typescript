@@ -881,6 +881,19 @@ export interface LocalLineFallbackReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface ConflictMarkerRenderingReport {
+  readonly render_id: string;
+  readonly strategy: string;
+  readonly marker_size: number;
+  readonly path_label: string;
+  readonly left_label: string;
+  readonly base_label: string;
+  readonly right_label: string;
+  readonly include_base: boolean;
+  readonly output: string;
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {
