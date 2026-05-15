@@ -829,6 +829,23 @@ export interface MatchingDebugArtifacts {
   readonly diagnostics: readonly string[];
 }
 
+export interface FallbackScopeDefinition {
+  readonly scope: string;
+  readonly path: string;
+  readonly owner_path: string;
+  readonly covers_children: boolean;
+  readonly requires_source_span: boolean;
+  readonly description: string;
+}
+
+export interface FallbackScopeReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly scopes: readonly FallbackScopeDefinition[];
+  readonly default_order: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

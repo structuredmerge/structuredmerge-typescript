@@ -37,6 +37,7 @@ import type {
   DiagnosticCategory,
   DiagnosticSeverity,
   DiscoveredSurface,
+  FallbackScopeReport,
   ChangeSet,
   ClassMappingReport,
   FamilyFeatureProfile,
@@ -5978,6 +5979,28 @@ describe('ast-merge shared fixtures', () => {
     expect(artifacts.selected_matches).toHaveLength(fixture.expected.selected_count);
     expect(artifacts.rejected_matches).toHaveLength(fixture.expected.rejected_count);
     expect(artifacts.rejected_matches[0]?.reason).toBe(fixture.expected.first_rejection_reason);
+  });
+
+  it('conforms to the slice-805 fallback scopes fixture', () => {
+    const fixture = readFixture<{
+      fallback: FallbackScopeReport;
+      expected: {
+        scope_count: number;
+        default_order: readonly string[];
+        first_scope: string;
+        last_scope: string;
+        whole_file_requires_source_span: boolean;
+      };
+    }>('diagnostics', 'slice-805-fallback-scopes', 'fallback-scopes.json');
+    const report = fixture.fallback;
+
+    expect(report.scopes).toHaveLength(fixture.expected.scope_count);
+    expect(report.default_order).toEqual(fixture.expected.default_order);
+    expect(report.scopes[0]?.scope).toBe(fixture.expected.first_scope);
+    expect(report.scopes.at(-1)?.scope).toBe(fixture.expected.last_scope);
+    expect(report.scopes.at(-1)?.requires_source_span).toBe(
+      fixture.expected.whole_file_requires_source_span
+    );
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

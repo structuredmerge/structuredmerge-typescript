@@ -40,6 +40,8 @@ export type {
   Diagnostic,
   DiagnosticCategory,
   DiagnosticSeverity,
+  FallbackScopeDefinition,
+  FallbackScopeReport,
   InconsistencyReport,
   MergeInconsistency,
   MergeIRComparisonCase,
