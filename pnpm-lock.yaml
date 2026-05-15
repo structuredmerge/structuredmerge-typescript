@@ -39,6 +39,12 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.12.2)(yaml@2.8.3)
 
+  packages/ast-crispr:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+
   packages/ast-merge:
     devDependencies:
       '@structuredmerge/markdown-merge':
@@ -173,6 +179,21 @@ importers:
       '@structuredmerge/tree-haver':
         specifier: workspace:*
         version: link:../tree-haver
+
+  packages/smorg-ts:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+      '@structuredmerge/go-merge':
+        specifier: workspace:*
+        version: link:../go-merge
+      '@structuredmerge/json-merge':
+        specifier: workspace:*
+        version: link:../json-merge
+      '@structuredmerge/plain-merge':
+        specifier: workspace:*
+        version: link:../plain-merge
 
   packages/toml-merge:
     dependencies:

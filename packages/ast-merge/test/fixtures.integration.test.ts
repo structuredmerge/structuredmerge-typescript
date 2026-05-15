@@ -228,7 +228,6 @@ import type {
   StructuredEditKettleJemPrimitiveGapReport,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
-  ProfileSelectionRequirement,
   PolicyReference,
   PolicySurface,
   Diagnostic,
