@@ -1507,6 +1507,45 @@ export interface ProfileDebugOutput {
   readonly diagnostics: readonly string[];
 }
 
+export type ProfilePromotionStatus =
+  | 'experimental'
+  | 'available'
+  | 'recommended'
+  | 'default'
+  | 'disabled';
+
+export interface ProfilePromotionHardGate {
+  readonly name: string;
+  readonly passed: boolean;
+  readonly required: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProfilePromotionMetrics {
+  readonly required_fixture_count: number;
+  readonly passed_fixture_count: number;
+  readonly formatting_preservation_score: number;
+  readonly formatting_threshold: number;
+  readonly fallback_count: number;
+  readonly fallback_threshold: number;
+  readonly unresolved_conflict_count: number;
+  readonly backend_parity_passed: boolean;
+}
+
+export interface ProfilePromotionReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly profile_id: string;
+  readonly backend: string;
+  readonly status: ProfilePromotionStatus;
+  readonly active_profile?: ActiveProfileView;
+  readonly hard_gates: readonly ProfilePromotionHardGate[];
+  readonly metrics: ProfilePromotionMetrics;
+  readonly required_suites: readonly string[];
+  readonly blocking_reasons: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

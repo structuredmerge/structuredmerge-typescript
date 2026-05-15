@@ -74,6 +74,7 @@ import type {
   PerformanceGuardrails,
   ProfileConformanceReport,
   ProfileDebugOutput,
+  ProfilePromotionReport,
   ProfileValidationDiagnostic,
   RawMerge,
   RenameAwareMatchingReport,
@@ -530,6 +531,20 @@ interface ActiveProfileReportingFixture {
     signature_count: number;
     validation_ok: boolean;
     debug_mode: string;
+  };
+}
+
+interface ProfilePromotionReportFixture {
+  report: ProfilePromotionReport;
+  blocked_report: ProfilePromotionReport;
+  expected: {
+    profile_id: string;
+    recommended_status: string;
+    blocked_status: string;
+    hard_gate_count: number;
+    required_fixture_count: number;
+    formatting_threshold: number;
+    blocking_reason_count: number;
   };
 }
 
@@ -7080,6 +7095,27 @@ describe('ast-merge shared fixtures', () => {
     expect(fixture.conformance_report.active_profile?.profile_id).toBe(fixture.expected.profile_id);
     expect(fixture.debug_output.mode).toBe(fixture.expected.debug_mode);
     expect(fixture.debug_output.active_profile.profile_id).toBe(fixture.expected.profile_id);
+  });
+
+  it('conforms to the slice-911 profile promotion report fixture', () => {
+    const fixture = readFixture<ProfilePromotionReportFixture>(
+      'diagnostics',
+      'slice-911-profile-promotion-report',
+      'profile-promotion-report.json'
+    );
+
+    expect(fixture.report.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.report.status).toBe(fixture.expected.recommended_status);
+    expect(fixture.report.hard_gates).toHaveLength(fixture.expected.hard_gate_count);
+    expect(fixture.report.metrics.required_fixture_count).toBe(
+      fixture.expected.required_fixture_count
+    );
+    expect(fixture.report.metrics.formatting_threshold).toBe(fixture.expected.formatting_threshold);
+    expect(fixture.report.active_profile?.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.blocked_report.status).toBe(fixture.expected.blocked_status);
+    expect(fixture.blocked_report.blocking_reasons).toHaveLength(
+      fixture.expected.blocking_reason_count
+    );
   });
 
   it('conforms to the template source path mapping fixture', () => {
