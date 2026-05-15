@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
+import { executeGenericConflictHandler } from '../src/index';
 import type {
   AmbiguityMatchingReport,
   ConformanceCaseRef,
@@ -44,6 +45,7 @@ import type {
   ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
+  GenericConflictHandlerExecution,
   InconsistencyReport,
   LocalLineFallbackReport,
   MatchingDebugArtifacts,
@@ -6101,6 +6103,42 @@ describe('ast-merge shared fixtures', () => {
     expect(enabledCount).toBe(fixture.expected.enabled_count);
     expect(report.handlers[0]?.conflict_category).toBe(fixture.expected.first_handler_category);
     expect(report.handlers[1]?.fallback_scope).toBe(fixture.expected.second_handler_scope);
+  });
+
+  it('conforms to the slice-810 generic conflict handler execution fixture', () => {
+    const fixture = readFixture<{
+      execution: GenericConflictHandlerExecution;
+      expected: {
+        case_count: number;
+        resolved_count: number;
+        first_handler_id: string;
+        first_merged_child_count: number;
+        second_handler_id: string;
+        second_merged_member_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-810-generic-conflict-handler-execution',
+      'generic-conflict-handler-execution.json'
+    );
+    const execution = fixture.execution;
+    const resolvedCount = execution.cases.filter(
+      (handlerCase) => handlerCase.expected_result.resolved
+    ).length;
+    const results = execution.cases.map((handlerCase) =>
+      executeGenericConflictHandler(handlerCase)
+    );
+
+    execution.cases.forEach((handlerCase, index) => {
+      expect(results[index]).toEqual(handlerCase.expected_result);
+    });
+
+    expect(execution.cases).toHaveLength(fixture.expected.case_count);
+    expect(resolvedCount).toBe(fixture.expected.resolved_count);
+    expect(execution.cases[0]?.handler_id).toBe(fixture.expected.first_handler_id);
+    expect(results[0]?.merged_children).toHaveLength(fixture.expected.first_merged_child_count);
+    expect(execution.cases[1]?.handler_id).toBe(fixture.expected.second_handler_id);
+    expect(results[1]?.merged_members).toHaveLength(fixture.expected.second_merged_member_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

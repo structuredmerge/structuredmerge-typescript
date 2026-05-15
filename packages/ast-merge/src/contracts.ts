@@ -910,6 +910,130 @@ export interface ConflictHandlerRegistryReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface HandlerChildNode {
+  readonly node_id: string;
+  readonly signature: string;
+  readonly source: string;
+}
+
+export interface HandlerKeyedMember {
+  readonly key: string;
+  readonly value: string;
+}
+
+export interface GenericConflictHandlerResult {
+  readonly resolved: boolean;
+  readonly merged_children?: readonly HandlerChildNode[];
+  readonly merged_members?: readonly HandlerKeyedMember[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface GenericConflictHandlerCase {
+  readonly case_id: string;
+  readonly handler_id: string;
+  readonly conflict_category: string;
+  readonly parent_policy?: string;
+  readonly base_children?: readonly HandlerChildNode[];
+  readonly left_insertions?: readonly HandlerChildNode[];
+  readonly right_insertions?: readonly HandlerChildNode[];
+  readonly base_members?: readonly HandlerKeyedMember[];
+  readonly left_edits?: readonly HandlerKeyedMember[];
+  readonly right_edits?: readonly HandlerKeyedMember[];
+  readonly expected_result: GenericConflictHandlerResult;
+}
+
+export interface GenericConflictHandlerExecution {
+  readonly execution_id: string;
+  readonly version: string;
+  readonly cases: readonly GenericConflictHandlerCase[];
+  readonly diagnostics: readonly string[];
+}
+
+export const genericIndependentCommutativeInsertionsHandler =
+  'generic-independent-commutative-insertions';
+export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';
+
+export function executeGenericConflictHandler(
+  handlerCase: GenericConflictHandlerCase
+): GenericConflictHandlerResult {
+  if (handlerCase.handler_id === genericIndependentCommutativeInsertionsHandler) {
+    return executeIndependentCommutativeInsertions(handlerCase);
+  }
+  if (handlerCase.handler_id === genericKeyedMemberEditHandler) {
+    return executeIndependentKeyedMemberEdits(handlerCase);
+  }
+
+  return {
+    resolved: false,
+    diagnostics: ['unsupported generic conflict handler']
+  };
+}
+
+function executeIndependentCommutativeInsertions(
+  handlerCase: GenericConflictHandlerCase
+): GenericConflictHandlerResult {
+  if (handlerCase.parent_policy !== 'commutative') {
+    return {
+      resolved: false,
+      diagnostics: ['independent insertion handler requires a commutative parent']
+    };
+  }
+
+  const seen = new Set<string>();
+  const mergedChildren: HandlerChildNode[] = [];
+  const appendUnique = (nodes: readonly HandlerChildNode[] | undefined) => {
+    for (const node of nodes ?? []) {
+      const key = node.signature || node.node_id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      mergedChildren.push(node);
+    }
+  };
+
+  appendUnique(handlerCase.base_children);
+  appendUnique(handlerCase.left_insertions);
+  appendUnique(handlerCase.right_insertions);
+
+  return {
+    resolved: true,
+    merged_children: mergedChildren,
+    diagnostics: ['independent insertions into a commutative parent were unioned deterministically']
+  };
+}
+
+function executeIndependentKeyedMemberEdits(
+  handlerCase: GenericConflictHandlerCase
+): GenericConflictHandlerResult {
+  const order: string[] = [];
+  const values = new Map<string, string>();
+  const setMember = (member: HandlerKeyedMember) => {
+    if (!values.has(member.key)) order.push(member.key);
+    values.set(member.key, member.value);
+  };
+
+  for (const member of handlerCase.base_members ?? []) setMember(member);
+  for (const member of handlerCase.left_edits ?? []) setMember(member);
+  for (const member of handlerCase.right_edits ?? []) {
+    if (
+      values.has(member.key) &&
+      values.get(member.key) !== member.value &&
+      (handlerCase.left_edits ?? []).some((left) => left.key === member.key)
+    ) {
+      return {
+        resolved: false,
+        diagnostics: ['keyed member was edited differently on both sides']
+      };
+    }
+    setMember(member);
+  }
+
+  return {
+    resolved: true,
+    merged_members: order.map((key) => ({ key, value: values.get(key) ?? '' })),
+    diagnostics: ['independent keyed member edits were merged by key']
+  };
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {
