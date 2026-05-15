@@ -1685,6 +1685,31 @@ export interface ProfilePromotionEvaluation {
   readonly diagnostics: readonly string[];
 }
 
+export type ProfileSelectionEnforcementMode = 'advisory' | 'required';
+
+export interface ProfileSelectionRequirement {
+  readonly profile_id: string;
+  readonly promotion_policy_id: string;
+  readonly minimum_profile_status: ProfilePromotionStatus;
+  readonly enforcement_mode: ProfileSelectionEnforcementMode;
+}
+
+export interface ProfileSelectionDecision {
+  readonly profile_id: string;
+  readonly promotion_policy_id: string;
+  readonly minimum_profile_status: ProfilePromotionStatus;
+  readonly evaluated_status: ProfilePromotionStatus;
+  readonly enforcement_mode: ProfileSelectionEnforcementMode;
+  readonly satisfied: boolean;
+  readonly enforced: boolean;
+  readonly allowed: boolean;
+  readonly rejection_code?: string;
+  readonly active_profile?: ActiveProfileView;
+  readonly profile_promotion_evaluation: ProfilePromotionEvaluation;
+  readonly blocking_reasons: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export function evaluateProfilePromotion(
   policy: ProfilePromotionPolicy,
   report: ProfilePromotionReport
@@ -1709,6 +1734,61 @@ export function evaluateProfilePromotion(
     blocking_reasons: blockingReasons,
     diagnostics: []
   };
+}
+
+export function evaluateProfileSelectionRequirement(
+  requirement: ProfileSelectionRequirement,
+  activeProfile: ActiveProfileView | undefined,
+  evaluation: ProfilePromotionEvaluation
+): ProfileSelectionDecision {
+  const satisfied =
+    profilePromotionStatusRank(evaluation.status) >=
+      profilePromotionStatusRank(requirement.minimum_profile_status) &&
+    evaluation.status !== 'disabled';
+  const enforced = requirement.enforcement_mode === 'required';
+  const allowed = satisfied || !enforced;
+  const blockingReasons = [...evaluation.blocking_reasons];
+  let rejectionCode = '';
+  if (!satisfied) {
+    blockingReasons.unshift(
+      `profile status ${evaluation.status} is below required ${requirement.minimum_profile_status}`
+    );
+    if (enforced) rejectionCode = 'profile_status_unmet';
+  }
+  const diagnostics = [...evaluation.diagnostics];
+  if (requirement.profile_id !== evaluation.profile_id) {
+    diagnostics.push('selected profile does not match promotion evaluation profile');
+  }
+  return {
+    profile_id: requirement.profile_id,
+    promotion_policy_id: requirement.promotion_policy_id,
+    minimum_profile_status: requirement.minimum_profile_status,
+    evaluated_status: evaluation.status,
+    enforcement_mode: requirement.enforcement_mode,
+    satisfied,
+    enforced,
+    allowed,
+    rejection_code: rejectionCode,
+    active_profile: activeProfile,
+    profile_promotion_evaluation: evaluation,
+    blocking_reasons: blockingReasons,
+    diagnostics
+  };
+}
+
+function profilePromotionStatusRank(status: ProfilePromotionStatus): number {
+  switch (status) {
+    case 'experimental':
+      return 1;
+    case 'available':
+      return 2;
+    case 'recommended':
+      return 3;
+    case 'default':
+      return 4;
+    default:
+      return 0;
+  }
 }
 
 function profilePromotionBlockingReasons(

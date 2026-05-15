@@ -8,6 +8,7 @@ import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
 import {
   evaluateProfilePromotion,
+  evaluateProfileSelectionRequirement,
   executeGenericConflictHandler,
   initialProfilePromotionPolicy,
   promotionProfileJsonKeyedObject,
@@ -81,8 +82,10 @@ import type {
   PerformanceGuardrails,
   ProfileConformanceReport,
   ProfileDebugOutput,
+  ProfilePromotionEvaluation,
   ProfilePromotionPolicy,
   ProfilePromotionReport,
+  ProfileSelectionRequirement,
   ProfileValidationDiagnostic,
   RawMerge,
   RenameAwareMatchingReport,
@@ -582,6 +585,30 @@ interface ProfilePromotionEvaluationFixture {
     blocked_blocking_reason_count: number;
     first_blocking_reason: string;
     unknown_profile_status: string;
+  };
+}
+
+interface ProfileSelectionEnforcementFixture {
+  active_profile: ActiveProfileView;
+  available_evaluation: ProfilePromotionEvaluation;
+  recommended_evaluation: ProfilePromotionEvaluation;
+  advisory_requirement: ProfileSelectionRequirement;
+  required_requirement: ProfileSelectionRequirement;
+  satisfied_requirement: ProfileSelectionRequirement;
+  expected: {
+    advisory_allowed: boolean;
+    advisory_satisfied: boolean;
+    advisory_enforced: boolean;
+    advisory_rejection_code: string;
+    required_allowed: boolean;
+    required_satisfied: boolean;
+    required_enforced: boolean;
+    required_rejection_code: string;
+    required_first_blocking_reason: string;
+    satisfied_allowed: boolean;
+    satisfied_satisfied: boolean;
+    satisfied_enforced: boolean;
+    satisfied_rejection_code: string;
   };
 }
 
@@ -7218,6 +7245,46 @@ describe('ast-merge shared fixtures', () => {
       profile_id: 'unknown.profile'
     });
     expect(unknown.status).toBe(fixture.expected.unknown_profile_status);
+  });
+
+  it('conforms to the slice-914 profile selection enforcement fixture', () => {
+    const fixture = readFixture<ProfileSelectionEnforcementFixture>(
+      'diagnostics',
+      'slice-914-profile-selection-enforcement',
+      'profile-selection-enforcement.json'
+    );
+
+    const advisory = evaluateProfileSelectionRequirement(
+      fixture.advisory_requirement,
+      fixture.active_profile,
+      fixture.available_evaluation
+    );
+    expect(advisory.allowed).toBe(fixture.expected.advisory_allowed);
+    expect(advisory.satisfied).toBe(fixture.expected.advisory_satisfied);
+    expect(advisory.enforced).toBe(fixture.expected.advisory_enforced);
+    expect(advisory.rejection_code).toBe(fixture.expected.advisory_rejection_code);
+
+    const required = evaluateProfileSelectionRequirement(
+      fixture.required_requirement,
+      fixture.active_profile,
+      fixture.available_evaluation
+    );
+    expect(required.allowed).toBe(fixture.expected.required_allowed);
+    expect(required.satisfied).toBe(fixture.expected.required_satisfied);
+    expect(required.enforced).toBe(fixture.expected.required_enforced);
+    expect(required.rejection_code).toBe(fixture.expected.required_rejection_code);
+    expect(required.blocking_reasons[0]).toBe(fixture.expected.required_first_blocking_reason);
+
+    const satisfied = evaluateProfileSelectionRequirement(
+      fixture.satisfied_requirement,
+      fixture.active_profile,
+      fixture.recommended_evaluation
+    );
+    expect(satisfied.allowed).toBe(fixture.expected.satisfied_allowed);
+    expect(satisfied.satisfied).toBe(fixture.expected.satisfied_satisfied);
+    expect(satisfied.enforced).toBe(fixture.expected.satisfied_enforced);
+    expect(satisfied.rejection_code).toBe(fixture.expected.satisfied_rejection_code);
+    expect(satisfied.blocking_reasons).toHaveLength(0);
   });
 
   it('conforms to the template source path mapping fixture', () => {
