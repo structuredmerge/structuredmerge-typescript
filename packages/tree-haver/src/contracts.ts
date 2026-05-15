@@ -180,6 +180,22 @@ export interface LibraryPathValidation {
   readonly errors: readonly string[];
 }
 
+export type BackendAvailabilityStatus = 'available' | 'unavailable' | 'unknown';
+
+export interface BackendAvailabilityCheck {
+  readonly name: string;
+  readonly status: BackendAvailabilityStatus;
+  readonly required: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface BackendAvailabilityReport {
+  readonly backendRef: BackendReference;
+  readonly status: BackendAvailabilityStatus;
+  readonly checks: readonly BackendAvailabilityCheck[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface OrderedSiblingEdge {
   readonly parentId: string;
   readonly nodeId: string;
@@ -695,6 +711,31 @@ export function safeSymbolName(symbol: string): boolean {
 
 export function safeBackendName(name: string): boolean {
   return name === 'auto' || backendRegistry.has(name);
+}
+
+export function buildBackendAvailabilityReport(
+  backendRef: BackendReference,
+  checks: readonly BackendAvailabilityCheck[]
+): BackendAvailabilityReport {
+  if (checks.length === 0) {
+    return {
+      backendRef,
+      status: 'unknown',
+      checks,
+      diagnostics: ['backend availability unknown: no checks supplied']
+    };
+  }
+
+  const diagnostics: string[] = [];
+  let status: BackendAvailabilityStatus = 'available';
+  for (const check of checks) {
+    if (check.required && check.status !== 'available') {
+      status = 'unavailable';
+      diagnostics.push(`backend unavailable: required check ${check.name} is ${check.status}`);
+    }
+  }
+
+  return { backendRef, status, checks, diagnostics };
 }
 
 export function currentBackendId(): string | undefined {

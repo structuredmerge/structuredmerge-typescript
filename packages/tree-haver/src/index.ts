@@ -3,6 +3,9 @@ export const packageName = '@structuredmerge/tree-haver';
 export type {
   AdapterInfo,
   AnalysisHandle,
+  BackendAvailabilityCheck,
+  BackendAvailabilityReport,
+  BackendAvailabilityStatus,
   BackendCapability,
   BackendReference,
   BinaryDiagnostic,
@@ -56,6 +59,7 @@ export type {
 } from './contracts';
 export {
   backendReference,
+  buildBackendAvailabilityReport,
   byteEditDelta,
   byteEditNewRange,
   byteEditOldRange,

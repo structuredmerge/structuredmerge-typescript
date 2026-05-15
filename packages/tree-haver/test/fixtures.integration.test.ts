@@ -3,6 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
   AdapterInfo,
+  BackendAvailabilityCheck,
+  BackendAvailabilityReport,
   BackendCapability,
   BackendReference,
   BinaryDiagnostic,
@@ -28,6 +30,7 @@ import type {
 } from '../src/index';
 import { processWithLanguagePack } from '../src/index';
 import {
+  buildBackendAvailabilityReport,
   byteEditDelta,
   byteEditNewRange,
   byteEditOldRange,
@@ -118,6 +121,13 @@ interface PathValidationFixture {
   backend_name_cases: NameValidationCase[];
 }
 
+interface BackendAvailabilityReportFixture {
+  backend_ref: BackendReference;
+  status: 'available' | 'unavailable' | 'unknown';
+  checks: BackendAvailabilityCheck[];
+  diagnostics: string[];
+}
+
 function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProjectionSupport {
   return {
     backendRef: fixture.backend_ref,
@@ -130,6 +140,17 @@ function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProje
     correlationKeys: fixture.correlation_keys,
     preservesSourceFragments: fixture.preserves_source_fragments,
     unsupportedReason: fixture.unsupported_reason ?? undefined,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function backendAvailabilityReport(
+  fixture: BackendAvailabilityReportFixture
+): BackendAvailabilityReport {
+  return {
+    backendRef: fixture.backend_ref,
+    status: fixture.status,
+    checks: fixture.checks,
     diagnostics: fixture.diagnostics
   };
 }
@@ -1089,6 +1110,21 @@ describe('tree-haver shared fixtures', () => {
 
     for (const testCase of fixture.backend_name_cases) {
       expect(safeBackendName(testCase.value), testCase.name).toBe(testCase.expected_valid);
+    }
+  });
+
+  it('conforms to the slice-926 tree_haver backend availability fixture', () => {
+    const fixture = readFixture<Record<string, BackendAvailabilityReportFixture>>(
+      'diagnostics',
+      'slice-926-tree-haver-backend-availability',
+      'backend-availability.json'
+    );
+
+    for (const name of ['available_report', 'unavailable_report', 'unknown_report']) {
+      const expected = backendAvailabilityReport(fixture[name]!);
+      expect(buildBackendAvailabilityReport(expected.backendRef, expected.checks)).toEqual(
+        expected
+      );
     }
   });
 
