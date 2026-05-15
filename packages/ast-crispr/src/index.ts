@@ -102,6 +102,12 @@ export interface OperationProfileReport {
   readonly may_reuse_captured_text: boolean;
 }
 
+export interface BatchOperationReport {
+  readonly operation_count: number;
+  readonly operation_kinds: readonly string[];
+  readonly operation_profiles: readonly OperationProfileReport[];
+}
+
 interface ProfileDescriptor {
   readonly family: string;
 }
@@ -435,6 +441,14 @@ export function moveOperation(): OperationProfile {
   });
 }
 
+export function batchOperationReport(profiles: readonly OperationProfile[]): BatchOperationReport {
+  return {
+    operation_count: profiles.length,
+    operation_kinds: profiles.map((profile) => profile.operationKind),
+    operation_profiles: profiles.map((profile) => profile.report())
+  };
+}
+
 export function selectionProfile(
   profile: ConstructorParameters<typeof SelectionProfile>[0]
 ): SelectionProfile {
@@ -589,9 +603,10 @@ export function boundaryReport(): Readonly<Record<string, unknown>> {
       'selection profile helpers',
       'destination profile helpers',
       'operation profile helpers',
-      'replace/delete/insert/move helpers'
+      'replace/delete/insert/move helpers',
+      'batch operation helpers'
     ],
-    future_exports: ['batch operation helpers'],
+    future_exports: [],
     metadata: {
       source: 'legacy_crispr_reference',
       decision:
