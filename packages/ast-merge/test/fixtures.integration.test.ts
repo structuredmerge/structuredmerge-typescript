@@ -224,6 +224,7 @@ import type {
   MergeResult,
   NativeProviderMetadataReport,
   NativeProviderProvingGroundReport,
+  ProviderRichnessProjection,
   TemplateTokenConfig,
   TemplateExecutionPlanEntry,
   TemplateDirectoryApplyReport,
@@ -6574,6 +6575,32 @@ describe('ast-merge shared fixtures', () => {
     expect(nativeProviders).toEqual(fixture.expected.native_providers);
     expect(suite.cases[0]?.tree_sitter_provider).toBe(fixture.expected.tree_sitter_provider);
     expect(sourceSpanCaseCount).toBe(fixture.expected.source_span_case_count);
+  });
+
+  it('conforms to the slice-828 provider richness projection fixture', () => {
+    const fixture = readFixture<{
+      projection: ProviderRichnessProjection;
+      expected: {
+        provider_id: string;
+        role_count: number;
+        signature_kind: string;
+        signature_name: string;
+        requires_private_fields: boolean;
+        private_metadata_namespace: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-828-provider-richness-projection',
+      'provider-richness-projection.json'
+    );
+    const projection = fixture.projection;
+
+    expect(projection.provider_id).toBe(fixture.expected.provider_id);
+    expect(projection.generic_roles).toHaveLength(fixture.expected.role_count);
+    expect(projection.generic_signature.kind).toBe(fixture.expected.signature_kind);
+    expect(projection.generic_signature.name).toBe(fixture.expected.signature_name);
+    expect(projection.requires_private_fields).toBe(fixture.expected.requires_private_fields);
+    expect(projection.private_metadata[fixture.expected.private_metadata_namespace]).toBeDefined();
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

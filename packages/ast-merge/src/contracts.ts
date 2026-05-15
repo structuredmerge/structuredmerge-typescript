@@ -1196,6 +1196,25 @@ export interface BackendParitySuite {
   readonly diagnostics: readonly string[];
 }
 
+export interface ProviderRichnessSignature {
+  readonly kind: string;
+  readonly name: string;
+  readonly parameters: readonly string[];
+  readonly result: string;
+}
+
+export interface ProviderRichnessProjection {
+  readonly projection_id: string;
+  readonly version: string;
+  readonly provider_id: string;
+  readonly node_path: string;
+  readonly generic_roles: readonly string[];
+  readonly generic_signature: ProviderRichnessSignature;
+  readonly private_metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  readonly requires_private_fields: boolean;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

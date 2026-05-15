@@ -133,6 +133,8 @@ export type {
   PairwiseNodeMatch,
   PCS,
   PCSConstraint,
+  ProviderRichnessProjection,
+  ProviderRichnessSignature,
   RawMerge,
   RawMergeChange,
   FamilyFeatureProfile,
