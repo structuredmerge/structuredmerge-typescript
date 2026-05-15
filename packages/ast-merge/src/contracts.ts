@@ -764,6 +764,34 @@ export interface AmbiguityMatchingReport {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export interface RejectedTieBreakCandidate {
+  readonly from_path: string;
+  readonly from_node_id: string;
+  readonly confidence: number;
+  readonly rejected_by: string;
+}
+
+export interface TieBreakMatch {
+  readonly signature: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly confidence: number;
+  readonly selected_by: string;
+  readonly rejected_candidates: readonly RejectedTieBreakCandidate[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface TieBreakMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly scope_path: string;
+  readonly tie_break_rules: readonly string[];
+  readonly matches: readonly TieBreakMatch[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

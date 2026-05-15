@@ -52,6 +52,7 @@ import type {
   SignatureMatchingReport,
   SourceTextNormalizedMatchingReport,
   StructuralMatchingReport,
+  TieBreakMatchingReport,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -5920,6 +5921,40 @@ describe('ast-merge shared fixtures', () => {
     expect(report.ambiguities[0]?.signature).toBe(fixture.expected.first_ambiguity_signature);
     expect(report.ambiguities[0]?.reason).toBe(fixture.expected.first_ambiguity_reason);
     expect(report.ambiguities[0]?.selected).toBe(fixture.expected.first_ambiguity_selected);
+  });
+
+  it('conforms to the slice-803 duplicate signature tie-break fixture', () => {
+    const fixture = readFixture<{
+      matching: TieBreakMatchingReport;
+      expected: {
+        strategy: string;
+        scope_path: string;
+        tie_break_rules: readonly string[];
+        match_count: number;
+        first_match_signature: string;
+        first_match_selected_by: string;
+        rejected_candidate_count: number;
+        first_rejected_by: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-803-duplicate-signature-tie-break',
+      'duplicate-signature-tie-break.json'
+    );
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.scope_path).toBe(fixture.expected.scope_path);
+    expect(report.tie_break_rules).toEqual(fixture.expected.tie_break_rules);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.matches[0]?.signature).toBe(fixture.expected.first_match_signature);
+    expect(report.matches[0]?.selected_by).toBe(fixture.expected.first_match_selected_by);
+    expect(report.matches[0]?.rejected_candidates).toHaveLength(
+      fixture.expected.rejected_candidate_count
+    );
+    expect(report.matches[0]?.rejected_candidates[0]?.rejected_by).toBe(
+      fixture.expected.first_rejected_by
+    );
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
