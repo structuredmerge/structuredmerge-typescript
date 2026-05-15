@@ -1172,6 +1172,15 @@ export interface GoDSTProviderStackReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface GoProviderComparisonReport {
+  readonly comparison_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly providers: readonly string[];
+  readonly dimensions: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

@@ -52,6 +52,7 @@ import type {
   FormattingRecommendationGate,
   GenericConflictHandlerExecution,
   GoDSTProviderStackReport,
+  GoProviderComparisonReport,
   HostLanguageNativeProviderContracts,
   InconsistencyReport,
   LanguageProfileHandlerRegistry,
@@ -6528,6 +6529,26 @@ describe('ast-merge shared fixtures', () => {
     expect(report.backend_family).toBe(fixture.expected.backend_family);
     expect(report.language).toBe(fixture.expected.language);
     expect(report.compares_with).toHaveLength(fixture.expected.comparison_count);
+  });
+
+  it('conforms to the slice-826 Go provider comparison fixture', () => {
+    const fixture = readFixture<{
+      comparison: GoProviderComparisonReport;
+      expected: {
+        language: string;
+        provider_count: number;
+        dimension_count: number;
+        includes_backend_deficiencies: boolean;
+      };
+    }>('diagnostics', 'slice-826-go-provider-comparison', 'go-provider-comparison.json');
+    const report = fixture.comparison;
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.providers).toHaveLength(fixture.expected.provider_count);
+    expect(report.dimensions).toHaveLength(fixture.expected.dimension_count);
+    expect(report.dimensions.includes('backend_deficiencies')).toBe(
+      fixture.expected.includes_backend_deficiencies
+    );
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
