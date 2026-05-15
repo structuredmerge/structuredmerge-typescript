@@ -49,6 +49,24 @@ export interface MatchProfileReport {
   readonly trailing_gap_extended: boolean;
 }
 
+export interface SelectionProfileReport {
+  readonly owner_scope: string;
+  readonly owner_selector: string;
+  readonly owner_selector_family: string;
+  readonly known_owner_selector: boolean;
+  readonly selector_kind: string;
+  readonly selector_kind_family: string;
+  readonly known_selector_kind: boolean;
+  readonly selection_intent: string;
+  readonly selection_intent_family: string;
+  readonly known_selection_intent: boolean;
+  readonly comment_region: string | null;
+  readonly comment_region_family: string;
+  readonly known_comment_region: boolean;
+  readonly comment_anchored: boolean;
+  readonly include_trailing_gap: boolean;
+}
+
 interface ProfileDescriptor {
   readonly family: string;
 }
@@ -67,6 +85,29 @@ const KNOWN_PAYLOAD_KINDS: Readonly<Record<string, ProfileDescriptor>> = {
   structural_owner_body: { family: 'owner_body' },
   comment_owned_body: { family: 'comment_owned' },
   section_branch: { family: 'section_branch' }
+};
+
+const KNOWN_OWNER_SELECTORS: Readonly<Record<string, ProfileDescriptor>> = {
+  line_bound_statements: { family: 'line_oriented' },
+  heading_sections: { family: 'section' }
+};
+
+const KNOWN_SELECTOR_KINDS: Readonly<Record<string, ProfileDescriptor>> = {
+  owner_filter: { family: 'owner_filter' },
+  comment_region_owner: { family: 'comment_anchor' },
+  heading_section: { family: 'section_branch' }
+};
+
+const KNOWN_SELECTION_INTENTS: Readonly<Record<string, ProfileDescriptor>> = {
+  predicate_filter: { family: 'predicate' },
+  comment_region_filter: { family: 'comment' },
+  section_heading: { family: 'section' }
+};
+
+const KNOWN_COMMENT_REGIONS: Readonly<Record<string, ProfileDescriptor>> = {
+  leading: { family: 'leading' },
+  trailing: { family: 'trailing' },
+  inline: { family: 'inline' }
 };
 
 export class MatchProfile {
@@ -108,8 +149,79 @@ export class MatchProfile {
   }
 }
 
+export class SelectionProfile {
+  readonly ownerScope: string;
+  readonly ownerSelector: string;
+  readonly selectorKind: string;
+  readonly selectionIntent: string;
+  readonly commentRegion: string | null;
+  readonly includeTrailingGap: boolean;
+
+  constructor({
+    owner_scope = 'shared_default',
+    owner_selector = 'line_bound_statements',
+    selector_kind = 'owner_filter',
+    selection_intent = 'predicate_filter',
+    comment_region = null,
+    include_trailing_gap = false
+  }: {
+    readonly owner_scope?: string;
+    readonly owner_selector?: string;
+    readonly selector_kind?: string;
+    readonly selection_intent?: string;
+    readonly comment_region?: string | null;
+    readonly include_trailing_gap?: boolean;
+  } = {}) {
+    this.ownerScope = owner_scope;
+    this.ownerSelector = owner_selector;
+    this.selectorKind = selector_kind;
+    this.selectionIntent = selection_intent;
+    this.commentRegion = comment_region;
+    this.includeTrailingGap = include_trailing_gap;
+  }
+
+  report(): SelectionProfileReport {
+    const ownerSelectorFamily = KNOWN_OWNER_SELECTORS[this.ownerSelector]?.family ?? 'unknown';
+    const selectorKindFamily = KNOWN_SELECTOR_KINDS[this.selectorKind]?.family ?? 'unknown';
+    const selectionIntentFamily =
+      KNOWN_SELECTION_INTENTS[this.selectionIntent]?.family ?? 'unknown';
+    const commentRegionFamily =
+      this.commentRegion === null
+        ? 'none'
+        : (KNOWN_COMMENT_REGIONS[this.commentRegion]?.family ?? 'unknown');
+    const knownCommentRegion =
+      this.commentRegion !== null && this.commentRegion in KNOWN_COMMENT_REGIONS;
+    return {
+      owner_scope: this.ownerScope,
+      owner_selector: this.ownerSelector,
+      owner_selector_family: ownerSelectorFamily,
+      known_owner_selector: this.ownerSelector in KNOWN_OWNER_SELECTORS,
+      selector_kind: this.selectorKind,
+      selector_kind_family: selectorKindFamily,
+      known_selector_kind: this.selectorKind in KNOWN_SELECTOR_KINDS,
+      selection_intent: this.selectionIntent,
+      selection_intent_family: selectionIntentFamily,
+      known_selection_intent: this.selectionIntent in KNOWN_SELECTION_INTENTS,
+      comment_region: this.commentRegion,
+      comment_region_family: commentRegionFamily,
+      known_comment_region: knownCommentRegion,
+      comment_anchored:
+        selectorKindFamily === 'comment_anchor' ||
+        selectionIntentFamily === 'comment' ||
+        knownCommentRegion,
+      include_trailing_gap: this.includeTrailingGap
+    };
+  }
+}
+
 export function matchProfile(profile: ConstructorParameters<typeof MatchProfile>[0]): MatchProfile {
   return new MatchProfile(profile);
+}
+
+export function selectionProfile(
+  profile: ConstructorParameters<typeof SelectionProfile>[0]
+): SelectionProfile {
+  return new SelectionProfile(profile);
 }
 
 export function limit(spec: unknown = null): Limit {
@@ -256,10 +368,10 @@ export function boundaryReport(): Readonly<Record<string, unknown>> {
       'boundary report',
       'ast-merge structured-edit contract anchor',
       'limit helpers',
-      'match profile helpers'
+      'match profile helpers',
+      'selection profile helpers'
     ],
     future_exports: [
-      'selection profile helpers',
       'destination profile helpers',
       'operation profile helpers',
       'replace/delete/insert/move helpers',

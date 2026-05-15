@@ -5,6 +5,7 @@ import {
   AstCrisprError,
   Limit,
   MatchProfile,
+  SelectionProfile,
   astMergeContractAnchor,
   boundaryReport
 } from '../src/index';
@@ -78,6 +79,27 @@ function readMatchProfileFixture(): MatchProfileFixture {
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as MatchProfileFixture;
 }
 
+interface SelectionProfileFixture {
+  cases: Array<{
+    name: string;
+    profile: ConstructorParameters<typeof SelectionProfile>[0];
+    expected: Readonly<Record<string, unknown>>;
+  }>;
+}
+
+function readSelectionProfileFixture(): SelectionProfileFixture {
+  const fixturePath = path.resolve(
+    process.cwd(),
+    '..',
+    'fixtures',
+    'diagnostics',
+    'slice-919-ast-crispr-selection-profile-helpers',
+    'ast-crispr-selection-profile-helpers.json'
+  );
+
+  return JSON.parse(readFileSync(fixturePath, 'utf8')) as SelectionProfileFixture;
+}
+
 describe('@structuredmerge/ast-crispr', () => {
   it('conforms to the package boundary fixture', () => {
     expect(boundaryReport()).toEqual(readFixture().boundary);
@@ -110,6 +132,14 @@ describe('@structuredmerge/ast-crispr', () => {
 
     for (const testCase of fixture.cases) {
       expect(new MatchProfile(testCase.profile).report()).toEqual(testCase.expected);
+    }
+  });
+
+  it('conforms to the selection profile helper fixture', () => {
+    const fixture = readSelectionProfileFixture();
+
+    for (const testCase of fixture.cases) {
+      expect(new SelectionProfile(testCase.profile).report()).toEqual(testCase.expected);
     }
   });
 });
