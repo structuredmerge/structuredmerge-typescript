@@ -9,7 +9,11 @@ import {
   OperationProfile,
   SelectionProfile,
   astMergeContractAnchor,
-  boundaryReport
+  boundaryReport,
+  deleteOperation,
+  insertOperation,
+  moveOperation,
+  replaceOperation
 } from '../src/index';
 
 interface BoundaryFixture {
@@ -144,6 +148,27 @@ function readOperationProfileFixture(): OperationProfileFixture {
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as OperationProfileFixture;
 }
 
+interface OperationHelperFixture {
+  cases: Array<{
+    name: string;
+    helper: 'replace' | 'delete' | 'insert' | 'move';
+    expected_operation_profile: Readonly<Record<string, unknown>>;
+  }>;
+}
+
+function readOperationHelperFixture(): OperationHelperFixture {
+  const fixturePath = path.resolve(
+    process.cwd(),
+    '..',
+    'fixtures',
+    'diagnostics',
+    'slice-922-ast-crispr-operation-helpers',
+    'ast-crispr-operation-helpers.json'
+  );
+
+  return JSON.parse(readFileSync(fixturePath, 'utf8')) as OperationHelperFixture;
+}
+
 describe('@structuredmerge/ast-crispr', () => {
   it('conforms to the package boundary fixture', () => {
     expect(boundaryReport()).toEqual(readFixture().boundary);
@@ -200,6 +225,20 @@ describe('@structuredmerge/ast-crispr', () => {
 
     for (const testCase of fixture.cases) {
       expect(new OperationProfile(testCase.profile).report()).toEqual(testCase.expected);
+    }
+  });
+
+  it('conforms to the operation helper fixture', () => {
+    const fixture = readOperationHelperFixture();
+    const helpers = {
+      replace: replaceOperation,
+      delete: deleteOperation,
+      insert: insertOperation,
+      move: moveOperation
+    };
+
+    for (const testCase of fixture.cases) {
+      expect(helpers[testCase.helper]().report()).toEqual(testCase.expected_operation_profile);
     }
   });
 });

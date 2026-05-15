@@ -391,6 +391,50 @@ export function operationProfile(
   return new OperationProfile(profile);
 }
 
+export function replaceOperation(): OperationProfile {
+  return new OperationProfile({
+    operation_kind: 'replace',
+    source_requirement: 'required',
+    destination_requirement: 'none',
+    replacement_source: 'explicit_text',
+    captures_source_text: true,
+    supports_if_missing: false
+  });
+}
+
+export function deleteOperation(): OperationProfile {
+  return new OperationProfile({
+    operation_kind: 'delete',
+    source_requirement: 'required',
+    destination_requirement: 'none',
+    replacement_source: 'none',
+    captures_source_text: true,
+    supports_if_missing: false
+  });
+}
+
+export function insertOperation(): OperationProfile {
+  return new OperationProfile({
+    operation_kind: 'insert',
+    source_requirement: 'none',
+    destination_requirement: 'optional',
+    replacement_source: 'explicit_text',
+    captures_source_text: false,
+    supports_if_missing: true
+  });
+}
+
+export function moveOperation(): OperationProfile {
+  return new OperationProfile({
+    operation_kind: 'move',
+    source_requirement: 'optional',
+    destination_requirement: 'optional',
+    replacement_source: 'captured_text_or_explicit',
+    captures_source_text: true,
+    supports_if_missing: true
+  });
+}
+
 export function selectionProfile(
   profile: ConstructorParameters<typeof SelectionProfile>[0]
 ): SelectionProfile {
@@ -544,9 +588,10 @@ export function boundaryReport(): Readonly<Record<string, unknown>> {
       'match profile helpers',
       'selection profile helpers',
       'destination profile helpers',
-      'operation profile helpers'
+      'operation profile helpers',
+      'replace/delete/insert/move helpers'
     ],
-    future_exports: ['replace/delete/insert/move helpers', 'batch operation helpers'],
+    future_exports: ['batch operation helpers'],
     metadata: {
       source: 'legacy_crispr_reference',
       decision:
