@@ -964,6 +964,41 @@ export interface LanguageProfileHandlerRegistry {
   readonly diagnostics: readonly string[];
 }
 
+export interface FallbackUsageEntry {
+  readonly fallback_id: string;
+  readonly strategy: string;
+  readonly scope: string;
+  readonly path: string;
+  readonly conflict_category: string;
+}
+
+export interface FallbackUsageSummary {
+  readonly fallback_count: number;
+  readonly conflict_count: number;
+  readonly resolved_count: number;
+}
+
+export interface FallbackUsageMachineOutput {
+  readonly fallbacks: readonly FallbackUsageEntry[];
+  readonly summary: FallbackUsageSummary;
+}
+
+export interface GitDriverOutput {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exit_code: number;
+}
+
+export interface FallbackUsageReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly mode: string;
+  readonly quiet_by_default: boolean;
+  readonly machine_output: FallbackUsageMachineOutput;
+  readonly git_driver_output: GitDriverOutput;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

@@ -39,6 +39,7 @@ import type {
   DiagnosticSeverity,
   DiscoveredSurface,
   FallbackScopeReport,
+  FallbackUsageReport,
   ChangeSet,
   ClassMappingReport,
   ConflictCategoryReport,
@@ -6171,6 +6172,36 @@ describe('ast-merge shared fixtures', () => {
     expect(enabledCount).toBe(fixture.expected.enabled_count);
     expect(roles).toEqual(fixture.expected.roles);
     expect(duplicateMemberHandler).toBe(fixture.expected.duplicate_member_handler);
+  });
+
+  it('conforms to the slice-812 fallback usage machine output fixture', () => {
+    const fixture = readFixture<{
+      fallback_usage: FallbackUsageReport;
+      expected: {
+        mode: string;
+        quiet_by_default: boolean;
+        fallback_count: number;
+        conflict_count: number;
+        stdout: string;
+        stderr: string;
+        exit_code: number;
+        first_fallback_scope: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-812-fallback-usage-machine-output',
+      'fallback-usage-machine-output.json'
+    );
+    const report = fixture.fallback_usage;
+
+    expect(report.mode).toBe(fixture.expected.mode);
+    expect(report.quiet_by_default).toBe(fixture.expected.quiet_by_default);
+    expect(report.machine_output.summary.fallback_count).toBe(fixture.expected.fallback_count);
+    expect(report.machine_output.summary.conflict_count).toBe(fixture.expected.conflict_count);
+    expect(report.git_driver_output.stdout).toBe(fixture.expected.stdout);
+    expect(report.git_driver_output.stderr).toBe(fixture.expected.stderr);
+    expect(report.git_driver_output.exit_code).toBe(fixture.expected.exit_code);
+    expect(report.machine_output.fallbacks[0]?.scope).toBe(fixture.expected.first_fallback_scope);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
