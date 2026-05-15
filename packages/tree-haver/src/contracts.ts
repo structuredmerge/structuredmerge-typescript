@@ -85,6 +85,9 @@ export interface BackendCapability {
   readonly semanticRoleSupport: string;
   readonly normalizedTreeSupport: boolean;
   readonly nativeNodeAccess: boolean;
+  readonly knownNodeKinds?: readonly string[];
+  readonly knownFields?: readonly string[];
+  readonly grammarInventory?: string;
   readonly diagnostics: readonly string[];
 }
 

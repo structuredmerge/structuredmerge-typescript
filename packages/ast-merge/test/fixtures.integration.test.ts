@@ -6,9 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
-import { executeGenericConflictHandler } from '../src/index';
+import { executeGenericConflictHandler, validateLanguageBackendProfile } from '../src/index';
 import type {
   AmbiguityMatchingReport,
+  BackendGrammarInventory,
   BackendGapConformanceReport,
   BackendParitySuite,
   ConformanceCaseRef,
@@ -71,6 +72,7 @@ import type {
   PCS,
   PerformanceGuardrails,
   ProfileConformanceReport,
+  ProfileValidationDiagnostic,
   RawMerge,
   RenameAwareMatchingReport,
   RenderPlanReport,
@@ -500,6 +502,24 @@ interface LanguageBackendProfileSchemaFixture {
     first_signature: string;
     first_commutative_parent: string;
   };
+}
+
+interface ProfileValidationFixture {
+  structural_profile: LanguageBackendProfile;
+  backend_metadata: BackendGrammarInventory;
+  partial_backend_metadata: BackendGrammarInventory;
+  unknown_selector_profile: LanguageBackendProfile;
+  expected: {
+    structural_errors: string[];
+    exhaustive_backend_errors: string[];
+    partial_backend_warnings: string[];
+  };
+}
+
+function sortedProfileValidationMessages(
+  diagnostics: readonly ProfileValidationDiagnostic[]
+): string[] {
+  return diagnostics.map((diagnostic) => diagnostic.message).sort();
 }
 
 interface TemplateSourcePathMappingFixture {
@@ -6994,6 +7014,36 @@ describe('ast-merge shared fixtures', () => {
     expect(fixture.profile.rules.signatures[0]?.name).toBe(fixture.expected.first_signature);
     expect(fixture.profile.rules.commutative_parents[0]?.selector).toBe(
       fixture.expected.first_commutative_parent
+    );
+  });
+
+  it('conforms to the slice-909 profile validation fixture', () => {
+    const fixture = readFixture<ProfileValidationFixture>(
+      'diagnostics',
+      'slice-909-profile-validation',
+      'profile-validation.json'
+    );
+
+    const structural = validateLanguageBackendProfile(fixture.structural_profile);
+    expect(sortedProfileValidationMessages(structural.errors)).toEqual(
+      [...fixture.expected.structural_errors].sort()
+    );
+
+    const exhaustive = validateLanguageBackendProfile(
+      fixture.unknown_selector_profile,
+      fixture.backend_metadata
+    );
+    expect(sortedProfileValidationMessages(exhaustive.errors)).toEqual(
+      [...fixture.expected.exhaustive_backend_errors].sort()
+    );
+
+    const partial = validateLanguageBackendProfile(
+      fixture.unknown_selector_profile,
+      fixture.partial_backend_metadata
+    );
+    expect(partial.errors).toHaveLength(0);
+    expect(sortedProfileValidationMessages(partial.warnings)).toEqual(
+      [...fixture.expected.partial_backend_warnings].sort()
     );
   });
 

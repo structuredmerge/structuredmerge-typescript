@@ -6,6 +6,7 @@ export type {
   BackendGapConformanceGap,
   BackendGapConformanceReport,
   BackendGapConformanceSummary,
+  BackendGrammarInventory,
   BackendParityCase,
   BackendParitySuite,
   BackendProfile,
@@ -157,6 +158,8 @@ export type {
   ProviderRichnessProjection,
   ProviderRichnessSignature,
   ProfileConformanceReport,
+  ProfileValidationDiagnostic,
+  ProfileValidationResult,
   ProfileSkippedRule,
   RawMerge,
   RawMergeChange,
@@ -583,5 +586,6 @@ export {
   resolveConformanceFamilyContext,
   selectConformanceCase,
   summarizeNamedConformanceSuiteReports,
-  summarizeConformanceResults
+  summarizeConformanceResults,
+  validateLanguageBackendProfile
 } from './contracts';

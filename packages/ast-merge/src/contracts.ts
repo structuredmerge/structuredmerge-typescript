@@ -1642,6 +1642,141 @@ export interface LanguageBackendProfile {
   readonly rules: LanguageBackendProfileRules;
 }
 
+export interface BackendGrammarInventory {
+  readonly backend_ref: {
+    readonly id: string;
+    readonly family: string;
+  };
+  readonly known_node_kinds?: readonly string[];
+  readonly known_fields?: readonly string[];
+  readonly grammar_inventory?: string;
+}
+
+export interface ProfileValidationDiagnostic {
+  readonly severity: 'error' | 'warning';
+  readonly message: string;
+}
+
+export interface ProfileValidationResult {
+  readonly ok: boolean;
+  readonly errors: readonly ProfileValidationDiagnostic[];
+  readonly warnings: readonly ProfileValidationDiagnostic[];
+  readonly diagnostics: readonly ProfileValidationDiagnostic[];
+}
+
+export function validateLanguageBackendProfile(
+  profile: LanguageBackendProfile,
+  capability?: BackendGrammarInventory
+): ProfileValidationResult {
+  const errors: ProfileValidationDiagnostic[] = [];
+  const warnings: ProfileValidationDiagnostic[] = [];
+  const diagnostics: ProfileValidationDiagnostic[] = [];
+  const addError = (message: string) => {
+    const diagnostic: ProfileValidationDiagnostic = { severity: 'error', message };
+    errors.push(diagnostic);
+    diagnostics.push(diagnostic);
+  };
+  const addWarning = (message: string) => {
+    const diagnostic: ProfileValidationDiagnostic = { severity: 'warning', message };
+    warnings.push(diagnostic);
+    diagnostics.push(diagnostic);
+  };
+
+  const validRoles = new Set([
+    'structural',
+    'token',
+    'trivia',
+    'comment',
+    'delimiter',
+    'separator',
+    'virtual',
+    'error',
+    'opaque'
+  ]);
+  profile.rules.node_roles.forEach((role) => {
+    if (!validRoles.has(role)) addError(`invalid node role ${role}`);
+  });
+
+  const signatureNames = new Set<string>();
+  profile.rules.signatures.forEach((signature) => {
+    if (!signature.name) addError('signature name is required');
+    else if (signatureNames.has(signature.name))
+      addError(`duplicate signature name ${signature.name}`);
+    signatureNames.add(signature.name);
+    if (!signature.selector) addError('signature selector is required');
+    if (!validSignatureExtractor(signature.extractor)) {
+      addError(`unsupported signature extractor ${signature.extractor}`);
+    }
+  });
+
+  const childGroups = new Set<string>();
+  profile.rules.child_groups.forEach((group) => {
+    if (!group.name) addError('child group name is required');
+    else if (childGroups.has(group.name)) addError(`duplicate child group name ${group.name}`);
+    childGroups.add(group.name);
+  });
+  profile.rules.commutative_parents.forEach((parent) => {
+    if (!parent.selector) addError('commutative parent selector is required');
+    if (!childGroups.has(parent.child_group)) {
+      addError(
+        `commutative parent ${parent.selector} references unknown child group ${parent.child_group}`
+      );
+    }
+  });
+  profile.rules.atomic_nodes.forEach((atomic) => {
+    if (!atomic.selector) addError('atomic node selector is required');
+  });
+  profile.rules.comment_attachment.forEach((attachment) => {
+    if (!attachment.selector) addError('comment attachment selector is required');
+    if (!attachment.strategy) addError('comment attachment strategy is required');
+  });
+
+  if (capability?.grammar_inventory) {
+    validateBackendInventory(profile, capability, addError, addWarning);
+  }
+
+  return { ok: errors.length === 0, errors, warnings, diagnostics };
+}
+
+function validSignatureExtractor(extractor: string): boolean {
+  return (
+    extractor === 'text' ||
+    extractor.startsWith('field:') ||
+    extractor.startsWith('kind:') ||
+    extractor.startsWith('custom:')
+  );
+}
+
+function validateBackendInventory(
+  profile: LanguageBackendProfile,
+  capability: BackendGrammarInventory,
+  addError: (message: string) => void,
+  addWarning: (message: string) => void
+): void {
+  const nodeKinds = new Set(capability.known_node_kinds ?? []);
+  const fields = new Set(capability.known_fields ?? []);
+  const report = capability.grammar_inventory === 'exhaustive' ? addError : addWarning;
+  const checkSelector = (prefix: string, selector: string) => {
+    if (selector && nodeKinds.size > 0 && !nodeKinds.has(selector)) report(`${prefix} ${selector}`);
+  };
+  profile.rules.atomic_nodes.forEach((atomic) => {
+    checkSelector('unknown atomic node selector', atomic.selector);
+  });
+  profile.rules.signatures.forEach((signature) => {
+    checkSelector('unknown signature selector', signature.selector);
+    if (signature.extractor.startsWith('field:')) {
+      const field = signature.extractor.slice('field:'.length);
+      if (fields.size > 0 && !fields.has(field)) report(`unknown signature field ${field}`);
+    }
+  });
+  profile.rules.commutative_parents.forEach((parent) => {
+    checkSelector('unknown commutative parent selector', parent.selector);
+  });
+  profile.rules.comment_attachment.forEach((attachment) => {
+    checkSelector('unknown comment attachment selector', attachment.selector);
+  });
+}
+
 export interface StructuredEditStructureProfile {
   readonly ownerScope: string;
   readonly ownerSelector: string;
