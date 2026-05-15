@@ -42,6 +42,7 @@ import type {
   InconsistencyReport,
   MergeIR,
   MergeIRComparisonReport,
+  MoveDetectionMatchingReport,
   PairwiseMatching,
   PCS,
   RawMerge,
@@ -5824,6 +5825,39 @@ describe('ast-merge shared fixtures', () => {
     expect(report.matches[0]?.confidence).toBeGreaterThanOrEqual(
       fixture.expected.minimum_confidence
     );
+  });
+
+  it('conforms to the slice-800 move detection opt-in fixture', () => {
+    const fixture = readFixture<{
+      matching: MoveDetectionMatchingReport;
+      expected: {
+        strategy: string;
+        capability: string;
+        enabled: boolean;
+        default_enabled: boolean;
+        requires_stable_node_identity: boolean;
+        match_count: number;
+        move_count: number;
+        first_moved_signature: string;
+        first_moved_from_index: number;
+        first_moved_to_index: number;
+      };
+    }>('diagnostics', 'slice-800-move-detection-opt-in', 'move-detection-opt-in.json');
+    const report = fixture.matching;
+    const moveCount = report.matches.filter((match) => match.moved).length;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.capability.name).toBe(fixture.expected.capability);
+    expect(report.capability.enabled).toBe(fixture.expected.enabled);
+    expect(report.capability.default_enabled).toBe(fixture.expected.default_enabled);
+    expect(report.capability.requires_stable_node_identity).toBe(
+      fixture.expected.requires_stable_node_identity
+    );
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(moveCount).toBe(fixture.expected.move_count);
+    expect(report.matches[0]?.signature).toBe(fixture.expected.first_moved_signature);
+    expect(report.matches[0]?.from_index).toBe(fixture.expected.first_moved_from_index);
+    expect(report.matches[0]?.to_index).toBe(fixture.expected.first_moved_to_index);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

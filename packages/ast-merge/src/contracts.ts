@@ -676,6 +676,40 @@ export interface SourceTextNormalizedMatchingReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface MoveDetectionCapability {
+  readonly name: string;
+  readonly enabled: boolean;
+  readonly default_enabled: boolean;
+  readonly requires_stable_node_identity: boolean;
+}
+
+export interface MoveDetectionMatch {
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly signature: string;
+  readonly moved: boolean;
+  readonly from_parent_path: string;
+  readonly to_parent_path: string;
+  readonly from_index: number;
+  readonly to_index: number;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface MoveDetectionMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly capability: MoveDetectionCapability;
+  readonly matches: readonly MoveDetectionMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {
