@@ -18,6 +18,9 @@ export default defineConfig({
       '@structuredmerge/json-merge': fileURLToPath(
         new URL('./packages/json-merge/src/index.ts', import.meta.url)
       ),
+      '@structuredmerge/go-merge': fileURLToPath(
+        new URL('./packages/go-merge/src/index.ts', import.meta.url)
+      ),
       '@structuredmerge/toml-merge': fileURLToPath(
         new URL('./packages/toml-merge/src/index.ts', import.meta.url)
       ),
