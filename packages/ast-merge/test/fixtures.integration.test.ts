@@ -9,6 +9,8 @@ import { mergeRuby } from '../../ruby-merge/src/index';
 import {
   evaluateProfilePromotion,
   executeGenericConflictHandler,
+  promotionProfileJsonKeyedObject,
+  promotionProfileRubyGemspecDependencyDeclarations,
   validateLanguageBackendProfile
 } from '../src/index';
 import type {
@@ -7168,10 +7170,10 @@ describe('ast-merge shared fixtures', () => {
       (entry) => entry.scope === 'source_subprofile'
     ).length;
     const jsonPolicy = fixture.policy.profiles.find(
-      (entry) => entry.profile_id === 'json.keyed-object'
+      (entry) => entry.profile_id === promotionProfileJsonKeyedObject
     );
     const rubyPolicy = fixture.policy.profiles.find(
-      (entry) => entry.profile_id === 'ruby.gemspec-dependency-declarations'
+      (entry) => entry.profile_id === promotionProfileRubyGemspecDependencyDeclarations
     );
 
     expect(fixture.policy.policy_id).toBe(fixture.expected.policy_id);

@@ -602,5 +602,10 @@ export {
   summarizeNamedConformanceSuiteReports,
   summarizeConformanceResults,
   evaluateProfilePromotion,
+  promotionProfileGoImportDeclarations,
+  promotionProfileJsonKeyedObject,
+  promotionProfileRubyGemspecDependencyDeclarations,
+  promotionProfileRustUseDeclarations,
+  promotionProfileTypeScriptImportDeclarations,
   validateLanguageBackendProfile
 } from './contracts';

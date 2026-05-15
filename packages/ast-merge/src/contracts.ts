@@ -1548,6 +1548,13 @@ export interface ProfilePromotionReport {
 
 export type ProfilePromotionScope = 'data_format' | 'source_subprofile';
 
+export const promotionProfileJsonKeyedObject = 'json.keyed-object';
+export const promotionProfileGoImportDeclarations = 'go.import-declarations';
+export const promotionProfileRustUseDeclarations = 'rust.use-declarations';
+export const promotionProfileTypeScriptImportDeclarations = 'typescript.import-declarations';
+export const promotionProfileRubyGemspecDependencyDeclarations =
+  'ruby.gemspec-dependency-declarations';
+
 export interface ProfileRecommendationGate {
   readonly required_fixture_count: number;
   readonly formatting_threshold: number;
