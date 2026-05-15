@@ -50,6 +50,8 @@ export type {
   FallbackUsageMachineOutput,
   FallbackUsageReport,
   FallbackUsageSummary,
+  FormattingPreservationConformanceReport,
+  FormattingPreservationMetrics,
   GenericConflictHandlerCase,
   GenericConflictHandlerExecution,
   GenericConflictHandlerResult,

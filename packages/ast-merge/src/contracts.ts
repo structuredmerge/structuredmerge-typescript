@@ -1033,6 +1033,22 @@ export interface RenderVerificationReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface FormattingPreservationMetrics {
+  readonly expected_output_line_diff_size: number;
+  readonly expected_output_character_diff_size: number;
+  readonly formatting_preservation_score: number;
+}
+
+export interface FormattingPreservationConformanceReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly suite: string;
+  readonly case_id: string;
+  readonly language: string;
+  readonly formatting_metrics: FormattingPreservationMetrics;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

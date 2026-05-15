@@ -46,6 +46,7 @@ import type {
   ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
+  FormattingPreservationConformanceReport,
   GenericConflictHandlerExecution,
   InconsistencyReport,
   LanguageProfileHandlerRegistry,
@@ -6257,6 +6258,34 @@ describe('ast-merge shared fixtures', () => {
     expect(report.hard_gate).toBe(fixture.expected.hard_gate);
     expect(report.parse_errors).toHaveLength(fixture.expected.parse_error_count);
     expect(report.render_strategy).toBe(fixture.expected.render_strategy);
+  });
+
+  it('conforms to the slice-815 formatting preservation metrics fixture', () => {
+    const fixture = readFixture<{
+      conformance_report: FormattingPreservationConformanceReport;
+      expected: {
+        suite: string;
+        language: string;
+        line_diff_size: number;
+        character_diff_size: number;
+        score: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-815-formatting-preservation-metrics',
+      'formatting-preservation-metrics.json'
+    );
+    const report = fixture.conformance_report;
+
+    expect(report.suite).toBe(fixture.expected.suite);
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.formatting_metrics.expected_output_line_diff_size).toBe(
+      fixture.expected.line_diff_size
+    );
+    expect(report.formatting_metrics.expected_output_character_diff_size).toBe(
+      fixture.expected.character_diff_size
+    );
+    expect(report.formatting_metrics.formatting_preservation_score).toBe(fixture.expected.score);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
