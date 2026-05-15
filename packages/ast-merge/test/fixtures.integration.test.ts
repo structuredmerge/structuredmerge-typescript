@@ -51,6 +51,7 @@ import type {
   FormattingPreservationConformanceReport,
   FormattingRecommendationGate,
   GenericConflictHandlerExecution,
+  GoDSTProviderStackReport,
   HostLanguageNativeProviderContracts,
   InconsistencyReport,
   LanguageProfileHandlerRegistry,
@@ -6507,6 +6508,26 @@ describe('ast-merge shared fixtures', () => {
     expect(report.providers).toHaveLength(fixture.expected.provider_count);
     expect(report.providers).toEqual(fixture.expected.providers);
     expect(report.checks).toEqual(fixture.expected.checks);
+  });
+
+  it('conforms to the slice-825 go-dst provider stack fixture', () => {
+    const fixture = readFixture<{
+      provider_stack: GoDSTProviderStackReport;
+      expected: {
+        provider_id: string;
+        module: string;
+        backend_family: string;
+        language: string;
+        comparison_count: number;
+      };
+    }>('diagnostics', 'slice-825-go-dst-provider-stack', 'go-dst-provider-stack.json');
+    const report = fixture.provider_stack;
+
+    expect(report.provider_id).toBe(fixture.expected.provider_id);
+    expect(report.module).toBe(fixture.expected.module);
+    expect(report.backend_family).toBe(fixture.expected.backend_family);
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.compares_with).toHaveLength(fixture.expected.comparison_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

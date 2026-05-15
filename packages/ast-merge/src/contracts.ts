@@ -1162,6 +1162,16 @@ export interface NativeProviderProvingGroundReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface GoDSTProviderStackReport {
+  readonly provider_id: string;
+  readonly module: string;
+  readonly backend_family: string;
+  readonly language: string;
+  readonly role: string;
+  readonly compares_with: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

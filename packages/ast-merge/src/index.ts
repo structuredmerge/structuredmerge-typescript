@@ -61,6 +61,7 @@ export type {
   GenericConflictHandlerCase,
   GenericConflictHandlerExecution,
   GenericConflictHandlerResult,
+  GoDSTProviderStackReport,
   HandlerChildNode,
   HandlerKeyedMember,
   HostLanguageNativeProviderContract,
