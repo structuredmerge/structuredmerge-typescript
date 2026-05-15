@@ -44,6 +44,8 @@ export type {
   FallbackScopeDefinition,
   FallbackScopeReport,
   InconsistencyReport,
+  LineSpan,
+  LocalLineFallbackReport,
   MergeConflict,
   MergeInconsistency,
   MergeIRComparisonCase,

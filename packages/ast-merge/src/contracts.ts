@@ -862,6 +862,25 @@ export interface ConflictCategoryReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface LineSpan {
+  readonly start_line: number;
+  readonly end_line: number;
+}
+
+export interface LocalLineFallbackReport {
+  readonly fallback_id: string;
+  readonly strategy: string;
+  readonly scope: string;
+  readonly path: string;
+  readonly owner_path: string;
+  readonly base_span: LineSpan;
+  readonly left_span: LineSpan;
+  readonly right_span: LineSpan;
+  readonly result: string;
+  readonly conflict_category: string;
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

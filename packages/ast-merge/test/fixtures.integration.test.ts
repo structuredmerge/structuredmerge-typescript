@@ -43,6 +43,7 @@ import type {
   ConflictCategoryReport,
   FamilyFeatureProfile,
   InconsistencyReport,
+  LocalLineFallbackReport,
   MatchingDebugArtifacts,
   MergeIR,
   MergeIRComparisonReport,
@@ -6023,6 +6024,34 @@ describe('ast-merge shared fixtures', () => {
     expect(report.categories[0]).toBe(fixture.expected.first_category);
     expect(report.categories.at(-1)).toBe(fixture.expected.last_category);
     expect(parseLimited?.fallback_scope).toBe(fixture.expected.parse_limited_fallback_scope);
+  });
+
+  it('conforms to the slice-807 local line-based fallback fixture', () => {
+    const fixture = readFixture<{
+      fallback: LocalLineFallbackReport;
+      expected: {
+        strategy: string;
+        scope: string;
+        path: string;
+        result: string;
+        conflict_category: string;
+        left_line_count: number;
+        right_line_count: number;
+      };
+    }>('diagnostics', 'slice-807-local-line-based-fallback', 'local-line-based-fallback.json');
+    const report = fixture.fallback;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.scope).toBe(fixture.expected.scope);
+    expect(report.path).toBe(fixture.expected.path);
+    expect(report.result).toBe(fixture.expected.result);
+    expect(report.conflict_category).toBe(fixture.expected.conflict_category);
+    expect(report.left_span.end_line - report.left_span.start_line + 1).toBe(
+      fixture.expected.left_line_count
+    );
+    expect(report.right_span.end_line - report.right_span.start_line + 1).toBe(
+      fixture.expected.right_line_count
+    );
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
