@@ -1569,6 +1569,79 @@ export interface FamilyFeatureProfile {
   readonly supportedPolicies: readonly PolicyReference[];
 }
 
+export interface ParserIdentity {
+  readonly parser: string;
+  readonly backend: string;
+  readonly backend_family: string;
+  readonly parser_version: string;
+  readonly language_version: string;
+}
+
+export interface GitAttributeProfile {
+  readonly attribute_namespace: string;
+  readonly language_attributes: readonly string[];
+  readonly language: string;
+  readonly merge_driver: string;
+  readonly diff_driver: string;
+  readonly conflict_marker_size_attribute: string;
+}
+
+export interface BackendProfile {
+  readonly backend: string;
+  readonly family: string;
+  readonly default: boolean;
+  readonly capabilities: readonly string[];
+}
+
+export interface AtomicNodeRule {
+  readonly selector: string;
+  readonly reason: string;
+}
+
+export interface SignatureDefinition {
+  readonly name: string;
+  readonly selector: string;
+  readonly extractor: string;
+}
+
+export interface CommutativeParentDefinition {
+  readonly selector: string;
+  readonly child_group: string;
+}
+
+export interface ChildGroupDefinition {
+  readonly name: string;
+  readonly separator: string;
+  readonly delimiter: string | null;
+}
+
+export interface CommentAttachmentRule {
+  readonly selector: string;
+  readonly strategy: string;
+}
+
+export interface LanguageBackendProfileRules {
+  readonly node_roles: readonly string[];
+  readonly atomic_nodes: readonly AtomicNodeRule[];
+  readonly signatures: readonly SignatureDefinition[];
+  readonly commutative_parents: readonly CommutativeParentDefinition[];
+  readonly child_groups: readonly ChildGroupDefinition[];
+  readonly comment_attachment: readonly CommentAttachmentRule[];
+}
+
+export interface LanguageBackendProfile {
+  readonly profile_id: string;
+  readonly family: string;
+  readonly version: string;
+  readonly parser_identity: ParserIdentity;
+  readonly extensions: readonly string[];
+  readonly aliases: readonly string[];
+  readonly git_attributes: GitAttributeProfile;
+  readonly supported_dialects: readonly string[];
+  readonly backends: readonly BackendProfile[];
+  readonly rules: LanguageBackendProfileRules;
+}
+
 export interface StructuredEditStructureProfile {
   readonly ownerScope: string;
   readonly ownerSelector: string;

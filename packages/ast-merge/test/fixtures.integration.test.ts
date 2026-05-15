@@ -60,6 +60,7 @@ import type {
   GoProviderComparisonReport,
   HostLanguageNativeProviderContracts,
   InconsistencyReport,
+  LanguageBackendProfile,
   LanguageProfileHandlerRegistry,
   LocalLineFallbackReport,
   MatchingDebugArtifacts,
@@ -486,6 +487,18 @@ interface FamilyFeatureProfileFixture {
     family: string;
     supported_dialects: string[];
     supported_policies: PolicyReference[];
+  };
+}
+
+interface LanguageBackendProfileSchemaFixture {
+  profile: LanguageBackendProfile;
+  expected: {
+    profile_id: string;
+    family: string;
+    default_backend: string;
+    primary_language_attribute: string;
+    first_signature: string;
+    first_commutative_parent: string;
   };
 }
 
@@ -6963,6 +6976,25 @@ describe('ast-merge shared fixtures', () => {
       supported_dialects: featureProfile.supportedDialects,
       supported_policies: featureProfile.supportedPolicies
     }).toEqual(fixture.feature_profile);
+  });
+
+  it('conforms to the slice-908 language backend profile schema fixture', () => {
+    const fixture = readFixture<LanguageBackendProfileSchemaFixture>(
+      'diagnostics',
+      'slice-908-language-backend-profile-schema',
+      'language-backend-profile-schema.json'
+    );
+
+    expect(fixture.profile.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.profile.family).toBe(fixture.expected.family);
+    expect(fixture.profile.backends[0]?.backend).toBe(fixture.expected.default_backend);
+    expect(fixture.profile.git_attributes.language_attributes[0]).toBe(
+      fixture.expected.primary_language_attribute
+    );
+    expect(fixture.profile.rules.signatures[0]?.name).toBe(fixture.expected.first_signature);
+    expect(fixture.profile.rules.commutative_parents[0]?.selector).toBe(
+      fixture.expected.first_commutative_parent
+    );
   });
 
   it('conforms to the template source path mapping fixture', () => {
