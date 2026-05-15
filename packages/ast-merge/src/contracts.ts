@@ -846,6 +846,22 @@ export interface FallbackScopeReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface MergeConflict {
+  readonly conflict_id: string;
+  readonly category: string;
+  readonly path: string;
+  readonly fallback_scope: string;
+  readonly message: string;
+}
+
+export interface ConflictCategoryReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly categories: readonly string[];
+  readonly conflicts: readonly MergeConflict[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

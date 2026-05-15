@@ -40,6 +40,7 @@ import type {
   FallbackScopeReport,
   ChangeSet,
   ClassMappingReport,
+  ConflictCategoryReport,
   FamilyFeatureProfile,
   InconsistencyReport,
   MatchingDebugArtifacts,
@@ -6001,6 +6002,27 @@ describe('ast-merge shared fixtures', () => {
     expect(report.scopes.at(-1)?.requires_source_span).toBe(
       fixture.expected.whole_file_requires_source_span
     );
+  });
+
+  it('conforms to the slice-806 conflict categories fixture', () => {
+    const fixture = readFixture<{
+      conflicts: ConflictCategoryReport;
+      expected: {
+        category_count: number;
+        conflict_count: number;
+        first_category: string;
+        last_category: string;
+        parse_limited_fallback_scope: string;
+      };
+    }>('diagnostics', 'slice-806-conflict-categories', 'conflict-categories.json');
+    const report = fixture.conflicts;
+    const parseLimited = report.conflicts.find((conflict) => conflict.category === 'parse_limited');
+
+    expect(report.categories).toHaveLength(fixture.expected.category_count);
+    expect(report.conflicts).toHaveLength(fixture.expected.conflict_count);
+    expect(report.categories[0]).toBe(fixture.expected.first_category);
+    expect(report.categories.at(-1)).toBe(fixture.expected.last_category);
+    expect(parseLimited?.fallback_scope).toBe(fixture.expected.parse_limited_fallback_scope);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
