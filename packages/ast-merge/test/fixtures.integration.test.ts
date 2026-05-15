@@ -74,6 +74,7 @@ import type {
   PerformanceGuardrails,
   ProfileConformanceReport,
   ProfileDebugOutput,
+  ProfilePromotionPolicy,
   ProfilePromotionReport,
   ProfileValidationDiagnostic,
   RawMerge,
@@ -545,6 +546,21 @@ interface ProfilePromotionReportFixture {
     required_fixture_count: number;
     formatting_threshold: number;
     blocking_reason_count: number;
+  };
+}
+
+interface ProfilePromotionPolicyFixture {
+  policy: ProfilePromotionPolicy;
+  expected: {
+    policy_id: string;
+    profile_count: number;
+    global_hard_gate_count: number;
+    recommended_eligible_count: number;
+    default_eligible_count: number;
+    source_subprofile_count: number;
+    json_requires_cross_implementation_parity: boolean;
+    ruby_requires_backend_parity: boolean;
+    formatting_threshold: number;
   };
 }
 
@@ -7115,6 +7131,45 @@ describe('ast-merge shared fixtures', () => {
     expect(fixture.blocked_report.status).toBe(fixture.expected.blocked_status);
     expect(fixture.blocked_report.blocking_reasons).toHaveLength(
       fixture.expected.blocking_reason_count
+    );
+  });
+
+  it('conforms to the slice-912 profile promotion policy fixture', () => {
+    const fixture = readFixture<ProfilePromotionPolicyFixture>(
+      'diagnostics',
+      'slice-912-profile-promotion-policy',
+      'profile-promotion-policy.json'
+    );
+    const recommendedEligible = fixture.policy.profiles.filter((entry) =>
+      entry.eligible_statuses.includes('recommended')
+    ).length;
+    const defaultEligible = fixture.policy.profiles.filter((entry) =>
+      entry.eligible_statuses.includes('default')
+    ).length;
+    const sourceSubprofiles = fixture.policy.profiles.filter(
+      (entry) => entry.scope === 'source_subprofile'
+    ).length;
+    const jsonPolicy = fixture.policy.profiles.find(
+      (entry) => entry.profile_id === 'json.keyed-object'
+    );
+    const rubyPolicy = fixture.policy.profiles.find(
+      (entry) => entry.profile_id === 'ruby.gemspec-dependencies'
+    );
+
+    expect(fixture.policy.policy_id).toBe(fixture.expected.policy_id);
+    expect(fixture.policy.profiles).toHaveLength(fixture.expected.profile_count);
+    expect(fixture.policy.global_hard_gates).toHaveLength(fixture.expected.global_hard_gate_count);
+    expect(recommendedEligible).toBe(fixture.expected.recommended_eligible_count);
+    expect(defaultEligible).toBe(fixture.expected.default_eligible_count);
+    expect(sourceSubprofiles).toBe(fixture.expected.source_subprofile_count);
+    expect(jsonPolicy?.recommendation_gate.requires_cross_implementation_parity).toBe(
+      fixture.expected.json_requires_cross_implementation_parity
+    );
+    expect(rubyPolicy?.recommendation_gate.requires_backend_parity).toBe(
+      fixture.expected.ruby_requires_backend_parity
+    );
+    expect(jsonPolicy?.recommendation_gate.formatting_threshold).toBe(
+      fixture.expected.formatting_threshold
     );
   });
 

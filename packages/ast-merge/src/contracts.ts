@@ -1546,6 +1546,43 @@ export interface ProfilePromotionReport {
   readonly diagnostics: readonly string[];
 }
 
+export type ProfilePromotionScope = 'data_format' | 'source_subprofile';
+
+export interface ProfileRecommendationGate {
+  readonly required_fixture_count: number;
+  readonly formatting_threshold: number;
+  readonly fallback_threshold: number;
+  readonly unresolved_conflict_threshold: number;
+  readonly requires_backend_parity: boolean;
+  readonly requires_cross_implementation_parity: boolean;
+}
+
+export interface ProfileDefaultGate {
+  readonly requires_recommended_status: boolean;
+  readonly requires_explicit_package_rollout: boolean;
+  readonly minimum_recommended_days: number;
+  readonly requires_narrow_scope: boolean;
+}
+
+export interface ProfilePromotionPolicyEntry {
+  readonly profile_id: string;
+  readonly family: string;
+  readonly scope: ProfilePromotionScope;
+  readonly eligible_statuses: readonly ProfilePromotionStatus[];
+  readonly recommendation_gate: ProfileRecommendationGate;
+  readonly default_gate: ProfileDefaultGate;
+  readonly required_suites: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProfilePromotionPolicy {
+  readonly policy_id: string;
+  readonly version: string;
+  readonly global_hard_gates: readonly string[];
+  readonly profiles: readonly ProfilePromotionPolicyEntry[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';
