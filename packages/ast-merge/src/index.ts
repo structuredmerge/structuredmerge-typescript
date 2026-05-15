@@ -121,6 +121,7 @@ export type {
   MergeIRNodeClass,
   MergeIROrderedNode,
   MergeResult,
+  NativeProviderMetadataReport,
   PairwiseMatching,
   PairwiseNodeMatch,
   PCS,

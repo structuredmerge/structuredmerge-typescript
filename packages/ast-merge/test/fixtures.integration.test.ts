@@ -218,6 +218,7 @@ import type {
   StructuredEditTransportImportError,
   ReviewRequest,
   MergeResult,
+  NativeProviderMetadataReport,
   TemplateTokenConfig,
   TemplateExecutionPlanEntry,
   TemplateDirectoryApplyReport,
@@ -6428,6 +6429,38 @@ describe('ast-merge shared fixtures', () => {
     expect(report.outcome).toBe(fixture.expected.outcome);
     expect(report.fallback_strategy).toBe(fixture.expected.fallback_strategy);
     expect(report.diagnostics).toHaveLength(fixture.expected.diagnostic_count);
+  });
+
+  it('conforms to the slice-822 native provider metadata fixture', () => {
+    const fixture = readFixture<{
+      provider_metadata: NativeProviderMetadataReport;
+      expected: {
+        provider_id: string;
+        family: string;
+        host_language: string;
+        target_language: string;
+        parser_name: string;
+        parse_error_behavior: string;
+        source_span_support: string;
+        render_support: string;
+        semantic_role_support: string;
+        retains_native_tree: boolean;
+        metadata_policy: string;
+      };
+    }>('diagnostics', 'slice-822-native-provider-metadata', 'native-provider-metadata.json');
+    const report = fixture.provider_metadata;
+
+    expect(report.provider_id).toBe(fixture.expected.provider_id);
+    expect(report.family).toBe(fixture.expected.family);
+    expect(report.host_language).toBe(fixture.expected.host_language);
+    expect(report.target_language).toBe(fixture.expected.target_language);
+    expect(report.parser_name).toBe(fixture.expected.parser_name);
+    expect(report.parse_error_behavior).toBe(fixture.expected.parse_error_behavior);
+    expect(report.source_span_support).toBe(fixture.expected.source_span_support);
+    expect(report.render_support).toBe(fixture.expected.render_support);
+    expect(report.semantic_role_support).toBe(fixture.expected.semantic_role_support);
+    expect(report.retains_native_tree).toBe(fixture.expected.retains_native_tree);
+    expect(report.metadata_policy).toBe(fixture.expected.metadata_policy);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

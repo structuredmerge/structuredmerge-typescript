@@ -24,6 +24,7 @@ export type {
   LanguagePackAnalysis,
   LanguagePackProcessAnalysis,
   NativeParserProvider,
+  NativeProviderMetadata,
   NormalizedParseResult,
   NodeRole,
   NormalizedTreeNode,

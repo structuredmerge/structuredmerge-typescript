@@ -14,6 +14,7 @@ import type {
   ByteEditSpan,
   FeatureProfile,
   NativeParserProvider,
+  NativeProviderMetadata,
   NormalizedParseResult,
   NormalizedTreeNode,
   OrderedTreePrimitives,
@@ -550,6 +551,38 @@ describe('tree-haver shared fixtures', () => {
     expect(result.nodes[1]?.semanticRoles[1]).toBe('function');
     expect(result.metadata.go_dst?.native_tree_visibility).toBe('provider_internal');
     expect(result.sourceFragmentsAvailable).toBe(true);
+  });
+
+  it('conforms to the slice-822 native provider metadata fixture', () => {
+    const fixture = readFixture<{
+      provider_metadata: NativeProviderMetadata;
+      expected: {
+        provider_id: string;
+        family: string;
+        host_language: string;
+        target_language: string;
+        parser_name: string;
+        parse_error_behavior: string;
+        source_span_support: string;
+        render_support: string;
+        semantic_role_support: string;
+        retains_native_tree: boolean;
+        metadata_policy: string;
+      };
+    }>('diagnostics', 'slice-822-native-provider-metadata', 'native-provider-metadata.json');
+    const metadata = fixture.provider_metadata;
+
+    expect(metadata.provider_id).toBe(fixture.expected.provider_id);
+    expect(metadata.family).toBe(fixture.expected.family);
+    expect(metadata.host_language).toBe(fixture.expected.host_language);
+    expect(metadata.target_language).toBe(fixture.expected.target_language);
+    expect(metadata.parser_name).toBe(fixture.expected.parser_name);
+    expect(metadata.parse_error_behavior).toBe(fixture.expected.parse_error_behavior);
+    expect(metadata.source_span_support).toBe(fixture.expected.source_span_support);
+    expect(metadata.render_support).toBe(fixture.expected.render_support);
+    expect(metadata.semantic_role_support).toBe(fixture.expected.semantic_role_support);
+    expect(metadata.retains_native_tree).toBe(fixture.expected.retains_native_tree);
+    expect(metadata.metadata_policy).toBe(fixture.expected.metadata_policy);
   });
 
   it('conforms to the slice-788 tree-haver profile fixture', () => {

@@ -1120,6 +1120,25 @@ export interface RenderSafetyReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface NativeProviderMetadataReport {
+  readonly provider_id: string;
+  readonly family: string;
+  readonly host_language: string;
+  readonly target_language: string;
+  readonly parser_name: string;
+  readonly parser_version: string;
+  readonly language_version: string;
+  readonly dialect: string;
+  readonly parse_error_behavior: string;
+  readonly source_span_support: string;
+  readonly render_support: string;
+  readonly semantic_role_support: string;
+  readonly retains_native_tree: boolean;
+  readonly native_tree_visibility: string;
+  readonly metadata_policy: string;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';
