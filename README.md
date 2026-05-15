@@ -31,6 +31,13 @@ The TypeScript implementation ships the implementation-specific `smorg-ts`
 command. Use that name in git configuration unless a package manager or local
 install has provided a `smorg` symlink.
 
+Package-manager formulas may expose the selected implementation as `smorg`.
+For a local user-created symlink:
+
+```sh
+ln -s "$(command -v smorg-ts)" ~/.local/bin/smorg
+```
+
 ```sh
 git config merge.smorg-ts.driver 'smorg-ts merge-driver %O %A %B %P'
 git config diff.smorg-ts.command 'smorg-ts diff-driver'
