@@ -1097,6 +1097,19 @@ export interface TokenSpanPreservationMetricsReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface FormattingEdgeFixtureCase {
+  readonly case_id: string;
+  readonly category: string;
+  readonly requires_conflict_markers: boolean;
+}
+
+export interface FormattingEdgeFixtureSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly cases: readonly FormattingEdgeFixtureCase[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

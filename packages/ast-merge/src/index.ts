@@ -50,6 +50,8 @@ export type {
   FallbackUsageMachineOutput,
   FallbackUsageReport,
   FallbackUsageSummary,
+  FormattingEdgeFixtureCase,
+  FormattingEdgeFixtureSuite,
   FormattingHardGate,
   FormattingHardGateReport,
   FormattingPreservationConformanceReport,

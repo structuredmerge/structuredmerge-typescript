@@ -46,6 +46,7 @@ import type {
   ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
+  FormattingEdgeFixtureSuite,
   FormattingHardGateReport,
   FormattingPreservationConformanceReport,
   FormattingRecommendationGate,
@@ -6382,6 +6383,26 @@ describe('ast-merge shared fixtures', () => {
     expect(report.token_preservation).toBe(fixture.expected.token_preservation);
     expect(report.span_preservation).toBe(fixture.expected.span_preservation);
     expect(report.weighted).toBe(fixture.expected.weighted);
+  });
+
+  it('conforms to the slice-820 formatting edge fixtures fixture', () => {
+    const fixture = readFixture<{
+      fixture_suite: FormattingEdgeFixtureSuite;
+      expected: {
+        case_count: number;
+        categories: readonly string[];
+        conflict_marker_case_count: number;
+      };
+    }>('diagnostics', 'slice-820-formatting-edge-fixtures', 'formatting-edge-fixtures.json');
+    const suite = fixture.fixture_suite;
+    const categories = suite.cases.map((fixtureCase) => fixtureCase.category);
+    const conflictMarkerCaseCount = suite.cases.filter(
+      (fixtureCase) => fixtureCase.requires_conflict_markers
+    ).length;
+
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(categories).toEqual(fixture.expected.categories);
+    expect(conflictMarkerCaseCount).toBe(fixture.expected.conflict_marker_case_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
