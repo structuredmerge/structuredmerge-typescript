@@ -228,6 +228,7 @@ import type {
   StructuredEditTransportImportError,
   ReviewRequest,
   MergeResult,
+  MergeEngine,
   NativeProviderMetadataReport,
   NativeProviderProvingGroundReport,
   ProviderRichnessProjection,
@@ -347,6 +348,9 @@ import {
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
+  mergeEngineEnvironmentVariable,
+  mergeEngineFromEnvironment,
+  normalizeMergeEngine,
   planConformanceSuite,
   planNamedConformanceSuiteEntry,
   planNamedConformanceSuitesWithDiagnostics,
@@ -5628,6 +5632,78 @@ describe('ast-merge shared fixtures', () => {
     expect(mergeIR.changes.map((change) => change.kind)).toEqual(fixture.expected.change_kinds);
     expect(mergeIR.node_classes[0]?.node_ids.left).toBe('left-import-fmt');
     expect(mergeIR.changes[1]?.class_id).toBe('class-import-strings');
+  });
+
+  it('conforms to the slice-906 merge engine suite setting fixture', () => {
+    const fixture = readFixture<{
+      settings: {
+        default_engine: MergeEngine;
+        experimental_engine: MergeEngine;
+        supported_engines: readonly MergeEngine[];
+        environment_variable: string;
+        experimental_policy: string;
+        runs_same_suite: boolean;
+      };
+      expected: {
+        default_engine: MergeEngine;
+        experimental_engine: MergeEngine;
+        supported_engine_count: number;
+        environment_variable: string;
+        experimental_policy: string;
+        runs_same_suite: boolean;
+      };
+    }>('diagnostics', 'slice-906-merge-engine-suite-setting', 'merge-engine-suite-setting.json');
+
+    expect(normalizeMergeEngine()).toBe(fixture.expected.default_engine);
+    expect(normalizeMergeEngine(fixture.settings.experimental_engine)).toBe(
+      fixture.expected.experimental_engine
+    );
+    expect(fixture.settings.supported_engines).toHaveLength(
+      fixture.expected.supported_engine_count
+    );
+    expect(mergeEngineEnvironmentVariable).toBe(fixture.expected.environment_variable);
+    expect(fixture.settings.experimental_policy).toBe(fixture.expected.experimental_policy);
+    expect(fixture.settings.runs_same_suite).toBe(fixture.expected.runs_same_suite);
+    expect(
+      mergeEngineFromEnvironment({
+        [mergeEngineEnvironmentVariable]: fixture.settings.experimental_engine
+      })
+    ).toBe('merge_ir_experimental');
+
+    const plan = planNamedConformanceSuitesWithDiagnostics(
+      {
+        family_feature_profiles: [],
+        suite_descriptors: [
+          {
+            kind: 'family',
+            subject: { grammar: 'go' },
+            roles: ['case']
+          }
+        ],
+        families: {
+          go: [
+            {
+              role: 'case',
+              path: ['go', 'case.json']
+            }
+          ]
+        }
+      },
+      {
+        familyProfiles: {
+          go: {
+            family: 'go',
+            supportedDialects: [],
+            supportedPolicies: []
+          }
+        },
+        mergeEngine: 'merge_ir_experimental'
+      }
+    );
+
+    expect(plan.entries).toHaveLength(1);
+    expect(plan.entries[0]?.plan.mergeEngine).toBe('merge_ir_experimental');
+    expect(plan.entries[0]?.plan.entries[0]?.run.mergeEngine).toBe('merge_ir_experimental');
   });
 
   it('conforms to the slice-791 pairwise matchings fixture', () => {

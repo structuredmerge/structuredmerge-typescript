@@ -3,6 +3,20 @@ import path from 'node:path';
 
 export type DiagnosticSeverity = 'info' | 'warning' | 'error';
 
+export type MergeEngine = 'owner_path' | 'merge_ir_experimental';
+
+export const mergeEngineEnvironmentVariable = 'SMORG_MERGE_ENGINE';
+
+export function normalizeMergeEngine(engine?: string): MergeEngine {
+  return engine === 'merge_ir_experimental' ? 'merge_ir_experimental' : 'owner_path';
+}
+
+export function mergeEngineFromEnvironment(
+  env: Readonly<Record<string, string | undefined>>
+): MergeEngine {
+  return normalizeMergeEngine(env[mergeEngineEnvironmentVariable]);
+}
+
 export type DiagnosticCategory =
   | 'parse_error'
   | 'destination_parse_error'
@@ -2578,6 +2592,7 @@ export interface ConformanceCaseRun {
   readonly requirements: ConformanceCaseRequirements;
   readonly familyProfile: FamilyFeatureProfile;
   readonly featureProfile?: ConformanceFeatureProfileView;
+  readonly mergeEngine?: MergeEngine;
 }
 
 export interface ConformanceCaseExecution {
@@ -2625,6 +2640,7 @@ export interface NamedConformanceSuiteReport {
 export interface ConformanceFamilyPlanContext {
   readonly familyProfile: FamilyFeatureProfile;
   readonly featureProfile?: ConformanceFeatureProfileView;
+  readonly mergeEngine?: MergeEngine;
 }
 
 export interface NamedConformanceSuitePlan {
@@ -2646,6 +2662,7 @@ export interface ConformanceManifestPlanningOptions {
   readonly contexts?: Readonly<Record<string, ConformanceFamilyPlanContext>>;
   readonly familyProfiles?: Readonly<Record<string, FamilyFeatureProfile>>;
   readonly requireExplicitContexts?: boolean;
+  readonly mergeEngine?: MergeEngine;
 }
 
 export interface ConformanceManifestReport {
@@ -2843,6 +2860,7 @@ export interface ConformanceSuitePlanEntry {
 
 export interface ConformanceSuitePlan {
   readonly family: string;
+  readonly mergeEngine?: MergeEngine;
   readonly entries: readonly ConformanceSuitePlanEntry[];
   readonly missingRoles: readonly string[];
 }
@@ -6691,6 +6709,20 @@ export function defaultConformanceFamilyContext(
   };
 }
 
+function applyPlanningMergeEngine(
+  context: ConformanceFamilyPlanContext,
+  options: ConformanceManifestPlanningOptions
+): ConformanceFamilyPlanContext {
+  if (context.mergeEngine || !options.mergeEngine) {
+    return context;
+  }
+
+  return {
+    ...context,
+    mergeEngine: normalizeMergeEngine(options.mergeEngine)
+  };
+}
+
 export function reviewRequestIdForFamilyContext(family: string): string {
   return `family_context:${family}`;
 }
@@ -7369,7 +7401,7 @@ export function resolveConformanceFamilyContext(
 
   if (explicitContext) {
     return {
-      context: explicitContext,
+      context: applyPlanningMergeEngine(explicitContext, options),
       diagnostics: []
     };
   }
@@ -7401,7 +7433,7 @@ export function resolveConformanceFamilyContext(
   }
 
   return {
-    context: defaultConformanceFamilyContext(familyProfile),
+    context: applyPlanningMergeEngine(defaultConformanceFamilyContext(familyProfile), options),
     diagnostics: [
       {
         severity: 'warning',
@@ -7875,6 +7907,23 @@ export function planConformanceSuite(
   familyProfile: FamilyFeatureProfile,
   featureProfile?: ConformanceFeatureProfileView
 ): ConformanceSuitePlan {
+  return planConformanceSuiteWithMergeEngine(
+    manifest,
+    family,
+    roles,
+    familyProfile,
+    featureProfile
+  );
+}
+
+export function planConformanceSuiteWithMergeEngine(
+  manifest: ConformanceManifest,
+  family: string,
+  roles: readonly string[],
+  familyProfile: FamilyFeatureProfile,
+  featureProfile?: ConformanceFeatureProfileView,
+  mergeEngine?: MergeEngine
+): ConformanceSuitePlan {
   const entries: ConformanceSuitePlanEntry[] = [];
   const missingRoles: string[] = [];
 
@@ -7901,13 +7950,15 @@ export function planConformanceSuite(
         ref,
         requirements: entry.requirements ?? {},
         familyProfile,
-        featureProfile
+        featureProfile,
+        mergeEngine
       }
     });
   }
 
   return {
     family,
+    mergeEngine,
     entries,
     missingRoles
   };
@@ -7925,7 +7976,7 @@ export function planNamedConformanceSuite(
     return undefined;
   }
 
-  return planConformanceSuite(
+  return planConformanceSuiteWithMergeEngine(
     manifest,
     definition.subject.grammar,
     definition.roles,
@@ -7939,19 +7990,23 @@ export function planNamedConformanceSuiteEntry(
   suiteSelector: ConformanceSuiteSelector,
   context: ConformanceFamilyPlanContext
 ): NamedConformanceSuitePlan | undefined {
-  const plan = planNamedConformanceSuite(
-    manifest,
-    suiteSelector,
-    context.familyProfile,
-    context.featureProfile
-  );
+  const definition = conformanceSuiteDefinition(manifest, suiteSelector);
 
-  if (!plan) {
+  if (!definition) {
     return undefined;
   }
 
+  const plan = planConformanceSuiteWithMergeEngine(
+    manifest,
+    definition.subject.grammar,
+    definition.roles,
+    context.familyProfile,
+    context.featureProfile,
+    context.mergeEngine
+  );
+
   return {
-    suite: conformanceSuiteDefinition(manifest, suiteSelector)!,
+    suite: definition,
     plan
   };
 }
