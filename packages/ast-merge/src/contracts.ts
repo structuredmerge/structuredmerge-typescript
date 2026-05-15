@@ -1064,6 +1064,19 @@ export interface FormattingRecommendationGate {
   readonly diagnostics: readonly string[];
 }
 
+export interface FormattingHardGate {
+  readonly name: string;
+  readonly passed: boolean;
+  readonly weighted: boolean;
+}
+
+export interface FormattingHardGateReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly gates: readonly FormattingHardGate[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

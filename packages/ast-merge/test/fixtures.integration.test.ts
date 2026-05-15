@@ -46,6 +46,7 @@ import type {
   ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
+  FormattingHardGateReport,
   FormattingPreservationConformanceReport,
   FormattingRecommendationGate,
   GenericConflictHandlerExecution,
@@ -6313,6 +6314,28 @@ describe('ast-merge shared fixtures', () => {
       fixture.expected.character_weight
     );
     expect(gate.metrics.formatting_preservation_score).toBe(fixture.expected.score);
+  });
+
+  it('conforms to the slice-817 formatting hard gates fixture', () => {
+    const fixture = readFixture<{
+      hard_gate_report: FormattingHardGateReport;
+      expected: {
+        gate_count: number;
+        all_passed: boolean;
+        weighted_gate_count: number;
+        first_gate: string;
+        second_gate: string;
+      };
+    }>('diagnostics', 'slice-817-formatting-hard-gates', 'formatting-hard-gates.json');
+    const report = fixture.hard_gate_report;
+    const passedCount = report.gates.filter((gate) => gate.passed).length;
+    const weightedCount = report.gates.filter((gate) => gate.weighted).length;
+
+    expect(report.gates).toHaveLength(fixture.expected.gate_count);
+    expect(passedCount === report.gates.length).toBe(fixture.expected.all_passed);
+    expect(weightedCount).toBe(fixture.expected.weighted_gate_count);
+    expect(report.gates[0]?.name).toBe(fixture.expected.first_gate);
+    expect(report.gates[1]?.name).toBe(fixture.expected.second_gate);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
