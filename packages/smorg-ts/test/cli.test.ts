@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { exitSuccess, exitUnresolvedConflict, run } from '../src/cli';
+import { exitSuccess, exitUnresolvedConflict, exitUserError, run } from '../src/cli';
 
 function writer() {
   let output = '';
@@ -112,6 +112,35 @@ describe('smorg-ts cli', () => {
 
     expect(exit).toBe(exitUnresolvedConflict);
     expect(readFileSync(current, 'utf8')).not.toContain('"other":true');
+  });
+
+  it('prints profile report and blocks unmet required profile status', () => {
+    const ancestor = write('ancestor.json', '{"name":"structuredmerge"}');
+    const current = write('current.json', '{"name":"structuredmerge","current":true}');
+    const other = write('other.json', '{"name":"structuredmerge","other":true}');
+    const stdout = writer();
+    const stderr = writer();
+
+    const exit = run(
+      [
+        'merge-driver',
+        '--profile',
+        'json.keyed-object',
+        '--profile-report',
+        '--require-profile-status',
+        'recommended',
+        ancestor,
+        current,
+        other,
+        'package.json'
+      ],
+      stdout.stream,
+      stderr.stream
+    );
+
+    expect(exit).toBe(exitUserError);
+    expect(stdout.output()).toContain('"rejection_code":"profile_status_unmet"');
+    expect(stderr.output()).toContain('profile status available is below required recommended');
   });
 
   it('supports diff-driver git arities', () => {

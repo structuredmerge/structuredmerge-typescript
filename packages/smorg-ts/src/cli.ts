@@ -2,7 +2,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { MergeResult } from '@structuredmerge/ast-merge';
+import {
+  evaluateProfileSelectionRequirement,
+  initialProfilePromotionPolicy,
+  promotionProfileJsonKeyedObject
+} from '@structuredmerge/ast-merge';
+import type { MergeResult, ProfilePromotionStatus } from '@structuredmerge/ast-merge';
 import { mergeGo } from '@structuredmerge/go-merge';
 import { mergeJson } from '@structuredmerge/json-merge';
 import { mergeText } from '@structuredmerge/plain-merge';
@@ -22,6 +27,9 @@ interface MergeDriverOptions {
   readonly fallback: string;
   readonly checkOnly: boolean;
   readonly exitCode: boolean;
+  readonly profileId?: string;
+  readonly profileReport: boolean;
+  readonly requireProfileStatus?: string;
 }
 
 interface DiffDriverOptions {
@@ -55,7 +63,7 @@ export function run(
   const [command, ...rest] = args;
   switch (command) {
     case 'merge-driver':
-      return runMergeDriver(rest, stderr);
+      return runMergeDriver(rest, stdout, stderr);
     case 'diff-driver':
       return runDiffDriver(rest, stdout, stderr);
     case 'conflicts':
@@ -91,10 +99,19 @@ function printUsage(out: Pick<NodeJS.WriteStream, 'write'>): void {
 
 function runMergeDriver(
   args: readonly string[],
+  stdout: Pick<NodeJS.WriteStream, 'write'>,
   stderr: Pick<NodeJS.WriteStream, 'write'>
 ): number {
   const options = parseMergeDriverOptions(args, stderr);
   if (!options) return exitUserError;
+  const profileExit = reportAndEnforceProfile(
+    options.profileId,
+    options.profileReport,
+    options.requireProfileStatus,
+    stdout,
+    stderr
+  );
+  if (profileExit !== exitSuccess) return profileExit;
 
   let ancestorSource: string;
   let currentSource: string;
@@ -147,6 +164,9 @@ function parseMergeDriverOptions(
   let fallback = 'full-file';
   let checkOnly = false;
   let exitCode = false;
+  let profileId: string | undefined;
+  let profileReport = false;
+  let requireProfileStatus: string | undefined;
   const positionals: string[] = [];
 
   for (let index = 0; index < args.length; index += 1) {
@@ -176,6 +196,15 @@ function parseMergeDriverOptions(
       case '--exit-code':
         exitCode = true;
         break;
+      case '--profile':
+        profileId = args[++index];
+        break;
+      case '--profile-report':
+        profileReport = true;
+        break;
+      case '--require-profile-status':
+        requireProfileStatus = args[++index];
+        break;
       case '--fallback':
         fallback = args[++index] ?? '';
         break;
@@ -204,7 +233,53 @@ function parseMergeDriverOptions(
     stderr.write(`unsupported fallback mode ${JSON.stringify(fallback)}\n`);
     return undefined;
   }
-  return { ancestor, current, other, pathName, output, strict, fallback, checkOnly, exitCode };
+  return {
+    ancestor,
+    current,
+    other,
+    pathName,
+    output,
+    strict,
+    fallback,
+    checkOnly,
+    exitCode,
+    profileId,
+    profileReport,
+    requireProfileStatus
+  };
+}
+
+function reportAndEnforceProfile(
+  profileId: string | undefined,
+  profileReport: boolean,
+  requireStatus: string | undefined,
+  stdout: Pick<NodeJS.WriteStream, 'write'>,
+  stderr: Pick<NodeJS.WriteStream, 'write'>
+): number {
+  if (!profileId && !profileReport && !requireStatus) return exitSuccess;
+  const selectedProfile = profileId ?? promotionProfileJsonKeyedObject;
+  const evaluation = {
+    profile_id: selectedProfile,
+    status: 'available' as ProfilePromotionStatus,
+    blocking_reasons: ['profile promotion evidence is not loaded by this CLI command'],
+    diagnostics: []
+  };
+  const decision = evaluateProfileSelectionRequirement(
+    {
+      profile_id: selectedProfile,
+      promotion_policy_id: initialProfilePromotionPolicy().policy_id,
+      minimum_profile_status: (requireStatus ?? 'available') as ProfilePromotionStatus,
+      enforcement_mode: requireStatus ? 'required' : 'advisory'
+    },
+    undefined,
+    evaluation
+  );
+  if (profileReport) stdout.write(`${JSON.stringify(decision)}\n`);
+  if (!decision.allowed) {
+    stderr.write(`${decision.blocking_reasons[0]}\n`);
+    return exitUserError;
+  }
+  return exitSuccess;
 }
 
 function runDiffDriver(
