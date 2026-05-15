@@ -351,6 +351,7 @@ import {
   mergeEngineEnvironmentVariable,
   mergeEngineFromEnvironment,
   normalizeMergeEngine,
+  evaluateMergeIRChangeSets,
   planConformanceSuite,
   planNamedConformanceSuiteEntry,
   planNamedConformanceSuitesWithDiagnostics,
@@ -5826,6 +5827,50 @@ describe('ast-merge shared fixtures', () => {
       fixture.expected.blocking_count
     );
     expect(report.inconsistencies[1]?.change_ids[1]).toBe('right-delete-greet');
+  });
+
+  it('conforms to the slice-907 merge IR experimental evaluation fixture', () => {
+    const fixture = readFixture<{
+      request: {
+        merge_engine: MergeEngine;
+        raw_merge_id: string;
+        report_id: string;
+        change_sets: readonly ChangeSet[];
+      };
+      expected: {
+        merge_engine: MergeEngine;
+        raw_change_count: number;
+        input_change_set_count: number;
+        categories: readonly string[];
+        blocking_count: number;
+        outcome: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-907-merge-ir-experimental-evaluation',
+      'merge-ir-experimental-evaluation.json'
+    );
+    const report = evaluateMergeIRChangeSets(
+      fixture.request.merge_engine,
+      fixture.request.raw_merge_id,
+      fixture.request.report_id,
+      fixture.request.change_sets
+    );
+    const categories = report.inconsistency_report.inconsistencies.map(
+      (inconsistency) => inconsistency.category
+    );
+    const blockingCount = report.inconsistency_report.inconsistencies.filter(
+      (inconsistency) => inconsistency.severity === 'error'
+    ).length;
+
+    expect(report.merge_engine).toBe(fixture.expected.merge_engine);
+    expect(report.raw_merge.changes).toHaveLength(fixture.expected.raw_change_count);
+    expect(report.raw_merge.input_change_set_ids).toHaveLength(
+      fixture.expected.input_change_set_count
+    );
+    expect(categories).toEqual(fixture.expected.categories);
+    expect(blockingCount).toBe(fixture.expected.blocking_count);
+    expect(report.outcome).toBe(fixture.expected.outcome);
   });
 
   it('conforms to the slice-796 merge IR comparison fixture', () => {

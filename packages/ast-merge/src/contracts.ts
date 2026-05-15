@@ -587,6 +587,14 @@ export interface InconsistencyReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface MergeIREvaluationReport {
+  readonly merge_engine: MergeEngine;
+  readonly raw_merge: RawMerge;
+  readonly inconsistency_report: InconsistencyReport;
+  readonly outcome: string;
+  readonly diagnostics: readonly string[];
+}
+
 export interface MergeIRComparisonCase {
   readonly case_id: string;
   readonly family: string;
@@ -611,6 +619,127 @@ export interface MergeIRComparisonReport {
   readonly prototype: string;
   readonly cases: readonly MergeIRComparisonCase[];
   readonly summary: MergeIRComparisonSummary;
+}
+
+export function rawMergeChangeSets(rawMergeId: string, changeSets: readonly ChangeSet[]): RawMerge {
+  return {
+    raw_merge_id: rawMergeId,
+    input_change_set_ids: changeSets.map((changeSet) => changeSet.change_set_id),
+    changes: changeSets.flatMap((changeSet) =>
+      changeSet.changes.map((change) => ({
+        change_id: change.change_id,
+        source_change_set_id: changeSet.change_set_id,
+        side: changeSet.side,
+        kind: change.kind,
+        class_id: change.class_id,
+        parent_class_id: change.parent_class_id,
+        predecessor_class_id: change.predecessor_class_id,
+        successor_class_id: change.successor_class_id,
+        content_hash: change.content_hash
+      }))
+    ),
+    diagnostics: ['raw merge intentionally preserves both sides before inconsistency detection']
+  };
+}
+
+export function detectRawMergeInconsistencies(
+  reportId: string,
+  rawMerge: RawMerge
+): InconsistencyReport {
+  const changesByClass = new Map<string, RawMergeChange[]>();
+  for (const change of rawMerge.changes) {
+    changesByClass.set(change.class_id, [...(changesByClass.get(change.class_id) ?? []), change]);
+  }
+
+  const inconsistencies: MergeInconsistency[] = [];
+  for (const change of rawMerge.changes) {
+    if (change.kind === 'move') {
+      inconsistencies.push({
+        inconsistency_id: `order-${change.class_id}`,
+        category: 'order_conflict',
+        severity: 'warning',
+        class_ids: [change.class_id],
+        change_ids: [change.change_id],
+        message: 'branch changes predecessor/successor ordering relation'
+      });
+    }
+  }
+
+  for (const [classId, changes] of changesByClass) {
+    const changesOfKind = (kind: string) => changes.filter((change) => change.kind === kind);
+    const hashesOfKind = (kind: string) =>
+      new Set(changesOfKind(kind).map((change) => change.content_hash));
+    const insertions = changesOfKind('insert');
+    const deletes = changesOfKind('delete');
+    const contentChanges = changesOfKind('content_change');
+
+    if (insertions.length > 1 && hashesOfKind('insert').size > 1) {
+      inconsistencies.push({
+        inconsistency_id: `duplicate-${classId}`,
+        category: 'duplicate_insertion_conflict',
+        severity: 'error',
+        class_ids: [classId],
+        change_ids: insertions.map((change) => change.change_id),
+        message: 'branches insert the same class with incompatible content hashes'
+      });
+    }
+    if (deletes.length > 0 && contentChanges.length > 0) {
+      inconsistencies.push({
+        inconsistency_id: `delete-edit-${classId}`,
+        category: 'delete_edit_conflict',
+        severity: 'error',
+        class_ids: [classId],
+        change_ids: [
+          ...contentChanges.map((change) => change.change_id),
+          ...deletes.map((change) => change.change_id)
+        ],
+        message: 'one branch edits a class that another branch deletes'
+      });
+    }
+    if (contentChanges.length > 1 && hashesOfKind('content_change').size > 1) {
+      inconsistencies.push({
+        inconsistency_id: `content-${classId}`,
+        category: 'content_conflict',
+        severity: 'error',
+        class_ids: [classId],
+        change_ids: contentChanges.map((change) => change.change_id),
+        message: 'branches change class content differently'
+      });
+    }
+  }
+
+  return {
+    report_id: reportId,
+    raw_merge_id: rawMerge.raw_merge_id,
+    inconsistencies,
+    diagnostics: [
+      'inconsistency detection classifies raw merge candidates before any conflict rendering'
+    ]
+  };
+}
+
+export function evaluateMergeIRChangeSets(
+  engine: MergeEngine | undefined,
+  rawMergeId: string,
+  reportId: string,
+  changeSets: readonly ChangeSet[]
+): MergeIREvaluationReport {
+  const mergeEngine = normalizeMergeEngine(engine);
+  const rawMerge = rawMergeChangeSets(rawMergeId, changeSets);
+  const inconsistencyReport = detectRawMergeInconsistencies(reportId, rawMerge);
+  const blockingCount = inconsistencyReport.inconsistencies.filter(
+    (inconsistency) => inconsistency.severity === 'error'
+  ).length;
+
+  return {
+    merge_engine: mergeEngine,
+    raw_merge: rawMerge,
+    inconsistency_report: inconsistencyReport,
+    outcome: blockingCount > 0 ? 'blocked_by_inconsistency' : 'clean',
+    diagnostics: [
+      'merge_ir_experimental evaluates PCS-style change sets behind the opt-in engine flag'
+    ]
+  };
 }
 
 export interface StructuralPathMatch {
