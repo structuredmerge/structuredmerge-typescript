@@ -3,6 +3,7 @@ export const packageName = '@structuredmerge/tree-haver';
 export type {
   AdapterInfo,
   AnalysisHandle,
+  AppliedEditProjectionOperation,
   BackendAvailabilityCheck,
   BackendAvailabilityReport,
   BackendAvailabilityStatus,
@@ -20,6 +21,9 @@ export type {
   Diagnostic,
   DiagnosticCategory,
   DiagnosticSeverity,
+  EditProjectionExecutionRequest,
+  EditProjectionExecutionResult,
+  EditProjectionOperationRequest,
   EditProjectionSupport,
   FeatureProfile,
   KaitaiByteSpan,
@@ -63,6 +67,7 @@ export type {
 export {
   backendReference,
   buildBackendAvailabilityReport,
+  buildEditProjectionExecutionResult,
   buildProviderDiagnosticsReport,
   byteEditDelta,
   byteEditNewRange,

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
   AdapterInfo,
+  AppliedEditProjectionOperation,
   BackendAvailabilityCheck,
   BackendAvailabilityReport,
   BackendCapability,
@@ -14,6 +15,7 @@ import type {
   BinaryRenderPolicy,
   BinaryScalarValue,
   ByteEditSpan,
+  EditProjectionExecutionResult,
   EditProjectionSupport,
   FeatureProfile,
   NativeParserProvider,
@@ -33,6 +35,7 @@ import type {
 import { processWithLanguagePack } from '../src/index';
 import {
   buildBackendAvailabilityReport,
+  buildEditProjectionExecutionResult,
   buildProviderDiagnosticsReport,
   byteEditDelta,
   byteEditNewRange,
@@ -139,6 +142,21 @@ interface ProviderDiagnosticsReportFixture {
   diagnostics: ProviderDiagnostic[];
 }
 
+interface AppliedEditProjectionOperationFixture {
+  operation: string;
+  target_node_id: string;
+  correlation_key: string;
+  correlation_value: string;
+}
+
+interface EditProjectionExecutionResultFixture {
+  ok: boolean;
+  status: 'applied' | 'rejected';
+  source: string;
+  applied_operations: AppliedEditProjectionOperationFixture[];
+  diagnostics: ProviderDiagnostic[];
+}
+
 function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProjectionSupport {
   return {
     backendRef: fixture.backend_ref,
@@ -174,6 +192,25 @@ function providerDiagnosticsReport(
     backendRef: fixture.backend_ref,
     language: fixture.language,
     status: fixture.status,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function editProjectionExecutionResult(
+  fixture: EditProjectionExecutionResultFixture
+): EditProjectionExecutionResult {
+  return {
+    ok: fixture.ok,
+    status: fixture.status,
+    source: fixture.source,
+    appliedOperations: fixture.applied_operations.map(
+      (operation): AppliedEditProjectionOperation => ({
+        operation: operation.operation,
+        targetNodeId: operation.target_node_id,
+        correlationKey: operation.correlation_key,
+        correlationValue: operation.correlation_value
+      })
+    ),
     diagnostics: fixture.diagnostics
   };
 }
@@ -1169,6 +1206,31 @@ describe('tree-haver shared fixtures', () => {
         )
       ).toEqual(expected);
     }
+  });
+
+  it('conforms to the slice-928 edit projection execution contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+      unsupported_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-928-go-dst-edit-projection-execution',
+      'edit-projection-execution.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+
+    const unsupported = editProjectionExecutionResult(fixture.unsupported_result);
+    expect(
+      buildEditProjectionExecutionResult(unsupported.source, [], unsupported.diagnostics)
+    ).toEqual(unsupported);
   });
 
   it('supports temporary backend context selection', () => {

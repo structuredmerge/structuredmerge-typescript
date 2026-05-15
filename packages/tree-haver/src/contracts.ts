@@ -215,6 +215,36 @@ export interface ProviderDiagnosticsReport {
   readonly diagnostics: readonly ProviderDiagnostic[];
 }
 
+export interface EditProjectionOperationRequest {
+  readonly operation: string;
+  readonly targetNodeId: string;
+  readonly targetNodePath: string;
+  readonly replacementSource: string;
+}
+
+export interface EditProjectionExecutionRequest {
+  readonly providerId: string;
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly source: string;
+  readonly operations: readonly EditProjectionOperationRequest[];
+}
+
+export interface AppliedEditProjectionOperation {
+  readonly operation: string;
+  readonly targetNodeId: string;
+  readonly correlationKey: string;
+  readonly correlationValue: string;
+}
+
+export interface EditProjectionExecutionResult {
+  readonly ok: boolean;
+  readonly status: 'applied' | 'rejected';
+  readonly source: string;
+  readonly appliedOperations: readonly AppliedEditProjectionOperation[];
+  readonly diagnostics: readonly ProviderDiagnostic[];
+}
+
 export interface OrderedSiblingEdge {
   readonly parentId: string;
   readonly nodeId: string;
@@ -775,6 +805,30 @@ export function buildProviderDiagnosticsReport(
   }
 
   return { providerId, backendRef, language, status, diagnostics };
+}
+
+export function buildEditProjectionExecutionResult(
+  source: string,
+  appliedOperations: readonly AppliedEditProjectionOperation[],
+  diagnostics: readonly ProviderDiagnostic[]
+): EditProjectionExecutionResult {
+  if (diagnostics.some((diagnostic) => diagnostic.blocking)) {
+    return {
+      ok: false,
+      status: 'rejected',
+      source,
+      appliedOperations: [],
+      diagnostics
+    };
+  }
+
+  return {
+    ok: true,
+    status: 'applied',
+    source,
+    appliedOperations,
+    diagnostics
+  };
 }
 
 export function currentBackendId(): string | undefined {
