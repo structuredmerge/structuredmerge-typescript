@@ -85,6 +85,7 @@ import type {
   ProfilePromotionEvaluation,
   ProfilePromotionPolicy,
   ProfilePromotionReport,
+  ProfileSelectionDecision,
   ProfileSelectionRequirement,
   ProfileValidationDiagnostic,
   RawMerge,
@@ -227,6 +228,7 @@ import type {
   StructuredEditKettleJemPrimitiveGapReport,
   StructuredEditExecutionReport,
   StructuredEditExecutionReportEnvelope,
+  ProfileSelectionRequirement,
   PolicyReference,
   PolicySurface,
   Diagnostic,
@@ -447,6 +449,7 @@ import {
   importStructuredEditProviderBatchExecutionHandoffEnvelope,
   importStructuredEditProviderBatchExecutionPlanEnvelope,
   importStructuredEditExecutionReportEnvelope,
+  profileSelectionRequirementFromRequestEnvelope,
   reviewReplayBundleInputs,
   reviewReplayBundleEnvelope,
   reviewedNestedExecution,
@@ -1395,6 +1398,9 @@ interface StructuredEditRequestEnvelopeFixture {
   expected_envelope: {
     kind: StructuredEditRequestEnvelope['kind'];
     version: number;
+    profile_id?: string;
+    minimum_profile_status?: StructuredEditRequestEnvelope['minimum_profile_status'];
+    promotion_policy_id?: string;
     request: StructuredEditRequestFixture['cases'][number]['request'];
   };
 }
@@ -1428,6 +1434,10 @@ interface StructuredEditExecutionReportFixture {
       application: StructuredEditApplicationFixture['cases'][number]['application'];
       provider_family: string;
       provider_backend?: string | null;
+      active_profile?: ActiveProfileView;
+      profile_promotion_evaluation?: ProfilePromotionEvaluation;
+      profile_selection_decision?: ProfileSelectionDecision;
+      profile_blocking_reasons?: readonly string[];
       diagnostics: DiagnosticFixture['diagnostics'];
       metadata?: Record<string, unknown>;
     };
@@ -2669,6 +2679,18 @@ interface StructuredEditExecutionReportEnvelopeFixture {
     kind: StructuredEditExecutionReportEnvelope['kind'];
     version: number;
     report: StructuredEditExecutionReportFixture['cases'][number]['report'];
+  };
+}
+
+interface StructuredEditProfilePromotionEnvelopeFixture {
+  structured_edit_request: StructuredEditRequestFixture['cases'][number]['request'];
+  profile_selection_requirement: ProfileSelectionRequirement;
+  expected_request_envelope: StructuredEditRequestEnvelopeFixture['expected_envelope'];
+  structured_edit_execution_report: StructuredEditExecutionReportFixture['cases'][number]['report'];
+  expected_execution_report_envelope: StructuredEditExecutionReportEnvelopeFixture['expected_envelope'];
+  expected: {
+    rejection_code: string;
+    profile_blocking_reason_count: number;
   };
 }
 
@@ -4349,6 +4371,9 @@ function normalizeStructuredEditRequestEnvelope(
   return {
     kind: raw.kind,
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    profile_id: raw.profile_id,
+    minimum_profile_status: raw.minimum_profile_status,
+    promotion_policy_id: raw.promotion_policy_id,
     request: normalizeStructuredEditRequest(raw.request)
   };
 }
@@ -4360,6 +4385,10 @@ function normalizeStructuredEditExecutionReport(
     application: normalizeStructuredEditApplication(raw.application),
     providerFamily: raw.provider_family,
     providerBackend: raw.provider_backend ?? undefined,
+    active_profile: raw.active_profile,
+    profile_promotion_evaluation: raw.profile_promotion_evaluation,
+    profile_selection_decision: raw.profile_selection_decision,
+    profile_blocking_reasons: raw.profile_blocking_reasons,
     diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
     metadata: raw.metadata
   };
@@ -11086,6 +11115,36 @@ describe('ast-merge shared fixtures', () => {
         error: rejectionCase.expected_error
       });
     }
+  });
+
+  it('conforms to the slice-915 structured-edit profile promotion envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProfilePromotionEnvelopeFixture>(
+      'diagnostics',
+      'slice-915-structured-edit-profile-promotion-envelope',
+      'structured-edit-profile-promotion-envelope.json'
+    );
+    const request = normalizeStructuredEditRequest(fixture.structured_edit_request);
+    const requestEnvelope = {
+      ...structuredEditRequestEnvelope(request),
+      profile_id: fixture.expected_request_envelope.profile_id,
+      minimum_profile_status: fixture.expected_request_envelope.minimum_profile_status,
+      promotion_policy_id: fixture.expected_request_envelope.promotion_policy_id
+    };
+    expect(requestEnvelope).toEqual(
+      normalizeStructuredEditRequestEnvelope(fixture.expected_request_envelope)
+    );
+    expect(profileSelectionRequirementFromRequestEnvelope(requestEnvelope)).toEqual(
+      fixture.profile_selection_requirement
+    );
+
+    const report = normalizeStructuredEditExecutionReport(fixture.structured_edit_execution_report);
+    expect(structuredEditExecutionReportEnvelope(report)).toEqual(
+      normalizeStructuredEditExecutionReportEnvelope(fixture.expected_execution_report_envelope)
+    );
+    expect(report.profile_selection_decision?.rejection_code).toBe(fixture.expected.rejection_code);
+    expect(report.profile_blocking_reasons).toHaveLength(
+      fixture.expected.profile_blocking_reason_count
+    );
   });
 
   it('conforms to the slice-438 structured-edit execution report fixture', () => {

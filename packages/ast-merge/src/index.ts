@@ -607,6 +607,7 @@ export {
   evaluateProfilePromotion,
   evaluateProfileSelectionRequirement,
   initialProfilePromotionPolicy,
+  profileSelectionRequirementFromRequestEnvelope,
   promotionProfileGoImportDeclarations,
   promotionProfileJsonKeyedObject,
   promotionProfileRubyGemspecDependencyDeclarations,

@@ -2278,6 +2278,9 @@ export interface StructuredEditApplicationEnvelope {
 export interface StructuredEditRequestEnvelope {
   readonly kind: 'structured_edit_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly profile_id?: string;
+  readonly minimum_profile_status?: ProfilePromotionStatus;
+  readonly promotion_policy_id?: string;
   readonly request: StructuredEditRequest;
 }
 
@@ -2285,6 +2288,10 @@ export interface StructuredEditExecutionReport {
   readonly application: StructuredEditApplication;
   readonly providerFamily: string;
   readonly providerBackend?: string;
+  readonly active_profile?: ActiveProfileView;
+  readonly profile_promotion_evaluation?: ProfilePromotionEvaluation;
+  readonly profile_selection_decision?: ProfileSelectionDecision;
+  readonly profile_blocking_reasons?: readonly string[];
   readonly diagnostics: readonly Diagnostic[];
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -3652,6 +3659,20 @@ export function structuredEditRequestEnvelope(
     kind: 'structured_edit_request',
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     request
+  };
+}
+
+export function profileSelectionRequirementFromRequestEnvelope(
+  envelope: StructuredEditRequestEnvelope
+): ProfileSelectionRequirement | undefined {
+  if (!envelope.profile_id && !envelope.minimum_profile_status && !envelope.promotion_policy_id) {
+    return undefined;
+  }
+  return {
+    profile_id: envelope.profile_id ?? '',
+    promotion_policy_id: envelope.promotion_policy_id ?? '',
+    minimum_profile_status: envelope.minimum_profile_status ?? 'available',
+    enforcement_mode: 'required'
   };
 }
 
