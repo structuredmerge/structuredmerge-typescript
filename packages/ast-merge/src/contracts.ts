@@ -1583,6 +1583,70 @@ export interface ProfilePromotionPolicy {
   readonly diagnostics: readonly string[];
 }
 
+export interface ProfilePromotionEvaluation {
+  readonly profile_id: string;
+  readonly status: ProfilePromotionStatus;
+  readonly blocking_reasons: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export function evaluateProfilePromotion(
+  policy: ProfilePromotionPolicy,
+  report: ProfilePromotionReport
+): ProfilePromotionEvaluation {
+  const entry = policy.profiles.find((profile) => profile.profile_id === report.profile_id);
+  if (!entry) {
+    return {
+      profile_id: report.profile_id,
+      status: 'experimental',
+      blocking_reasons: ['profile has no promotion policy'],
+      diagnostics: []
+    };
+  }
+  const blockingReasons = profilePromotionBlockingReasons(entry, report);
+  const status =
+    blockingReasons.length === 0 && entry.eligible_statuses.includes('recommended')
+      ? 'recommended'
+      : 'available';
+  return {
+    profile_id: report.profile_id,
+    status,
+    blocking_reasons: blockingReasons,
+    diagnostics: []
+  };
+}
+
+function profilePromotionBlockingReasons(
+  entry: ProfilePromotionPolicyEntry,
+  report: ProfilePromotionReport
+): string[] {
+  const reasons: string[] = [];
+  report.hard_gates.forEach((gate) => {
+    if (gate.required && !gate.passed) reasons.push(`required hard gate ${gate.name} failed`);
+  });
+  if (report.metrics.passed_fixture_count < entry.recommendation_gate.required_fixture_count) {
+    reasons.push('passed fixture count is below required fixture count');
+  }
+  if (
+    report.metrics.formatting_preservation_score < entry.recommendation_gate.formatting_threshold
+  ) {
+    reasons.push('formatting preservation score is below threshold');
+  }
+  if (report.metrics.fallback_count > entry.recommendation_gate.fallback_threshold) {
+    reasons.push('fallback count exceeds threshold');
+  }
+  if (
+    report.metrics.unresolved_conflict_count >
+    entry.recommendation_gate.unresolved_conflict_threshold
+  ) {
+    reasons.push('unresolved conflict count exceeds threshold');
+  }
+  if (entry.recommendation_gate.requires_backend_parity && !report.metrics.backend_parity_passed) {
+    reasons.push('backend parity did not pass');
+  }
+  return reasons;
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

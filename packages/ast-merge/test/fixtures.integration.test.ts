@@ -6,7 +6,11 @@ import { describe, expect, it } from 'vitest';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
-import { executeGenericConflictHandler, validateLanguageBackendProfile } from '../src/index';
+import {
+  evaluateProfilePromotion,
+  executeGenericConflictHandler,
+  validateLanguageBackendProfile
+} from '../src/index';
 import type {
   ActiveProfileView,
   AmbiguityMatchingReport,
@@ -561,6 +565,20 @@ interface ProfilePromotionPolicyFixture {
     json_requires_cross_implementation_parity: boolean;
     ruby_requires_backend_parity: boolean;
     formatting_threshold: number;
+  };
+}
+
+interface ProfilePromotionEvaluationFixture {
+  policy: ProfilePromotionPolicy;
+  recommended_report: ProfilePromotionReport;
+  blocked_report: ProfilePromotionReport;
+  expected: {
+    recommended_status: string;
+    recommended_blocking_reason_count: number;
+    blocked_status: string;
+    blocked_blocking_reason_count: number;
+    first_blocking_reason: string;
+    unknown_profile_status: string;
   };
 }
 
@@ -7171,6 +7189,31 @@ describe('ast-merge shared fixtures', () => {
     expect(jsonPolicy?.recommendation_gate.formatting_threshold).toBe(
       fixture.expected.formatting_threshold
     );
+  });
+
+  it('conforms to the slice-913 profile promotion evaluation fixture', () => {
+    const fixture = readFixture<ProfilePromotionEvaluationFixture>(
+      'diagnostics',
+      'slice-913-profile-promotion-evaluation',
+      'profile-promotion-evaluation.json'
+    );
+
+    const recommended = evaluateProfilePromotion(fixture.policy, fixture.recommended_report);
+    expect(recommended.status).toBe(fixture.expected.recommended_status);
+    expect(recommended.blocking_reasons).toHaveLength(
+      fixture.expected.recommended_blocking_reason_count
+    );
+
+    const blocked = evaluateProfilePromotion(fixture.policy, fixture.blocked_report);
+    expect(blocked.status).toBe(fixture.expected.blocked_status);
+    expect(blocked.blocking_reasons).toHaveLength(fixture.expected.blocked_blocking_reason_count);
+    expect(blocked.blocking_reasons[0]).toBe(fixture.expected.first_blocking_reason);
+
+    const unknown = evaluateProfilePromotion(fixture.policy, {
+      ...fixture.recommended_report,
+      profile_id: 'unknown.profile'
+    });
+    expect(unknown.status).toBe(fixture.expected.unknown_profile_status);
   });
 
   it('conforms to the template source path mapping fixture', () => {

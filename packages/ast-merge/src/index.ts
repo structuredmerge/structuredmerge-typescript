@@ -163,6 +163,7 @@ export type {
   ProfileConformanceReport,
   ProfileDebugOutput,
   ProfilePromotionHardGate,
+  ProfilePromotionEvaluation,
   ProfilePromotionMetrics,
   ProfilePromotionPolicy,
   ProfilePromotionPolicyEntry,
@@ -600,5 +601,6 @@ export {
   selectConformanceCase,
   summarizeNamedConformanceSuiteReports,
   summarizeConformanceResults,
+  evaluateProfilePromotion,
   validateLanguageBackendProfile
 } from './contracts';
