@@ -744,6 +744,26 @@ export interface RenameAwareMatchingReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface MatchingAmbiguity {
+  readonly signature: string;
+  readonly scope_path: string;
+  readonly from_candidates: readonly string[];
+  readonly to_candidates: readonly string[];
+  readonly selected: boolean;
+  readonly reason: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface AmbiguityMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly scope_path: string;
+  readonly ambiguous: boolean;
+  readonly matches: readonly SignatureNodeMatch[];
+  readonly ambiguities: readonly MatchingAmbiguity[];
+  readonly diagnostics: readonly Diagnostic[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

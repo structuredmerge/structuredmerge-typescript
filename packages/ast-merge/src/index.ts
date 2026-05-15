@@ -1,6 +1,7 @@
 export const packageName = '@structuredmerge/ast-merge';
 
 export type {
+  AmbiguityMatchingReport,
   ChangeSet,
   ChangeSetChange,
   ClassMappingDiagnostic,
@@ -44,6 +45,7 @@ export type {
   MergeIRComparisonCase,
   MergeIRComparisonReport,
   MergeIRComparisonSummary,
+  MatchingAmbiguity,
   MoveDetectionCapability,
   MoveDetectionMatch,
   MoveDetectionMatchingReport,

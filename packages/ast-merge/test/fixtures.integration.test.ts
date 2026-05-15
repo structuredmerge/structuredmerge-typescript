@@ -7,6 +7,7 @@ import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
 import type {
+  AmbiguityMatchingReport,
   ConformanceCaseRef,
   ConformanceCaseRun,
   ConformanceCaseExecution,
@@ -5891,6 +5892,34 @@ describe('ast-merge shared fixtures', () => {
     expect(report.matches).toHaveLength(fixture.expected.match_count);
     expect(report.candidates[0]?.selected).toBe(fixture.expected.first_candidate_selected);
     expect(report.candidates[0]?.stable_body_hash).toBe(fixture.expected.first_candidate_body_hash);
+  });
+
+  it('conforms to the slice-802 ambiguity diagnostics fixture', () => {
+    const fixture = readFixture<{
+      matching: AmbiguityMatchingReport;
+      expected: {
+        strategy: string;
+        scope_path: string;
+        ambiguous: boolean;
+        match_count: number;
+        ambiguity_count: number;
+        diagnostic_category: string;
+        first_ambiguity_signature: string;
+        first_ambiguity_reason: string;
+        first_ambiguity_selected: boolean;
+      };
+    }>('diagnostics', 'slice-802-ambiguity-diagnostics', 'ambiguity-diagnostics.json');
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.scope_path).toBe(fixture.expected.scope_path);
+    expect(report.ambiguous).toBe(fixture.expected.ambiguous);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.ambiguities).toHaveLength(fixture.expected.ambiguity_count);
+    expect(report.diagnostics[0]?.category).toBe(fixture.expected.diagnostic_category);
+    expect(report.ambiguities[0]?.signature).toBe(fixture.expected.first_ambiguity_signature);
+    expect(report.ambiguities[0]?.reason).toBe(fixture.expected.first_ambiguity_reason);
+    expect(report.ambiguities[0]?.selected).toBe(fixture.expected.first_ambiguity_selected);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
