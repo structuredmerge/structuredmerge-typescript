@@ -1233,6 +1233,25 @@ describe('tree-haver shared fixtures', () => {
     ).toEqual(unsupported);
   });
 
+  it('conforms to the slice-929 insert-child edit projection contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-929-go-dst-insert-child-edit-projection',
+      'insert-child-edit-projection.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+  });
+
   it('supports temporary backend context selection', () => {
     expect(currentBackendId()).toBeUndefined();
 
