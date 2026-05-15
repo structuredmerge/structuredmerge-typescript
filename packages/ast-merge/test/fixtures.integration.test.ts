@@ -45,6 +45,7 @@ import type {
   PairwiseMatching,
   PCS,
   RawMerge,
+  StructuralMatchingReport,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -5729,6 +5730,31 @@ describe('ast-merge shared fixtures', () => {
     expect(report.summary.merge_ir_wins).toBe(fixture.expected.merge_ir_wins);
     expect(report.summary.recommendation).toBe(fixture.expected.recommendation);
     expect(report.cases[4]?.merge_ir_advantage).toBe('defer');
+  });
+
+  it('conforms to the slice-797 structural matching baseline fixture', () => {
+    const fixture = readFixture<{
+      matching: StructuralMatchingReport;
+      expected: {
+        strategy: string;
+        match_count: number;
+        unmatched_from_count: number;
+        unmatched_to_count: number;
+        move_detection: boolean;
+      };
+    }>(
+      'diagnostics',
+      'slice-797-structural-matching-baseline',
+      'structural-matching-baseline.json'
+    );
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.unmatched_from).toHaveLength(fixture.expected.unmatched_from_count);
+    expect(report.unmatched_to).toHaveLength(fixture.expected.unmatched_to_count);
+    expect(fixture.expected.move_detection).toBe(false);
+    expect(report.matches[1]?.from_path).toBe('/declarations/Greet');
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

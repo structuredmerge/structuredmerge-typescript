@@ -44,6 +44,8 @@ export type {
   MergeIRComparisonCase,
   MergeIRComparisonReport,
   MergeIRComparisonSummary,
+  StructuralMatchingReport,
+  StructuralPathMatch,
   CompactRuleset,
   CompactRulesetAtomicNode,
   CompactRulesetBackendDeclaration,

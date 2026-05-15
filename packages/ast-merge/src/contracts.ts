@@ -599,6 +599,25 @@ export interface MergeIRComparisonReport {
   readonly summary: MergeIRComparisonSummary;
 }
 
+export interface StructuralPathMatch {
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly confidence: number;
+}
+
+export interface StructuralMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly matches: readonly StructuralPathMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {
