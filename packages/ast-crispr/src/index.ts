@@ -67,6 +67,21 @@ export interface SelectionProfileReport {
   readonly include_trailing_gap: boolean;
 }
 
+export interface DestinationProfileReport {
+  readonly resolution_kind: string;
+  readonly resolution_family: string;
+  readonly known_resolution_kind: boolean;
+  readonly resolution_source: string;
+  readonly resolution_source_family: string;
+  readonly known_resolution_source: boolean;
+  readonly anchor_boundary: string;
+  readonly anchor_boundary_family: string;
+  readonly known_anchor_boundary: boolean;
+  readonly used_if_missing: boolean;
+  readonly append_fallback: boolean;
+  readonly anchored: boolean;
+}
+
 interface ProfileDescriptor {
   readonly family: string;
 }
@@ -108,6 +123,22 @@ const KNOWN_COMMENT_REGIONS: Readonly<Record<string, ProfileDescriptor>> = {
   leading: { family: 'leading' },
   trailing: { family: 'trailing' },
   inline: { family: 'inline' }
+};
+
+const KNOWN_RESOLUTION_KINDS: Readonly<Record<string, ProfileDescriptor>> = {
+  append_fallback: { family: 'append' },
+  anchor_after_statement: { family: 'anchored' }
+};
+
+const KNOWN_RESOLUTION_SOURCES: Readonly<Record<string, ProfileDescriptor>> = {
+  none: { family: 'implicit' },
+  callable: { family: 'callable' },
+  selector: { family: 'selector' }
+};
+
+const KNOWN_ANCHOR_BOUNDARIES: Readonly<Record<string, ProfileDescriptor>> = {
+  none: { family: 'none' },
+  statement_end_plus_following_gap: { family: 'gap_preserving_statement' }
 };
 
 export class MatchProfile {
@@ -214,8 +245,59 @@ export class SelectionProfile {
   }
 }
 
+export class DestinationProfile {
+  readonly resolutionKind: string;
+  readonly resolutionSource: string;
+  readonly anchorBoundary: string;
+  readonly usedIfMissing: boolean;
+
+  constructor({
+    resolution_kind = 'append_fallback',
+    resolution_source = 'none',
+    anchor_boundary = 'none',
+    used_if_missing = false
+  }: {
+    readonly resolution_kind?: string;
+    readonly resolution_source?: string;
+    readonly anchor_boundary?: string;
+    readonly used_if_missing?: boolean;
+  } = {}) {
+    this.resolutionKind = resolution_kind;
+    this.resolutionSource = resolution_source;
+    this.anchorBoundary = anchor_boundary;
+    this.usedIfMissing = used_if_missing;
+  }
+
+  report(): DestinationProfileReport {
+    const resolutionFamily = KNOWN_RESOLUTION_KINDS[this.resolutionKind]?.family ?? 'unknown';
+    const resolutionSourceFamily =
+      KNOWN_RESOLUTION_SOURCES[this.resolutionSource]?.family ?? 'unknown';
+    const anchorBoundaryFamily = KNOWN_ANCHOR_BOUNDARIES[this.anchorBoundary]?.family ?? 'unknown';
+    return {
+      resolution_kind: this.resolutionKind,
+      resolution_family: resolutionFamily,
+      known_resolution_kind: this.resolutionKind in KNOWN_RESOLUTION_KINDS,
+      resolution_source: this.resolutionSource,
+      resolution_source_family: resolutionSourceFamily,
+      known_resolution_source: this.resolutionSource in KNOWN_RESOLUTION_SOURCES,
+      anchor_boundary: this.anchorBoundary,
+      anchor_boundary_family: anchorBoundaryFamily,
+      known_anchor_boundary: this.anchorBoundary in KNOWN_ANCHOR_BOUNDARIES,
+      used_if_missing: this.usedIfMissing,
+      append_fallback: this.resolutionKind === 'append_fallback',
+      anchored: resolutionFamily === 'anchored'
+    };
+  }
+}
+
 export function matchProfile(profile: ConstructorParameters<typeof MatchProfile>[0]): MatchProfile {
   return new MatchProfile(profile);
+}
+
+export function destinationProfile(
+  profile: ConstructorParameters<typeof DestinationProfile>[0]
+): DestinationProfile {
+  return new DestinationProfile(profile);
 }
 
 export function selectionProfile(
@@ -369,10 +451,10 @@ export function boundaryReport(): Readonly<Record<string, unknown>> {
       'ast-merge structured-edit contract anchor',
       'limit helpers',
       'match profile helpers',
-      'selection profile helpers'
+      'selection profile helpers',
+      'destination profile helpers'
     ],
     future_exports: [
-      'destination profile helpers',
       'operation profile helpers',
       'replace/delete/insert/move helpers',
       'batch operation helpers'
