@@ -1590,6 +1590,94 @@ export interface ProfilePromotionPolicy {
   readonly diagnostics: readonly string[];
 }
 
+export function initialProfilePromotionPolicy(): ProfilePromotionPolicy {
+  const sourceSubprofile = (profileId: string, family: string): ProfilePromotionPolicyEntry => ({
+    profile_id: profileId,
+    family,
+    scope: 'source_subprofile',
+    eligible_statuses: ['available', 'recommended'],
+    recommendation_gate: {
+      required_fixture_count: 16,
+      formatting_threshold: 0.95,
+      fallback_threshold: 2,
+      unresolved_conflict_threshold: 0,
+      requires_backend_parity: true,
+      requires_cross_implementation_parity: false
+    },
+    default_gate: {
+      requires_recommended_status: true,
+      requires_explicit_package_rollout: true,
+      minimum_recommended_days: 30,
+      requires_narrow_scope: true
+    },
+    required_suites: [
+      'slice-827-backend-parity-fixtures',
+      'slice-815-formatting-preservation-metrics'
+    ],
+    diagnostics: ['source-language profile is narrow and not language-wide']
+  });
+  const rubyProfile = sourceSubprofile(promotionProfileRubyGemspecDependencyDeclarations, 'ruby');
+  return {
+    policy_id: 'initial-profile-promotion-policy',
+    version: '1',
+    global_hard_gates: [
+      'parse_or_fail_closed',
+      'render_or_fail_closed',
+      'coherent_conflict_markers',
+      'performance_guardrails'
+    ],
+    profiles: [
+      {
+        profile_id: promotionProfileJsonKeyedObject,
+        family: 'json',
+        scope: 'data_format',
+        eligible_statuses: ['available', 'recommended', 'default'],
+        recommendation_gate: {
+          required_fixture_count: 12,
+          formatting_threshold: 0.95,
+          fallback_threshold: 1,
+          unresolved_conflict_threshold: 0,
+          requires_backend_parity: true,
+          requires_cross_implementation_parity: true
+        },
+        default_gate: {
+          requires_recommended_status: true,
+          requires_explicit_package_rollout: true,
+          minimum_recommended_days: 30,
+          requires_narrow_scope: true
+        },
+        required_suites: [
+          'slice-901-false-textual-conflicts',
+          'slice-902-git-driver-smoke-fixtures',
+          'slice-815-formatting-preservation-metrics'
+        ],
+        diagnostics: ['data-format profile may become default after recommendation soak time']
+      },
+      sourceSubprofile(promotionProfileGoImportDeclarations, 'go'),
+      sourceSubprofile(promotionProfileRustUseDeclarations, 'rust'),
+      sourceSubprofile(promotionProfileTypeScriptImportDeclarations, 'typescript'),
+      {
+        ...rubyProfile,
+        recommendation_gate: {
+          ...rubyProfile.recommendation_gate,
+          required_fixture_count: 10,
+          fallback_threshold: 1,
+          requires_backend_parity: false
+        },
+        required_suites: [
+          'slice-702-ruby-gemspec-signature-merge-acceptance',
+          'slice-703-ruby-gemspec-field-policy-acceptance',
+          'slice-704-ruby-gemspec-dependency-section-policy-acceptance'
+        ],
+        diagnostics: ['Ruby source subprofile is limited to dependency declarations']
+      }
+    ],
+    diagnostics: [
+      'default status is allowed only after recommendation status and explicit package rollout'
+    ]
+  };
+}
+
 export interface ProfilePromotionEvaluation {
   readonly profile_id: string;
   readonly status: ProfilePromotionStatus;

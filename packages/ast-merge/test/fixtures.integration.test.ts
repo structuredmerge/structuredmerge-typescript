@@ -9,6 +9,7 @@ import { mergeRuby } from '../../ruby-merge/src/index';
 import {
   evaluateProfilePromotion,
   executeGenericConflictHandler,
+  initialProfilePromotionPolicy,
   promotionProfileJsonKeyedObject,
   promotionProfileRubyGemspecDependencyDeclarations,
   validateLanguageBackendProfile
@@ -7191,6 +7192,7 @@ describe('ast-merge shared fixtures', () => {
     expect(jsonPolicy?.recommendation_gate.formatting_threshold).toBe(
       fixture.expected.formatting_threshold
     );
+    expect(initialProfilePromotionPolicy()).toEqual(fixture.policy);
   });
 
   it('conforms to the slice-913 profile promotion evaluation fixture', () => {

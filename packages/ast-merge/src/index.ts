@@ -602,6 +602,7 @@ export {
   summarizeNamedConformanceSuiteReports,
   summarizeConformanceResults,
   evaluateProfilePromotion,
+  initialProfilePromotionPolicy,
   promotionProfileGoImportDeclarations,
   promotionProfileJsonKeyedObject,
   promotionProfileRubyGemspecDependencyDeclarations,
