@@ -1278,6 +1278,22 @@ export interface GitDriverSmokeSuite {
   readonly diagnostics: readonly string[];
 }
 
+export interface DiffDriverSmokeCase {
+  readonly case_id: string;
+  readonly argument_count: number;
+  readonly argument_roles: readonly string[];
+  readonly expected_exit_code: number;
+  readonly expected_output_kind: string;
+}
+
+export interface DiffDriverSmokeSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly driver_name: string;
+  readonly cases: readonly DiffDriverSmokeCase[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

@@ -49,6 +49,8 @@ export type {
   Diagnostic,
   DiagnosticCategory,
   DiagnosticSeverity,
+  DiffDriverSmokeCase,
+  DiffDriverSmokeSuite,
   FallbackScopeDefinition,
   FallbackScopeReport,
   FallbackUsageEntry,

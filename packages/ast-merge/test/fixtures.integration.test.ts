@@ -39,6 +39,7 @@ import type {
   DelegatedChildSurfaceOutput,
   DiagnosticCategory,
   DiagnosticSeverity,
+  DiffDriverSmokeSuite,
   DiscoveredSurface,
   FallbackScopeReport,
   FallbackUsageReport,
@@ -6685,6 +6686,28 @@ describe('ast-merge shared fixtures', () => {
     expect(suite.cases).toHaveLength(fixture.expected.case_count);
     expect(placeholderSet).toEqual(fixture.expected.placeholder_set);
     expect(updatedCurrentFileCount).toBe(fixture.expected.updated_current_file_count);
+  });
+
+  it('conforms to the slice-903 diff driver smoke fixtures fixture', () => {
+    const fixture = readFixture<{
+      suite: DiffDriverSmokeSuite;
+      expected: {
+        driver_name: string;
+        case_count: number;
+        argument_counts: readonly number[];
+        structured_diff_count: number;
+      };
+    }>('diagnostics', 'slice-903-diff-driver-smoke-fixtures', 'diff-driver-smoke-fixtures.json');
+    const suite = fixture.suite;
+    const argumentCounts = suite.cases.map((smokeCase) => smokeCase.argument_count);
+    const structuredDiffCount = suite.cases.filter(
+      (smokeCase) => smokeCase.expected_output_kind === 'structured_diff'
+    ).length;
+
+    expect(suite.driver_name).toBe(fixture.expected.driver_name);
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(argumentCounts).toEqual(fixture.expected.argument_counts);
+    expect(structuredDiffCount).toBe(fixture.expected.structured_diff_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
