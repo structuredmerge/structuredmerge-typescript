@@ -24,6 +24,8 @@ import type {
   ParseErrorTolerance,
   ParserRequest,
   PolicyReference,
+  ProviderDiagnostic,
+  ProviderDiagnosticsReport,
   SourceSpan,
   TreeHaverProfile,
   ZipUnsafeEntry
@@ -31,6 +33,7 @@ import type {
 import { processWithLanguagePack } from '../src/index';
 import {
   buildBackendAvailabilityReport,
+  buildProviderDiagnosticsReport,
   byteEditDelta,
   byteEditNewRange,
   byteEditOldRange,
@@ -128,6 +131,14 @@ interface BackendAvailabilityReportFixture {
   diagnostics: string[];
 }
 
+interface ProviderDiagnosticsReportFixture {
+  provider_id: string;
+  backend_ref: BackendReference;
+  language: string;
+  status: 'clean' | 'warning' | 'blocked';
+  diagnostics: ProviderDiagnostic[];
+}
+
 function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProjectionSupport {
   return {
     backendRef: fixture.backend_ref,
@@ -151,6 +162,18 @@ function backendAvailabilityReport(
     backendRef: fixture.backend_ref,
     status: fixture.status,
     checks: fixture.checks,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function providerDiagnosticsReport(
+  fixture: ProviderDiagnosticsReportFixture
+): ProviderDiagnosticsReport {
+  return {
+    providerId: fixture.provider_id,
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    status: fixture.status,
     diagnostics: fixture.diagnostics
   };
 }
@@ -1125,6 +1148,26 @@ describe('tree-haver shared fixtures', () => {
       expect(buildBackendAvailabilityReport(expected.backendRef, expected.checks)).toEqual(
         expected
       );
+    }
+  });
+
+  it('conforms to the slice-927 tree_haver provider diagnostics fixture', () => {
+    const fixture = readFixture<Record<string, ProviderDiagnosticsReportFixture>>(
+      'diagnostics',
+      'slice-927-tree-haver-provider-diagnostics',
+      'provider-diagnostics.json'
+    );
+
+    for (const name of ['clean_report', 'warning_report', 'blocked_report']) {
+      const expected = providerDiagnosticsReport(fixture[name]!);
+      expect(
+        buildProviderDiagnosticsReport(
+          expected.providerId,
+          expected.backendRef,
+          expected.language,
+          expected.diagnostics
+        )
+      ).toEqual(expected);
     }
   });
 

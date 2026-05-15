@@ -42,6 +42,9 @@ export type {
   ParseResult,
   PolicyReference,
   PolicySurface,
+  ProviderDiagnostic,
+  ProviderDiagnosticsReport,
+  ProviderDiagnosticsStatus,
   ProcessDiagnostic,
   ProcessImportInfo,
   ProcessRequest,
@@ -60,6 +63,7 @@ export type {
 export {
   backendReference,
   buildBackendAvailabilityReport,
+  buildProviderDiagnosticsReport,
   byteEditDelta,
   byteEditNewRange,
   byteEditOldRange,

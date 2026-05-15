@@ -196,6 +196,25 @@ export interface BackendAvailabilityReport {
   readonly diagnostics: readonly string[];
 }
 
+export type ProviderDiagnosticsStatus = 'clean' | 'warning' | 'blocked';
+
+export interface ProviderDiagnostic {
+  readonly severity: DiagnosticSeverity;
+  readonly category: string;
+  readonly code: string;
+  readonly message: string;
+  readonly path: string;
+  readonly blocking: boolean;
+}
+
+export interface ProviderDiagnosticsReport {
+  readonly providerId: string;
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly status: ProviderDiagnosticsStatus;
+  readonly diagnostics: readonly ProviderDiagnostic[];
+}
+
 export interface OrderedSiblingEdge {
   readonly parentId: string;
   readonly nodeId: string;
@@ -736,6 +755,26 @@ export function buildBackendAvailabilityReport(
   }
 
   return { backendRef, status, checks, diagnostics };
+}
+
+export function buildProviderDiagnosticsReport(
+  providerId: string,
+  backendRef: BackendReference,
+  language: string,
+  diagnostics: readonly ProviderDiagnostic[]
+): ProviderDiagnosticsReport {
+  let status: ProviderDiagnosticsStatus = 'clean';
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.blocking) {
+      status = 'blocked';
+      break;
+    }
+    if (diagnostic.severity === 'warning') {
+      status = 'warning';
+    }
+  }
+
+  return { providerId, backendRef, language, status, diagnostics };
 }
 
 export function currentBackendId(): string | undefined {
