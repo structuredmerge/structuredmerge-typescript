@@ -82,6 +82,26 @@ export interface DestinationProfileReport {
   readonly anchored: boolean;
 }
 
+export interface OperationProfileReport {
+  readonly operation_kind: string;
+  readonly operation_family: string;
+  readonly known_operation_kind: boolean;
+  readonly source_requirement: string;
+  readonly known_source_requirement: boolean;
+  readonly destination_requirement: string;
+  readonly known_destination_requirement: boolean;
+  readonly replacement_source: string;
+  readonly known_replacement_source: boolean;
+  readonly captures_source_text: boolean;
+  readonly supports_if_missing: boolean;
+  readonly selects_source: boolean;
+  readonly requires_source: boolean;
+  readonly supports_destination: boolean;
+  readonly requires_destination: boolean;
+  readonly explicit_replacement: boolean;
+  readonly may_reuse_captured_text: boolean;
+}
+
 interface ProfileDescriptor {
   readonly family: string;
 }
@@ -140,6 +160,16 @@ const KNOWN_ANCHOR_BOUNDARIES: Readonly<Record<string, ProfileDescriptor>> = {
   none: { family: 'none' },
   statement_end_plus_following_gap: { family: 'gap_preserving_statement' }
 };
+
+const KNOWN_OPERATION_KINDS: Readonly<Record<string, ProfileDescriptor>> = {
+  replace: { family: 'rewrite' },
+  delete: { family: 'removal' },
+  insert: { family: 'insertion' },
+  move: { family: 'relocation' }
+};
+
+const KNOWN_REQUIREMENTS = new Set(['none', 'optional', 'required']);
+const KNOWN_REPLACEMENT_SOURCES = new Set(['none', 'explicit_text', 'captured_text_or_explicit']);
 
 export class MatchProfile {
   readonly startBoundary: string;
@@ -290,6 +320,61 @@ export class DestinationProfile {
   }
 }
 
+export class OperationProfile {
+  readonly operationKind: string;
+  readonly sourceRequirement: string;
+  readonly destinationRequirement: string;
+  readonly replacementSource: string;
+  readonly capturesSourceText: boolean;
+  readonly supportsIfMissing: boolean;
+
+  constructor({
+    operation_kind = 'replace',
+    source_requirement = 'required',
+    destination_requirement = 'none',
+    replacement_source = 'explicit_text',
+    captures_source_text = false,
+    supports_if_missing = false
+  }: {
+    readonly operation_kind?: string;
+    readonly source_requirement?: string;
+    readonly destination_requirement?: string;
+    readonly replacement_source?: string;
+    readonly captures_source_text?: boolean;
+    readonly supports_if_missing?: boolean;
+  } = {}) {
+    this.operationKind = operation_kind;
+    this.sourceRequirement = source_requirement;
+    this.destinationRequirement = destination_requirement;
+    this.replacementSource = replacement_source;
+    this.capturesSourceText = captures_source_text;
+    this.supportsIfMissing = supports_if_missing;
+  }
+
+  report(): OperationProfileReport {
+    const operationFamily = KNOWN_OPERATION_KINDS[this.operationKind]?.family ?? 'unknown';
+    return {
+      operation_kind: this.operationKind,
+      operation_family: operationFamily,
+      known_operation_kind: this.operationKind in KNOWN_OPERATION_KINDS,
+      source_requirement: this.sourceRequirement,
+      known_source_requirement: KNOWN_REQUIREMENTS.has(this.sourceRequirement),
+      destination_requirement: this.destinationRequirement,
+      known_destination_requirement: KNOWN_REQUIREMENTS.has(this.destinationRequirement),
+      replacement_source: this.replacementSource,
+      known_replacement_source: KNOWN_REPLACEMENT_SOURCES.has(this.replacementSource),
+      captures_source_text: this.capturesSourceText,
+      supports_if_missing: this.supportsIfMissing,
+      selects_source: this.sourceRequirement !== 'none',
+      requires_source: this.sourceRequirement === 'required',
+      supports_destination: this.destinationRequirement !== 'none',
+      requires_destination: this.destinationRequirement === 'required',
+      explicit_replacement: this.replacementSource === 'explicit_text',
+      may_reuse_captured_text: this.replacementSource === 'captured_text_or_explicit'
+    };
+  }
+}
+
 export function matchProfile(profile: ConstructorParameters<typeof MatchProfile>[0]): MatchProfile {
   return new MatchProfile(profile);
 }
@@ -298,6 +383,12 @@ export function destinationProfile(
   profile: ConstructorParameters<typeof DestinationProfile>[0]
 ): DestinationProfile {
   return new DestinationProfile(profile);
+}
+
+export function operationProfile(
+  profile: ConstructorParameters<typeof OperationProfile>[0]
+): OperationProfile {
+  return new OperationProfile(profile);
 }
 
 export function selectionProfile(
@@ -452,13 +543,10 @@ export function boundaryReport(): Readonly<Record<string, unknown>> {
       'limit helpers',
       'match profile helpers',
       'selection profile helpers',
-      'destination profile helpers'
+      'destination profile helpers',
+      'operation profile helpers'
     ],
-    future_exports: [
-      'operation profile helpers',
-      'replace/delete/insert/move helpers',
-      'batch operation helpers'
-    ],
+    future_exports: ['replace/delete/insert/move helpers', 'batch operation helpers'],
     metadata: {
       source: 'legacy_crispr_reference',
       decision:
