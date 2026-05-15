@@ -710,6 +710,40 @@ export interface MoveDetectionMatchingReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface RenameAwareCapability {
+  readonly name: string;
+  readonly status: string;
+  readonly enabled: boolean;
+  readonly requires_explicit_profile: boolean;
+  readonly requires_diagnostics: boolean;
+}
+
+export interface RenameAwareCandidate {
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly from_signature: string;
+  readonly to_signature: string;
+  readonly stable_body_hash: string;
+  readonly rename_distance: number;
+  readonly selected: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface RenameAwareMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly capability: RenameAwareCapability;
+  readonly candidates: readonly RenameAwareCandidate[];
+  readonly matches: readonly SignatureNodeMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

@@ -46,6 +46,7 @@ import type {
   PairwiseMatching,
   PCS,
   RawMerge,
+  RenameAwareMatchingReport,
   SignatureMatchingParent,
   SignatureMatchingReport,
   SourceTextNormalizedMatchingReport,
@@ -5858,6 +5859,38 @@ describe('ast-merge shared fixtures', () => {
     expect(report.matches[0]?.signature).toBe(fixture.expected.first_moved_signature);
     expect(report.matches[0]?.from_index).toBe(fixture.expected.first_moved_from_index);
     expect(report.matches[0]?.to_index).toBe(fixture.expected.first_moved_to_index);
+  });
+
+  it('conforms to the slice-801 rename-aware matching gated fixture', () => {
+    const fixture = readFixture<{
+      matching: RenameAwareMatchingReport;
+      expected: {
+        strategy: string;
+        capability: string;
+        status: string;
+        enabled: boolean;
+        requires_explicit_profile: boolean;
+        requires_diagnostics: boolean;
+        candidate_count: number;
+        match_count: number;
+        first_candidate_selected: boolean;
+        first_candidate_body_hash: string;
+      };
+    }>('diagnostics', 'slice-801-rename-aware-matching-gated', 'rename-aware-matching-gated.json');
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.capability.name).toBe(fixture.expected.capability);
+    expect(report.capability.status).toBe(fixture.expected.status);
+    expect(report.capability.enabled).toBe(fixture.expected.enabled);
+    expect(report.capability.requires_explicit_profile).toBe(
+      fixture.expected.requires_explicit_profile
+    );
+    expect(report.capability.requires_diagnostics).toBe(fixture.expected.requires_diagnostics);
+    expect(report.candidates).toHaveLength(fixture.expected.candidate_count);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.candidates[0]?.selected).toBe(fixture.expected.first_candidate_selected);
+    expect(report.candidates[0]?.stable_body_hash).toBe(fixture.expected.first_candidate_body_hash);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
