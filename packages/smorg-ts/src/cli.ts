@@ -47,6 +47,8 @@ interface ConflictDiffOptions {
 interface PathSettings {
   language?: string;
   conflictMarkerSize: number;
+  profileId?: string;
+  requireProfileStatus?: string;
 }
 
 interface ConflictRegion {
@@ -104,14 +106,6 @@ function runMergeDriver(
 ): number {
   const options = parseMergeDriverOptions(args, stderr);
   if (!options) return exitUserError;
-  const profileExit = reportAndEnforceProfile(
-    options.profileId,
-    options.profileReport,
-    options.requireProfileStatus,
-    stdout,
-    stderr
-  );
-  if (profileExit !== exitSuccess) return profileExit;
 
   let ancestorSource: string;
   let currentSource: string;
@@ -128,6 +122,14 @@ function runMergeDriver(
 
   const effectivePath = options.pathName ?? options.current;
   const settings = loadPathSettings(effectivePath);
+  const profileExit = reportAndEnforceProfile(
+    options.profileId ?? settings.profileId,
+    options.profileReport,
+    options.requireProfileStatus ?? settings.requireProfileStatus,
+    stdout,
+    stderr
+  );
+  if (profileExit !== exitSuccess) return profileExit;
   const result = mergeByPath(effectivePath, settings.language, otherSource, currentSource);
   let output = result.output;
   if (!result.ok || output === undefined) {
@@ -515,6 +517,10 @@ function applyAttributes(settings: PathSettings, pathName: string, source: strin
       if (!value) continue;
       if (key === 'smorg.language' || key === 'linguist-language') {
         settings.language = value;
+      } else if (key === 'smorg.profile') {
+        settings.profileId = value;
+      } else if (key === 'smorg.requireProfileStatus') {
+        settings.requireProfileStatus = value;
       } else if (key === 'conflict-marker-size') {
         const markerSize = Number.parseInt(value, 10);
         if (markerSize > 0) settings.conflictMarkerSize = markerSize;

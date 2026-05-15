@@ -143,6 +143,28 @@ describe('smorg-ts cli', () => {
     expect(stderr.output()).toContain('profile status available is below required recommended');
   });
 
+  it('uses smorg profile attributes', () => {
+    writeFileSync(
+      '.gitattributes',
+      '*.json smorg.profile=json.keyed-object smorg.requireProfileStatus=recommended\n'
+    );
+    const ancestor = write('ancestor.json', '{"name":"structuredmerge"}');
+    const current = write('current.json', '{"name":"structuredmerge","current":true}');
+    const other = write('other.json', '{"name":"structuredmerge","other":true}');
+    const stdout = writer();
+    const stderr = writer();
+
+    const exit = run(
+      ['merge-driver', '--profile-report', ancestor, current, other, 'package.json'],
+      stdout.stream,
+      stderr.stream
+    );
+
+    expect(exit).toBe(exitUserError);
+    expect(stdout.output()).toContain('"profile_id":"json.keyed-object"');
+    expect(stdout.output()).toContain('"rejection_code":"profile_status_unmet"');
+  });
+
   it('supports diff-driver git arities', () => {
     for (const argumentCount of [7, 9]) {
       const oldPath = write(`old-${argumentCount}.json`, '{"old":true}');
