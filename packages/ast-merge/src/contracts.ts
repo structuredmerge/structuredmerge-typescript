@@ -1259,6 +1259,25 @@ export interface FalseTextualConflictSuite {
   readonly diagnostics: readonly string[];
 }
 
+export interface GitDriverSmokeCase {
+  readonly case_id: string;
+  readonly family: string;
+  readonly ancestor_placeholder: string;
+  readonly current_placeholder: string;
+  readonly other_placeholder: string;
+  readonly path_placeholder: string;
+  readonly expected_exit_code: number;
+  readonly expected_current_file_updated: boolean;
+}
+
+export interface GitDriverSmokeSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly driver_name: string;
+  readonly cases: readonly GitDriverSmokeCase[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

@@ -65,6 +65,8 @@ export type {
   FormattingPreservationMetrics,
   FormattingRecommendationGate,
   FormattingRecommendationWeights,
+  GitDriverSmokeCase,
+  GitDriverSmokeSuite,
   GenericConflictHandlerCase,
   GenericConflictHandlerExecution,
   GenericConflictHandlerResult,

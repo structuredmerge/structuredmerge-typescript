@@ -53,6 +53,7 @@ import type {
   FormattingHardGateReport,
   FormattingPreservationConformanceReport,
   FormattingRecommendationGate,
+  GitDriverSmokeSuite,
   GenericConflictHandlerExecution,
   GoDSTProviderStackReport,
   GoProviderComparisonReport,
@@ -6654,6 +6655,36 @@ describe('ast-merge shared fixtures', () => {
     expect(languages).toEqual(fixture.expected.languages);
     expect(categories).toEqual(fixture.expected.categories);
     expect(unresolvedConflictCount).toBe(fixture.expected.expected_unresolved_conflict_count);
+  });
+
+  it('conforms to the slice-902 git driver smoke fixtures fixture', () => {
+    const fixture = readFixture<{
+      suite: GitDriverSmokeSuite;
+      expected: {
+        driver_name: string;
+        case_count: number;
+        placeholder_set: readonly string[];
+        updated_current_file_count: number;
+      };
+    }>('diagnostics', 'slice-902-git-driver-smoke-fixtures', 'git-driver-smoke-fixtures.json');
+    const suite = fixture.suite;
+    const firstCase = suite.cases[0];
+    const placeholderSet = firstCase
+      ? [
+          firstCase.ancestor_placeholder,
+          firstCase.current_placeholder,
+          firstCase.other_placeholder,
+          firstCase.path_placeholder
+        ]
+      : [];
+    const updatedCurrentFileCount = suite.cases.filter(
+      (smokeCase) => smokeCase.expected_current_file_updated
+    ).length;
+
+    expect(suite.driver_name).toBe(fixture.expected.driver_name);
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(placeholderSet).toEqual(fixture.expected.placeholder_set);
+    expect(updatedCurrentFileCount).toBe(fixture.expected.updated_current_file_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
