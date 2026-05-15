@@ -58,6 +58,7 @@ import type {
   PCS,
   RawMerge,
   RenameAwareMatchingReport,
+  RenderPlanReport,
   SignatureMatchingParent,
   SignatureMatchingReport,
   SourceTextNormalizedMatchingReport,
@@ -6202,6 +6203,31 @@ describe('ast-merge shared fixtures', () => {
     expect(report.git_driver_output.stderr).toBe(fixture.expected.stderr);
     expect(report.git_driver_output.exit_code).toBe(fixture.expected.exit_code);
     expect(report.machine_output.fallbacks[0]?.scope).toBe(fixture.expected.first_fallback_scope);
+  });
+
+  it('conforms to the slice-813 render strategy metadata fixture', () => {
+    const fixture = readFixture<{
+      render_plan: RenderPlanReport;
+      expected: {
+        language: string;
+        strategy_count: number;
+        strategies: readonly string[];
+        source_reuse_preserves_fragment: boolean;
+        full_file_requires_reparse: boolean;
+      };
+    }>('diagnostics', 'slice-813-render-strategy-metadata', 'render-strategy-metadata.json');
+    const report = fixture.render_plan;
+    const strategies = report.strategies.map((strategy) => strategy.strategy);
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.strategies).toHaveLength(fixture.expected.strategy_count);
+    expect(strategies).toEqual(fixture.expected.strategies);
+    expect(report.strategies[0]?.preserves_source_fragment).toBe(
+      fixture.expected.source_reuse_preserves_fragment
+    );
+    expect(report.strategies.at(-1)?.requires_reparse).toBe(
+      fixture.expected.full_file_requires_reparse
+    );
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

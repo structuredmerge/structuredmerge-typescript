@@ -999,6 +999,27 @@ export interface FallbackUsageReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface RenderByteSpan {
+  readonly start_byte: number;
+  readonly end_byte: number;
+}
+
+export interface RenderStrategyMetadata {
+  readonly strategy: string;
+  readonly path: string;
+  readonly span: RenderByteSpan | null;
+  readonly preserves_source_fragment: boolean;
+  readonly requires_reparse: boolean;
+}
+
+export interface RenderPlanReport {
+  readonly plan_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly strategies: readonly RenderStrategyMetadata[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';
