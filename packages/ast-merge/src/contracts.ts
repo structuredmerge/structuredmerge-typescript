@@ -1181,6 +1181,21 @@ export interface GoProviderComparisonReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface BackendParityCase {
+  readonly case_id: string;
+  readonly native_provider: string;
+  readonly tree_sitter_provider: string;
+  readonly dimensions: readonly string[];
+}
+
+export interface BackendParitySuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly cases: readonly BackendParityCase[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

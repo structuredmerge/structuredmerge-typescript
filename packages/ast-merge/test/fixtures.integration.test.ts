@@ -9,6 +9,7 @@ import { mergeRuby } from '../../ruby-merge/src/index';
 import { executeGenericConflictHandler } from '../src/index';
 import type {
   AmbiguityMatchingReport,
+  BackendParitySuite,
   ConformanceCaseRef,
   ConformanceCaseRun,
   ConformanceCaseExecution,
@@ -6549,6 +6550,30 @@ describe('ast-merge shared fixtures', () => {
     expect(report.dimensions.includes('backend_deficiencies')).toBe(
       fixture.expected.includes_backend_deficiencies
     );
+  });
+
+  it('conforms to the slice-827 backend parity fixtures fixture', () => {
+    const fixture = readFixture<{
+      parity_suite: BackendParitySuite;
+      expected: {
+        language: string;
+        case_count: number;
+        native_providers: readonly string[];
+        tree_sitter_provider: string;
+        source_span_case_count: number;
+      };
+    }>('diagnostics', 'slice-827-backend-parity-fixtures', 'backend-parity-fixtures.json');
+    const suite = fixture.parity_suite;
+    const nativeProviders = suite.cases.map((parityCase) => parityCase.native_provider);
+    const sourceSpanCaseCount = suite.cases.filter((parityCase) =>
+      parityCase.dimensions.includes('source_spans')
+    ).length;
+
+    expect(suite.language).toBe(fixture.expected.language);
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(nativeProviders).toEqual(fixture.expected.native_providers);
+    expect(suite.cases[0]?.tree_sitter_provider).toBe(fixture.expected.tree_sitter_provider);
+    expect(sourceSpanCaseCount).toBe(fixture.expected.source_span_case_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

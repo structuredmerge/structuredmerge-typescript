@@ -2,6 +2,8 @@ export const packageName = '@structuredmerge/ast-merge';
 
 export type {
   AmbiguityMatchingReport,
+  BackendParityCase,
+  BackendParitySuite,
   ChangeSet,
   ChangeSetChange,
   ClassMappingDiagnostic,
