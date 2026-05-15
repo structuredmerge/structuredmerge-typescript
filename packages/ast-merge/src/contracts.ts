@@ -894,6 +894,22 @@ export interface ConflictMarkerRenderingReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface ConflictHandlerRegistration {
+  readonly handler_id: string;
+  readonly conflict_category: string;
+  readonly fallback_scope: string;
+  readonly node_roles: readonly string[];
+  readonly capability: string;
+  readonly enabled: boolean;
+}
+
+export interface ConflictHandlerRegistryReport {
+  readonly registry_id: string;
+  readonly version: string;
+  readonly handlers: readonly ConflictHandlerRegistration[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

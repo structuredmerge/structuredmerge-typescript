@@ -8,6 +8,8 @@ export type {
   ClassMappingNodeClass,
   ClassMappingReport,
   ConflictCategoryReport,
+  ConflictHandlerRegistration,
+  ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
   ConformanceCaseRef,
   ConformanceCaseRun,

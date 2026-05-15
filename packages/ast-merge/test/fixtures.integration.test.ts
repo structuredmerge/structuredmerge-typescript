@@ -41,6 +41,7 @@ import type {
   ChangeSet,
   ClassMappingReport,
   ConflictCategoryReport,
+  ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
   InconsistencyReport,
@@ -6077,6 +6078,29 @@ describe('ast-merge shared fixtures', () => {
     expect(report.output.startsWith(fixture.expected.starts_with)).toBe(true);
     expect(report.output.includes(fixture.expected.contains_base_marker)).toBe(true);
     expect(report.output.endsWith(fixture.expected.ends_with)).toBe(true);
+  });
+
+  it('conforms to the slice-809 typed conflict handler extension points fixture', () => {
+    const fixture = readFixture<{
+      handlers: ConflictHandlerRegistryReport;
+      expected: {
+        handler_count: number;
+        enabled_count: number;
+        first_handler_category: string;
+        second_handler_scope: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-809-typed-conflict-handler-extension-points',
+      'typed-conflict-handler-extension-points.json'
+    );
+    const report = fixture.handlers;
+    const enabledCount = report.handlers.filter((handler) => handler.enabled).length;
+
+    expect(report.handlers).toHaveLength(fixture.expected.handler_count);
+    expect(enabledCount).toBe(fixture.expected.enabled_count);
+    expect(report.handlers[0]?.conflict_category).toBe(fixture.expected.first_handler_category);
+    expect(report.handlers[1]?.fallback_scope).toBe(fixture.expected.second_handler_scope);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
