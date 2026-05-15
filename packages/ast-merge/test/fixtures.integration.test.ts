@@ -47,6 +47,7 @@ import type {
   FamilyFeatureProfile,
   GenericConflictHandlerExecution,
   InconsistencyReport,
+  LanguageProfileHandlerRegistry,
   LocalLineFallbackReport,
   MatchingDebugArtifacts,
   MergeIR,
@@ -6139,6 +6140,37 @@ describe('ast-merge shared fixtures', () => {
     expect(results[0]?.merged_children).toHaveLength(fixture.expected.first_merged_child_count);
     expect(execution.cases[1]?.handler_id).toBe(fixture.expected.second_handler_id);
     expect(results[1]?.merged_members).toHaveLength(fixture.expected.second_merged_member_count);
+  });
+
+  it('conforms to the slice-811 language profile handler registration fixture', () => {
+    const fixture = readFixture<{
+      profile_handlers: LanguageProfileHandlerRegistry;
+      expected: {
+        language: string;
+        registration_count: number;
+        enabled_count: number;
+        roles: readonly string[];
+        duplicate_member_handler: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-811-language-profile-handler-registration',
+      'language-profile-handler-registration.json'
+    );
+    const registry = fixture.profile_handlers;
+    const enabledCount = registry.registrations.filter(
+      (registration) => registration.enabled
+    ).length;
+    const roles = registry.registrations.map((registration) => registration.role);
+    const duplicateMemberHandler = registry.registrations.find(
+      (registration) => registration.role === 'duplicate_members'
+    )?.handler_id;
+
+    expect(registry.language).toBe(fixture.expected.language);
+    expect(registry.registrations).toHaveLength(fixture.expected.registration_count);
+    expect(enabledCount).toBe(fixture.expected.enabled_count);
+    expect(roles).toEqual(fixture.expected.roles);
+    expect(duplicateMemberHandler).toBe(fixture.expected.duplicate_member_handler);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

@@ -949,6 +949,21 @@ export interface GenericConflictHandlerExecution {
   readonly diagnostics: readonly string[];
 }
 
+export interface LanguageProfileHandlerRegistration {
+  readonly role: string;
+  readonly handler_id: string;
+  readonly conflict_categories: readonly string[];
+  readonly enabled: boolean;
+}
+
+export interface LanguageProfileHandlerRegistry {
+  readonly profile_id: string;
+  readonly language: string;
+  readonly version: string;
+  readonly registrations: readonly LanguageProfileHandlerRegistration[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

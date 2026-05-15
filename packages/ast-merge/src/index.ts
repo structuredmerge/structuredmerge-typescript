@@ -52,6 +52,8 @@ export type {
   HandlerChildNode,
   HandlerKeyedMember,
   InconsistencyReport,
+  LanguageProfileHandlerRegistration,
+  LanguageProfileHandlerRegistry,
   LineSpan,
   LocalLineFallbackReport,
   MergeConflict,
