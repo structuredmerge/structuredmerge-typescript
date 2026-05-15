@@ -7171,7 +7171,7 @@ describe('ast-merge shared fixtures', () => {
       (entry) => entry.profile_id === 'json.keyed-object'
     );
     const rubyPolicy = fixture.policy.profiles.find(
-      (entry) => entry.profile_id === 'ruby.gemspec-dependencies'
+      (entry) => entry.profile_id === 'ruby.gemspec-dependency-declarations'
     );
 
     expect(fixture.policy.policy_id).toBe(fixture.expected.policy_id);
