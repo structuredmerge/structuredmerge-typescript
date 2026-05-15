@@ -651,6 +651,31 @@ export interface SignatureMatchingReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface SourceTextNormalizedMatch {
+  readonly normalized_text: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly from_source_text: string;
+  readonly to_source_text: string;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface SourceTextNormalizedMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly normalization: readonly string[];
+  readonly leaf_kinds: readonly string[];
+  readonly matches: readonly SourceTextNormalizedMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

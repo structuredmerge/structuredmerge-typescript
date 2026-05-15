@@ -47,6 +47,8 @@ export type {
   SignatureMatchingParent,
   SignatureMatchingReport,
   SignatureNodeMatch,
+  SourceTextNormalizedMatch,
+  SourceTextNormalizedMatchingReport,
   StructuralMatchingReport,
   StructuralPathMatch,
   CompactRuleset,

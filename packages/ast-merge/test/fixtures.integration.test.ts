@@ -47,6 +47,7 @@ import type {
   RawMerge,
   SignatureMatchingParent,
   SignatureMatchingReport,
+  SourceTextNormalizedMatchingReport,
   StructuralMatchingReport,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
@@ -5791,6 +5792,38 @@ describe('ast-merge shared fixtures', () => {
     expect(fixture.expected.order_sensitive).toBe(false);
     expect(report.matches[0]?.signature).toBe(fixture.expected.first_match_signature);
     expect(report.matches[0]?.to_path).toBe(fixture.expected.first_match_to_path);
+  });
+
+  it('conforms to the slice-799 source-text normalized leaf matching fixture', () => {
+    const fixture = readFixture<{
+      matching: SourceTextNormalizedMatchingReport;
+      expected: {
+        strategy: string;
+        normalization: readonly string[];
+        leaf_kinds: readonly string[];
+        match_count: number;
+        unmatched_from_count: number;
+        unmatched_to_count: number;
+        first_match_normalized_text: string;
+        minimum_confidence: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-799-source-text-normalized-leaf-matching',
+      'source-text-normalized-leaf-matching.json'
+    );
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.normalization).toEqual(fixture.expected.normalization);
+    expect(report.leaf_kinds).toEqual(fixture.expected.leaf_kinds);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.unmatched_from).toHaveLength(fixture.expected.unmatched_from_count);
+    expect(report.unmatched_to).toHaveLength(fixture.expected.unmatched_to_count);
+    expect(report.matches[0]?.normalized_text).toBe(fixture.expected.first_match_normalized_text);
+    expect(report.matches[0]?.confidence).toBeGreaterThanOrEqual(
+      fixture.expected.minimum_confidence
+    );
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
