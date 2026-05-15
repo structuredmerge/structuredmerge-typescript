@@ -45,6 +45,8 @@ import type {
   PairwiseMatching,
   PCS,
   RawMerge,
+  SignatureMatchingParent,
+  SignatureMatchingReport,
   StructuralMatchingReport,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
@@ -5755,6 +5757,40 @@ describe('ast-merge shared fixtures', () => {
     expect(report.unmatched_to).toHaveLength(fixture.expected.unmatched_to_count);
     expect(fixture.expected.move_detection).toBe(false);
     expect(report.matches[1]?.from_path).toBe('/declarations/Greet');
+  });
+
+  it('conforms to the slice-798 signature matching commutative parent fixture', () => {
+    const fixture = readFixture<{
+      parent: SignatureMatchingParent;
+      matching: SignatureMatchingReport;
+      expected: {
+        strategy: string;
+        parent_policy: string;
+        signature_components: readonly string[];
+        match_count: number;
+        unmatched_from_count: number;
+        unmatched_to_count: number;
+        order_sensitive: boolean;
+        first_match_signature: string;
+        first_match_to_path: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-798-signature-matching-commutative-parent',
+      'signature-matching-commutative-parent.json'
+    );
+    const report = fixture.matching;
+
+    expect(fixture.parent.child_order).toBe(fixture.expected.parent_policy);
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.parent_policy).toBe(fixture.expected.parent_policy);
+    expect(report.signature_components).toEqual(fixture.expected.signature_components);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.unmatched_from).toHaveLength(fixture.expected.unmatched_from_count);
+    expect(report.unmatched_to).toHaveLength(fixture.expected.unmatched_to_count);
+    expect(fixture.expected.order_sensitive).toBe(false);
+    expect(report.matches[0]?.signature).toBe(fixture.expected.first_match_signature);
+    expect(report.matches[0]?.to_path).toBe(fixture.expected.first_match_to_path);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

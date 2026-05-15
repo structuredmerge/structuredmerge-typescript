@@ -618,6 +618,39 @@ export interface StructuralMatchingReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface SignatureMatchingParent {
+  readonly kind: string;
+  readonly role: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly child_order: string;
+}
+
+export interface SignatureNodeMatch {
+  readonly signature: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface SignatureMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly parent_policy: string;
+  readonly signature_components: readonly string[];
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly matches: readonly SignatureNodeMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {
