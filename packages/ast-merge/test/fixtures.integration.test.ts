@@ -63,6 +63,7 @@ import type {
   RawMerge,
   RenameAwareMatchingReport,
   RenderPlanReport,
+  RenderSafetyReport,
   RenderVerificationReport,
   SecondaryFormattingMetricsReport,
   SignatureMatchingParent,
@@ -6403,6 +6404,30 @@ describe('ast-merge shared fixtures', () => {
     expect(suite.cases).toHaveLength(fixture.expected.case_count);
     expect(categories).toEqual(fixture.expected.categories);
     expect(conflictMarkerCaseCount).toBe(fixture.expected.conflict_marker_case_count);
+  });
+
+  it('conforms to the slice-821 unsafe render fallback or failure fixture', () => {
+    const fixture = readFixture<{
+      render_safety: RenderSafetyReport;
+      expected: {
+        safe_to_render: boolean;
+        allowed_outcomes: readonly string[];
+        outcome: string;
+        fallback_strategy: string;
+        diagnostic_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-821-unsafe-render-fallback-or-failure',
+      'unsafe-render-fallback-or-failure.json'
+    );
+    const report = fixture.render_safety;
+
+    expect(report.safe_to_render).toBe(fixture.expected.safe_to_render);
+    expect(fixture.expected.allowed_outcomes).toContain(report.outcome);
+    expect(report.outcome).toBe(fixture.expected.outcome);
+    expect(report.fallback_strategy).toBe(fixture.expected.fallback_strategy);
+    expect(report.diagnostics).toHaveLength(fixture.expected.diagnostic_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

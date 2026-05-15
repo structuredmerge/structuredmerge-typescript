@@ -1110,6 +1110,16 @@ export interface FormattingEdgeFixtureSuite {
   readonly diagnostics: readonly string[];
 }
 
+export interface RenderSafetyReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly provider_id: string;
+  readonly safe_to_render: boolean;
+  readonly outcome: string;
+  readonly fallback_strategy: string;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

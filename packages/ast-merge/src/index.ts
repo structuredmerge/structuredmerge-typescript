@@ -88,6 +88,7 @@ export type {
   RenameAwareMatchingReport,
   RenderByteSpan,
   RenderPlanReport,
+  RenderSafetyReport,
   RenderStrategyMetadata,
   RenderVerificationReport,
   RejectedTieBreakCandidate,
