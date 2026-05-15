@@ -55,6 +55,8 @@ export type {
   FallbackUsageMachineOutput,
   FallbackUsageReport,
   FallbackUsageSummary,
+  FalseTextualConflictCase,
+  FalseTextualConflictSuite,
   FormattingEdgeFixtureCase,
   FormattingEdgeFixtureSuite,
   FormattingHardGate,

@@ -48,6 +48,7 @@ import type {
   ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
+  FalseTextualConflictSuite,
   FormattingEdgeFixtureSuite,
   FormattingHardGateReport,
   FormattingPreservationConformanceReport,
@@ -6630,6 +6631,29 @@ describe('ast-merge shared fixtures', () => {
     expect(report.summary.fallback_count).toBe(fixture.expected.fallback_count);
     expect(report.summary.silently_normalized).toBe(fixture.expected.silently_normalized);
     expect(report.gaps[0]?.diagnostic_code).toBe(fixture.expected.first_diagnostic_code);
+  });
+
+  it('conforms to the slice-901 false textual conflicts fixture', () => {
+    const fixture = readFixture<{
+      suite: FalseTextualConflictSuite;
+      expected: {
+        case_count: number;
+        languages: readonly string[];
+        categories: readonly string[];
+        expected_unresolved_conflict_count: number;
+      };
+    }>('diagnostics', 'slice-901-false-textual-conflicts', 'false-textual-conflicts.json');
+    const suite = fixture.suite;
+    const languages = suite.cases.map((conflictCase) => conflictCase.language);
+    const categories = suite.cases.map((conflictCase) => conflictCase.category);
+    const unresolvedConflictCount = suite.cases.filter(
+      (conflictCase) => conflictCase.expected_unresolved_conflict
+    ).length;
+
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(languages).toEqual(fixture.expected.languages);
+    expect(categories).toEqual(fixture.expected.categories);
+    expect(unresolvedConflictCount).toBe(fixture.expected.expected_unresolved_conflict_count);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

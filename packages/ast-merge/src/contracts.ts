@@ -1240,6 +1240,25 @@ export interface BackendGapConformanceReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface FalseTextualConflictCase {
+  readonly case_id: string;
+  readonly language: string;
+  readonly category: string;
+  readonly base_path: string;
+  readonly ours_path: string;
+  readonly theirs_path: string;
+  readonly expected_strategy: string;
+  readonly expected_unresolved_conflict: boolean;
+}
+
+export interface FalseTextualConflictSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly source: string;
+  readonly cases: readonly FalseTextualConflictCase[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';
