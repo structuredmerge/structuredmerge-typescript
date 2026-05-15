@@ -51,6 +51,7 @@ import type {
   FormattingPreservationConformanceReport,
   FormattingRecommendationGate,
   GenericConflictHandlerExecution,
+  HostLanguageNativeProviderContracts,
   InconsistencyReport,
   LanguageProfileHandlerRegistry,
   LocalLineFallbackReport,
@@ -6461,6 +6462,32 @@ describe('ast-merge shared fixtures', () => {
     expect(report.semantic_role_support).toBe(fixture.expected.semantic_role_support);
     expect(report.retains_native_tree).toBe(fixture.expected.retains_native_tree);
     expect(report.metadata_policy).toBe(fixture.expected.metadata_policy);
+  });
+
+  it('conforms to the slice-823 host language native provider contracts fixture', () => {
+    const fixture = readFixture<{
+      native_provider_contracts: HostLanguageNativeProviderContracts;
+      expected: {
+        provider_count: number;
+        provider_ids: readonly string[];
+        ruby_provider_count: number;
+        first_provider_parser: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-823-host-language-native-provider-contracts',
+      'host-language-native-provider-contracts.json'
+    );
+    const contracts = fixture.native_provider_contracts;
+    const providerIds = contracts.providers.map((provider) => provider.provider_id);
+    const rubyProviderCount = contracts.providers.filter(
+      (provider) => provider.host_language === 'ruby'
+    ).length;
+
+    expect(contracts.providers).toHaveLength(fixture.expected.provider_count);
+    expect(providerIds).toEqual(fixture.expected.provider_ids);
+    expect(rubyProviderCount).toBe(fixture.expected.ruby_provider_count);
+    expect(contracts.providers[0]?.parser_name).toBe(fixture.expected.first_provider_parser);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

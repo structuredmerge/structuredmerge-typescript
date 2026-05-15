@@ -63,6 +63,8 @@ export type {
   GenericConflictHandlerResult,
   HandlerChildNode,
   HandlerKeyedMember,
+  HostLanguageNativeProviderContract,
+  HostLanguageNativeProviderContracts,
   GitDriverOutput,
   InconsistencyReport,
   LanguageProfileHandlerRegistration,

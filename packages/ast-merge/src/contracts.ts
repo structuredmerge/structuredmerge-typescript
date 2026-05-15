@@ -1139,6 +1139,20 @@ export interface NativeProviderMetadataReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface HostLanguageNativeProviderContract {
+  readonly provider_id: string;
+  readonly host_language: string;
+  readonly target_language: string;
+  readonly parser_name: string;
+}
+
+export interface HostLanguageNativeProviderContracts {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly providers: readonly HostLanguageNativeProviderContract[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';
