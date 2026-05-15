@@ -37,6 +37,7 @@ import {
   byteRangeOverlaps,
   currentBackendId,
   extractSourceFragment,
+  libraryPathErrors,
   kaitaiAdapterInfo,
   kaitaiFeatureProfile,
   KAITAI_STRUCT_BACKEND,
@@ -48,7 +49,12 @@ import {
   nodeRoles,
   registerBackend,
   registeredBackends,
+  safeBackendName,
+  safeLanguageName,
+  safeSymbolName,
+  sanitizeLanguageName,
   sliceByteRange,
+  validateLibraryPath,
   withBackend
 } from '../src/index';
 
@@ -89,6 +95,27 @@ interface EditProjectionSupportFixture {
   preserves_source_fragments: boolean;
   unsupported_reason: string | null;
   diagnostics: string[];
+}
+
+interface PathValidationCase {
+  name: string;
+  path: string;
+  expected_valid: boolean;
+  expected_errors: string[];
+}
+
+interface NameValidationCase {
+  name: string;
+  value: string;
+  expected_valid: boolean;
+  expected_sanitized?: string | null;
+}
+
+interface PathValidationFixture {
+  library_path_cases: PathValidationCase[];
+  language_name_cases: NameValidationCase[];
+  symbol_name_cases: NameValidationCase[];
+  backend_name_cases: NameValidationCase[];
 }
 
 function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProjectionSupport {
@@ -1032,6 +1059,37 @@ describe('tree-haver shared fixtures', () => {
     expect(unsupported.diagnostics[0]).toBe(
       'edit projection unavailable: native tree not retained'
     );
+  });
+
+  it('conforms to the slice-925 tree_haver path validation fixture', () => {
+    const fixture = readFixture<PathValidationFixture>(
+      'diagnostics',
+      'slice-925-tree-haver-path-validation',
+      'path-validation.json'
+    );
+
+    for (const testCase of fixture.library_path_cases) {
+      const validation = validateLibraryPath(testCase.path);
+      expect(validation.path).toBe(testCase.path);
+      expect(validation.valid, testCase.name).toBe(testCase.expected_valid);
+      expect(validation.errors, testCase.name).toEqual(testCase.expected_errors);
+      expect(libraryPathErrors(testCase.path), testCase.name).toEqual(testCase.expected_errors);
+    }
+
+    for (const testCase of fixture.language_name_cases) {
+      expect(safeLanguageName(testCase.value), testCase.name).toBe(testCase.expected_valid);
+      expect(sanitizeLanguageName(testCase.value), testCase.name).toBe(
+        testCase.expected_sanitized ?? undefined
+      );
+    }
+
+    for (const testCase of fixture.symbol_name_cases) {
+      expect(safeSymbolName(testCase.value), testCase.name).toBe(testCase.expected_valid);
+    }
+
+    for (const testCase of fixture.backend_name_cases) {
+      expect(safeBackendName(testCase.value), testCase.name).toBe(testCase.expected_valid);
+    }
   });
 
   it('supports temporary backend context selection', () => {

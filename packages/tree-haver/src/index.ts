@@ -24,6 +24,7 @@ export type {
   KaitaiTreeNode,
   LanguagePackAnalysis,
   LanguagePackProcessAnalysis,
+  LibraryPathValidation,
   NativeParserProvider,
   NativeProviderMetadata,
   NormalizedParseResult,
@@ -79,8 +80,15 @@ export {
   processWithLanguagePack,
   parseWithLanguagePack,
   parseWithPeggy,
+  libraryPathErrors,
+  MAX_LIBRARY_PATH_LENGTH,
   registerBackend,
   registeredBackends,
+  safeBackendName,
+  safeLanguageName,
+  safeSymbolName,
+  sanitizeLanguageName,
   sliceByteRange,
+  validateLibraryPath,
   withBackend
 } from './contracts';

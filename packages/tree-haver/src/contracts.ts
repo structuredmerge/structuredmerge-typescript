@@ -174,6 +174,12 @@ export interface EditProjectionSupport {
   readonly diagnostics: readonly string[];
 }
 
+export interface LibraryPathValidation {
+  readonly path: string;
+  readonly valid: boolean;
+  readonly errors: readonly string[];
+}
+
 export interface OrderedSiblingEdge {
   readonly parentId: string;
   readonly nodeId: string;
@@ -607,6 +613,13 @@ const backendRegistry = new Map<string, BackendReference>([
 ]);
 let currentBackend: string | undefined;
 
+export const MAX_LIBRARY_PATH_LENGTH = 4096;
+
+const VALID_LIBRARY_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+const VALID_LANGUAGE_NAME_PATTERN = /^[a-z][a-z0-9_]*$/u;
+const VALID_SYMBOL_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/u;
+const VERSIONED_SHARED_OBJECT_PATTERN = /\.so\.\d+$/u;
+
 export function registerBackend(backend: BackendReference): void {
   backendRegistry.set(backend.id, { ...backend });
 }
@@ -619,6 +632,69 @@ export function backendReference(id: string): BackendReference | undefined {
 
 export function registeredBackends(): BackendReference[] {
   return [...backendRegistry.values()].map((backend) => ({ ...backend }));
+}
+
+export function validateLibraryPath(libraryPath: string): LibraryPathValidation {
+  const errors = libraryPathErrors(libraryPath);
+
+  return {
+    path: libraryPath,
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function libraryPathErrors(libraryPath: string): string[] {
+  const errors: string[] = [];
+
+  if (libraryPath.length === 0) {
+    errors.push('path_empty');
+  }
+  if (libraryPath.length > MAX_LIBRARY_PATH_LENGTH) {
+    errors.push('path_too_long');
+  }
+  if (libraryPath.includes('\0')) {
+    errors.push('path_contains_null_byte');
+  }
+  if (!libraryPath.startsWith('/') && !windowsAbsolutePath(libraryPath)) {
+    errors.push('path_not_absolute');
+  }
+
+  const segments = libraryPath.split(/[\\/]/u);
+  if (segments.includes('..')) {
+    errors.push('path_contains_parent_traversal');
+  }
+  if (segments.includes('.')) {
+    errors.push('path_contains_current_directory_traversal');
+  }
+  if (!hasAllowedLibraryExtension(libraryPath)) {
+    errors.push('path_extension_not_allowed');
+  }
+
+  const filename = libraryFilename(libraryPath);
+  if (!VALID_LIBRARY_FILENAME_PATTERN.test(filename)) {
+    errors.push('filename_contains_invalid_characters');
+  }
+
+  return errors;
+}
+
+export function safeLanguageName(name: string): boolean {
+  return VALID_LANGUAGE_NAME_PATTERN.test(name);
+}
+
+export function sanitizeLanguageName(name: string): string | undefined {
+  const sanitized = name.toLowerCase().replace(/[^a-z0-9_]/gu, '');
+
+  return safeLanguageName(sanitized) ? sanitized : undefined;
+}
+
+export function safeSymbolName(symbol: string): boolean {
+  return VALID_SYMBOL_NAME_PATTERN.test(symbol);
+}
+
+export function safeBackendName(name: string): boolean {
+  return name === 'auto' || backendRegistry.has(name);
 }
 
 export function currentBackendId(): string | undefined {
@@ -637,6 +713,25 @@ export function withBackend<T>(backendId: string, fn: () => T): T {
   } finally {
     currentBackend = previousBackend;
   }
+}
+
+function windowsAbsolutePath(libraryPath: string): boolean {
+  return /^[A-Za-z]:[\\/]/u.test(libraryPath);
+}
+
+function hasAllowedLibraryExtension(libraryPath: string): boolean {
+  const normalizedPath = libraryPath.toLowerCase();
+
+  return (
+    normalizedPath.endsWith('.so') ||
+    VERSIONED_SHARED_OBJECT_PATTERN.test(normalizedPath) ||
+    normalizedPath.endsWith('.dylib') ||
+    normalizedPath.endsWith('.dll')
+  );
+}
+
+function libraryFilename(libraryPath: string): string {
+  return libraryPath.split(/[\\/]/u).at(-1) ?? '';
 }
 
 export function createPeggyParser(
