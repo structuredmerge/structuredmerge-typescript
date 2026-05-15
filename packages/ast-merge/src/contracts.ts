@@ -1049,6 +1049,21 @@ export interface FormattingPreservationConformanceReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface FormattingRecommendationWeights {
+  readonly expected_output_line_diff_size: number;
+  readonly expected_output_character_diff_size: number;
+}
+
+export interface FormattingRecommendationGate {
+  readonly gate_id: string;
+  readonly version: string;
+  readonly threshold: number;
+  readonly passed: boolean;
+  readonly weights: FormattingRecommendationWeights;
+  readonly metrics: FormattingPreservationMetrics;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

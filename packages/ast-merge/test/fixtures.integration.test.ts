@@ -47,6 +47,7 @@ import type {
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
   FormattingPreservationConformanceReport,
+  FormattingRecommendationGate,
   GenericConflictHandlerExecution,
   InconsistencyReport,
   LanguageProfileHandlerRegistry,
@@ -6286,6 +6287,32 @@ describe('ast-merge shared fixtures', () => {
       fixture.expected.character_diff_size
     );
     expect(report.formatting_metrics.formatting_preservation_score).toBe(fixture.expected.score);
+  });
+
+  it('conforms to the slice-816 formatting recommendation gate fixture', () => {
+    const fixture = readFixture<{
+      recommendation_gate: FormattingRecommendationGate;
+      expected: {
+        threshold: number;
+        passed: boolean;
+        line_weight: number;
+        character_weight: number;
+        score: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-816-formatting-recommendation-gate',
+      'formatting-recommendation-gate.json'
+    );
+    const gate = fixture.recommendation_gate;
+
+    expect(gate.threshold).toBe(fixture.expected.threshold);
+    expect(gate.passed).toBe(fixture.expected.passed);
+    expect(gate.weights.expected_output_line_diff_size).toBe(fixture.expected.line_weight);
+    expect(gate.weights.expected_output_character_diff_size).toBe(
+      fixture.expected.character_weight
+    );
+    expect(gate.metrics.formatting_preservation_score).toBe(fixture.expected.score);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

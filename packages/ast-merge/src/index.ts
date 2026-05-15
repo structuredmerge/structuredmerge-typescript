@@ -52,6 +52,8 @@ export type {
   FallbackUsageSummary,
   FormattingPreservationConformanceReport,
   FormattingPreservationMetrics,
+  FormattingRecommendationGate,
+  FormattingRecommendationWeights,
   GenericConflictHandlerCase,
   GenericConflictHandlerExecution,
   GenericConflictHandlerResult,
