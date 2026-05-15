@@ -35,6 +35,83 @@ export class Limit {
   }
 }
 
+export interface MatchProfileReport {
+  readonly start_boundary: string;
+  readonly start_boundary_family: string;
+  readonly known_start_boundary: boolean;
+  readonly end_boundary: string;
+  readonly end_boundary_family: string;
+  readonly known_end_boundary: boolean;
+  readonly payload_kind: string;
+  readonly payload_family: string;
+  readonly known_payload_kind: boolean;
+  readonly comment_anchored: boolean;
+  readonly trailing_gap_extended: boolean;
+}
+
+interface ProfileDescriptor {
+  readonly family: string;
+}
+
+const KNOWN_START_BOUNDARIES: Readonly<Record<string, ProfileDescriptor>> = {
+  owner_start: { family: 'structural_owner' },
+  comment_region_start: { family: 'comment_anchor' }
+};
+
+const KNOWN_END_BOUNDARIES: Readonly<Record<string, ProfileDescriptor>> = {
+  owner_end: { family: 'structural_owner' },
+  owner_end_plus_trailing_gap: { family: 'gap_extension' }
+};
+
+const KNOWN_PAYLOAD_KINDS: Readonly<Record<string, ProfileDescriptor>> = {
+  structural_owner_body: { family: 'owner_body' },
+  comment_owned_body: { family: 'comment_owned' },
+  section_branch: { family: 'section_branch' }
+};
+
+export class MatchProfile {
+  readonly startBoundary: string;
+  readonly endBoundary: string;
+  readonly payloadKind: string;
+
+  constructor({
+    start_boundary = 'owner_start',
+    end_boundary = 'owner_end',
+    payload_kind = 'structural_owner_body'
+  }: {
+    readonly start_boundary?: string;
+    readonly end_boundary?: string;
+    readonly payload_kind?: string;
+  } = {}) {
+    this.startBoundary = start_boundary;
+    this.endBoundary = end_boundary;
+    this.payloadKind = payload_kind;
+  }
+
+  report(): MatchProfileReport {
+    const startFamily = KNOWN_START_BOUNDARIES[this.startBoundary]?.family ?? 'unknown';
+    const endFamily = KNOWN_END_BOUNDARIES[this.endBoundary]?.family ?? 'unknown';
+    const payloadFamily = KNOWN_PAYLOAD_KINDS[this.payloadKind]?.family ?? 'unknown';
+    return {
+      start_boundary: this.startBoundary,
+      start_boundary_family: startFamily,
+      known_start_boundary: this.startBoundary in KNOWN_START_BOUNDARIES,
+      end_boundary: this.endBoundary,
+      end_boundary_family: endFamily,
+      known_end_boundary: this.endBoundary in KNOWN_END_BOUNDARIES,
+      payload_kind: this.payloadKind,
+      payload_family: payloadFamily,
+      known_payload_kind: this.payloadKind in KNOWN_PAYLOAD_KINDS,
+      comment_anchored: startFamily === 'comment_anchor' || payloadFamily === 'comment_owned',
+      trailing_gap_extended: endFamily === 'gap_extension'
+    };
+  }
+}
+
+export function matchProfile(profile: ConstructorParameters<typeof MatchProfile>[0]): MatchProfile {
+  return new MatchProfile(profile);
+}
+
 export function limit(spec: unknown = null): Limit {
   return spec instanceof Limit ? spec : new Limit(spec);
 }
@@ -178,10 +255,10 @@ export function boundaryReport(): Readonly<Record<string, unknown>> {
       'package identity',
       'boundary report',
       'ast-merge structured-edit contract anchor',
-      'limit helpers'
+      'limit helpers',
+      'match profile helpers'
     ],
     future_exports: [
-      'match profile helpers',
       'selection profile helpers',
       'destination profile helpers',
       'operation profile helpers',

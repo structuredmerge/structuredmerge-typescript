@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { AstCrisprError, Limit, astMergeContractAnchor, boundaryReport } from '../src/index';
+import {
+  AstCrisprError,
+  Limit,
+  MatchProfile,
+  astMergeContractAnchor,
+  boundaryReport
+} from '../src/index';
 
 interface BoundaryFixture {
   boundary: Readonly<Record<string, unknown>>;
@@ -47,6 +53,31 @@ function readLimitFixture(): LimitFixture {
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as LimitFixture;
 }
 
+interface MatchProfileFixture {
+  cases: Array<{
+    name: string;
+    profile: {
+      start_boundary: string;
+      end_boundary: string;
+      payload_kind: string;
+    };
+    expected: Readonly<Record<string, unknown>>;
+  }>;
+}
+
+function readMatchProfileFixture(): MatchProfileFixture {
+  const fixturePath = path.resolve(
+    process.cwd(),
+    '..',
+    'fixtures',
+    'diagnostics',
+    'slice-918-ast-crispr-match-profile-helpers',
+    'ast-crispr-match-profile-helpers.json'
+  );
+
+  return JSON.parse(readFileSync(fixturePath, 'utf8')) as MatchProfileFixture;
+}
+
 describe('@structuredmerge/ast-crispr', () => {
   it('conforms to the package boundary fixture', () => {
     expect(boundaryReport()).toEqual(readFixture().boundary);
@@ -71,6 +102,14 @@ describe('@structuredmerge/ast-crispr', () => {
       } catch (error) {
         expect((error as AstCrisprError).code).toBe(testCase.expected_error);
       }
+    }
+  });
+
+  it('conforms to the match profile helper fixture', () => {
+    const fixture = readMatchProfileFixture();
+
+    for (const testCase of fixture.cases) {
+      expect(new MatchProfile(testCase.profile).report()).toEqual(testCase.expected);
     }
   });
 });
