@@ -792,6 +792,43 @@ export interface TieBreakMatchingReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface MatchingDebugOwnerSet {
+  readonly owner_id: string;
+  readonly scope_path: string;
+  readonly node_paths: readonly string[];
+}
+
+export interface MatchingDebugCandidate {
+  readonly candidate_id: string;
+  readonly signature: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly confidence: number;
+  readonly reason: string;
+}
+
+export interface MatchingDebugSelectedMatch {
+  readonly candidate_id: string;
+  readonly selected_by: string;
+}
+
+export interface MatchingDebugRejectedMatch {
+  readonly candidate_id: string;
+  readonly rejected_by: string;
+  readonly reason: string;
+}
+
+export interface MatchingDebugArtifacts {
+  readonly artifact_id: string;
+  readonly matching_id: string;
+  readonly enabled: boolean;
+  readonly owner_sets: readonly MatchingDebugOwnerSet[];
+  readonly candidates: readonly MatchingDebugCandidate[];
+  readonly selected_matches: readonly MatchingDebugSelectedMatch[];
+  readonly rejected_matches: readonly MatchingDebugRejectedMatch[];
+  readonly diagnostics: readonly string[];
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {

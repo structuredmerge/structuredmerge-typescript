@@ -41,6 +41,7 @@ import type {
   ClassMappingReport,
   FamilyFeatureProfile,
   InconsistencyReport,
+  MatchingDebugArtifacts,
   MergeIR,
   MergeIRComparisonReport,
   MoveDetectionMatchingReport,
@@ -5955,6 +5956,28 @@ describe('ast-merge shared fixtures', () => {
     expect(report.matches[0]?.rejected_candidates[0]?.rejected_by).toBe(
       fixture.expected.first_rejected_by
     );
+  });
+
+  it('conforms to the slice-804 matching debug artifacts fixture', () => {
+    const fixture = readFixture<{
+      debug_artifacts: MatchingDebugArtifacts;
+      expected: {
+        enabled: boolean;
+        owner_set_count: number;
+        candidate_count: number;
+        selected_count: number;
+        rejected_count: number;
+        first_rejection_reason: string;
+      };
+    }>('diagnostics', 'slice-804-matching-debug-artifacts', 'matching-debug-artifacts.json');
+    const artifacts = fixture.debug_artifacts;
+
+    expect(artifacts.enabled).toBe(fixture.expected.enabled);
+    expect(artifacts.owner_sets).toHaveLength(fixture.expected.owner_set_count);
+    expect(artifacts.candidates).toHaveLength(fixture.expected.candidate_count);
+    expect(artifacts.selected_matches).toHaveLength(fixture.expected.selected_count);
+    expect(artifacts.rejected_matches).toHaveLength(fixture.expected.rejected_count);
+    expect(artifacts.rejected_matches[0]?.reason).toBe(fixture.expected.first_rejection_reason);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
