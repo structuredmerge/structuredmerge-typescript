@@ -124,6 +124,7 @@ export type {
   MergeIROrderedNode,
   MergeResult,
   NativeProviderMetadataReport,
+  NativeProviderProvingGroundReport,
   PairwiseMatching,
   PairwiseNodeMatch,
   PCS,

@@ -220,6 +220,7 @@ import type {
   ReviewRequest,
   MergeResult,
   NativeProviderMetadataReport,
+  NativeProviderProvingGroundReport,
   TemplateTokenConfig,
   TemplateExecutionPlanEntry,
   TemplateDirectoryApplyReport,
@@ -6488,6 +6489,24 @@ describe('ast-merge shared fixtures', () => {
     expect(providerIds).toEqual(fixture.expected.provider_ids);
     expect(rubyProviderCount).toBe(fixture.expected.ruby_provider_count);
     expect(contracts.providers[0]?.parser_name).toBe(fixture.expected.first_provider_parser);
+  });
+
+  it('conforms to the slice-824 Go native proving ground fixture', () => {
+    const fixture = readFixture<{
+      proving_ground: NativeProviderProvingGroundReport;
+      expected: {
+        language: string;
+        provider_count: number;
+        providers: readonly string[];
+        checks: readonly string[];
+      };
+    }>('diagnostics', 'slice-824-go-native-proving-ground', 'go-native-proving-ground.json');
+    const report = fixture.proving_ground;
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.providers).toHaveLength(fixture.expected.provider_count);
+    expect(report.providers).toEqual(fixture.expected.providers);
+    expect(report.checks).toEqual(fixture.expected.checks);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
