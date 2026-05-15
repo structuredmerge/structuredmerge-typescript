@@ -1077,6 +1077,16 @@ export interface FormattingHardGateReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface SecondaryFormattingMetricsReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly unchanged_line_churn: number;
+  readonly output_diff_size: number;
+  readonly source_fragment_retention: number;
+  readonly weighted: boolean;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

@@ -63,6 +63,7 @@ import type {
   RenameAwareMatchingReport,
   RenderPlanReport,
   RenderVerificationReport,
+  SecondaryFormattingMetricsReport,
   SignatureMatchingParent,
   SignatureMatchingReport,
   SourceTextNormalizedMatchingReport,
@@ -6336,6 +6337,28 @@ describe('ast-merge shared fixtures', () => {
     expect(weightedCount).toBe(fixture.expected.weighted_gate_count);
     expect(report.gates[0]?.name).toBe(fixture.expected.first_gate);
     expect(report.gates[1]?.name).toBe(fixture.expected.second_gate);
+  });
+
+  it('conforms to the slice-818 secondary formatting metrics fixture', () => {
+    const fixture = readFixture<{
+      secondary_metrics: SecondaryFormattingMetricsReport;
+      expected: {
+        unchanged_line_churn: number;
+        output_diff_size: number;
+        source_fragment_retention: number;
+        weighted: boolean;
+      };
+    }>(
+      'diagnostics',
+      'slice-818-secondary-formatting-metrics',
+      'secondary-formatting-metrics.json'
+    );
+    const report = fixture.secondary_metrics;
+
+    expect(report.unchanged_line_churn).toBe(fixture.expected.unchanged_line_churn);
+    expect(report.output_diff_size).toBe(fixture.expected.output_diff_size);
+    expect(report.source_fragment_retention).toBe(fixture.expected.source_fragment_retention);
+    expect(report.weighted).toBe(fixture.expected.weighted);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {

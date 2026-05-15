@@ -89,6 +89,7 @@ export type {
   RenderStrategyMetadata,
   RenderVerificationReport,
   RejectedTieBreakCandidate,
+  SecondaryFormattingMetricsReport,
   SignatureMatchingParent,
   SignatureMatchingReport,
   SignatureNodeMatch,
