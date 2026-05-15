@@ -1294,6 +1294,24 @@ export interface DiffDriverSmokeSuite {
   readonly diagnostics: readonly string[];
 }
 
+export interface PerformanceTimeoutDiagnostic {
+  readonly severity: string;
+  readonly category: string;
+  readonly code: string;
+  readonly fallback: string;
+}
+
+export interface PerformanceGuardrails {
+  readonly guardrail_id: string;
+  readonly version: string;
+  readonly max_bytes: number;
+  readonly max_nodes: number;
+  readonly max_match_candidates: number;
+  readonly timeout_ms: number;
+  readonly timeout_diagnostic: PerformanceTimeoutDiagnostic;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

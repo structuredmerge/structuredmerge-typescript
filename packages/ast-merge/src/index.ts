@@ -142,6 +142,8 @@ export type {
   PairwiseNodeMatch,
   PCS,
   PCSConstraint,
+  PerformanceGuardrails,
+  PerformanceTimeoutDiagnostic,
   ProviderRichnessProjection,
   ProviderRichnessSignature,
   RawMerge,

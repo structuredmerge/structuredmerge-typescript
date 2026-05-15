@@ -68,6 +68,7 @@ import type {
   MoveDetectionMatchingReport,
   PairwiseMatching,
   PCS,
+  PerformanceGuardrails,
   RawMerge,
   RenameAwareMatchingReport,
   RenderPlanReport,
@@ -6708,6 +6709,28 @@ describe('ast-merge shared fixtures', () => {
     expect(suite.cases).toHaveLength(fixture.expected.case_count);
     expect(argumentCounts).toEqual(fixture.expected.argument_counts);
     expect(structuredDiffCount).toBe(fixture.expected.structured_diff_count);
+  });
+
+  it('conforms to the slice-904 performance guardrails fixture', () => {
+    const fixture = readFixture<{
+      guardrails: PerformanceGuardrails;
+      expected: {
+        max_bytes: number;
+        max_nodes: number;
+        max_match_candidates: number;
+        timeout_ms: number;
+        timeout_code: string;
+        fallback: string;
+      };
+    }>('diagnostics', 'slice-904-performance-guardrails', 'performance-guardrails.json');
+    const guardrails = fixture.guardrails;
+
+    expect(guardrails.max_bytes).toBe(fixture.expected.max_bytes);
+    expect(guardrails.max_nodes).toBe(fixture.expected.max_nodes);
+    expect(guardrails.max_match_candidates).toBe(fixture.expected.max_match_candidates);
+    expect(guardrails.timeout_ms).toBe(fixture.expected.timeout_ms);
+    expect(guardrails.timeout_diagnostic.code).toBe(fixture.expected.timeout_code);
+    expect(guardrails.timeout_diagnostic.fallback).toBe(fixture.expected.fallback);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
