@@ -17,6 +17,7 @@ export type {
   Diagnostic,
   DiagnosticCategory,
   DiagnosticSeverity,
+  EditProjectionSupport,
   FeatureProfile,
   KaitaiByteSpan,
   KaitaiTreeAnalysis,

@@ -160,6 +160,20 @@ export interface TreeHaverProfile {
   readonly diagnostics: readonly string[];
 }
 
+export interface EditProjectionSupport {
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly supportsEditProjection: boolean;
+  readonly nativeEditTarget: string;
+  readonly normalizedEditTarget: string;
+  readonly supportedOperations: readonly string[];
+  readonly requiredNodeFields: readonly string[];
+  readonly correlationKeys: readonly string[];
+  readonly preservesSourceFragments: boolean;
+  readonly unsupportedReason?: string;
+  readonly diagnostics: readonly string[];
+}
+
 export interface OrderedSiblingEdge {
   readonly parentId: string;
   readonly nodeId: string;

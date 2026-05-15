@@ -12,6 +12,7 @@ import type {
   BinaryRenderPolicy,
   BinaryScalarValue,
   ByteEditSpan,
+  EditProjectionSupport,
   FeatureProfile,
   NativeParserProvider,
   NativeProviderMetadata,
@@ -74,6 +75,36 @@ interface FeatureProfileFixture {
 
 interface BackendRegistryFixture {
   backends: BackendReference[];
+}
+
+interface EditProjectionSupportFixture {
+  backend_ref: BackendReference;
+  language: string;
+  supports_edit_projection: boolean;
+  native_edit_target: string;
+  normalized_edit_target: string;
+  supported_operations: string[];
+  required_node_fields: string[];
+  correlation_keys: string[];
+  preserves_source_fragments: boolean;
+  unsupported_reason: string | null;
+  diagnostics: string[];
+}
+
+function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProjectionSupport {
+  return {
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    supportsEditProjection: fixture.supports_edit_projection,
+    nativeEditTarget: fixture.native_edit_target,
+    normalizedEditTarget: fixture.normalized_edit_target,
+    supportedOperations: fixture.supported_operations,
+    requiredNodeFields: fixture.required_node_fields,
+    correlationKeys: fixture.correlation_keys,
+    preservesSourceFragments: fixture.preserves_source_fragments,
+    unsupportedReason: fixture.unsupported_reason ?? undefined,
+    diagnostics: fixture.diagnostics
+  };
 }
 
 interface KaitaiSubstrateFixture {
@@ -973,6 +1004,34 @@ describe('tree-haver shared fixtures', () => {
     expect(unsafeEntries[0]?.category).toBe('path_traversal');
     expect(unsafeEntries[1]?.normalizedPath).toBe('config/settings.yml');
     expect(unsafeEntries[2]?.category).toBe('encrypted_member');
+  });
+
+  it('conforms to the slice-924 tree_haver edit projection support fixture', () => {
+    const fixture = readFixture<{
+      support: EditProjectionSupportFixture;
+      unsupported: EditProjectionSupportFixture;
+    }>(
+      'diagnostics',
+      'slice-924-tree-haver-edit-projection-support',
+      'edit-projection-support.json'
+    );
+    const support = editProjectionSupport(fixture.support);
+    const unsupported = editProjectionSupport(fixture.unsupported);
+
+    expect(support.supportsEditProjection).toBe(true);
+    expect(support.backendRef.id).toBe('go-dst');
+    expect(support.supportedOperations[0]).toBe('replace_node');
+    expect(support.correlationKeys[1]).toBe('metadata.go_dst.node_path');
+    expect(support.preservesSourceFragments).toBe(true);
+    expect(support.unsupportedReason).toBeUndefined();
+
+    expect(unsupported.supportsEditProjection).toBe(false);
+    expect(unsupported.backendRef.id).toBe('psych');
+    expect(unsupported.unsupportedReason).toBe('backend_does_not_retain_native_tree');
+    expect(unsupported.supportedOperations).toHaveLength(0);
+    expect(unsupported.diagnostics[0]).toBe(
+      'edit projection unavailable: native tree not retained'
+    );
   });
 
   it('supports temporary backend context selection', () => {
