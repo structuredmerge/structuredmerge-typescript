@@ -81,6 +81,7 @@ export type {
   RenderByteSpan,
   RenderPlanReport,
   RenderStrategyMetadata,
+  RenderVerificationReport,
   RejectedTieBreakCandidate,
   SignatureMatchingParent,
   SignatureMatchingReport,

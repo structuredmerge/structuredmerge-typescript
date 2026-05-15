@@ -1020,6 +1020,19 @@ export interface RenderPlanReport {
   readonly diagnostics: readonly string[];
 }
 
+export interface RenderVerificationReport {
+  readonly verification_id: string;
+  readonly version: string;
+  readonly mode: string;
+  readonly language: string;
+  readonly render_strategy: string;
+  readonly attempted: boolean;
+  readonly passed: boolean;
+  readonly hard_gate: boolean;
+  readonly parse_errors: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

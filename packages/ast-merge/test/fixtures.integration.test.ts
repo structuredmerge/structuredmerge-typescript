@@ -59,6 +59,7 @@ import type {
   RawMerge,
   RenameAwareMatchingReport,
   RenderPlanReport,
+  RenderVerificationReport,
   SignatureMatchingParent,
   SignatureMatchingReport,
   SourceTextNormalizedMatchingReport,
@@ -6228,6 +6229,34 @@ describe('ast-merge shared fixtures', () => {
     expect(report.strategies.at(-1)?.requires_reparse).toBe(
       fixture.expected.full_file_requires_reparse
     );
+  });
+
+  it('conforms to the slice-814 reparse after render verification fixture', () => {
+    const fixture = readFixture<{
+      render_verification: RenderVerificationReport;
+      expected: {
+        mode: string;
+        language: string;
+        attempted: boolean;
+        passed: boolean;
+        hard_gate: boolean;
+        parse_error_count: number;
+        render_strategy: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-814-reparse-after-render-verification',
+      'reparse-after-render-verification.json'
+    );
+    const report = fixture.render_verification;
+
+    expect(report.mode).toBe(fixture.expected.mode);
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.attempted).toBe(fixture.expected.attempted);
+    expect(report.passed).toBe(fixture.expected.passed);
+    expect(report.hard_gate).toBe(fixture.expected.hard_gate);
+    expect(report.parse_errors).toHaveLength(fixture.expected.parse_error_count);
+    expect(report.render_strategy).toBe(fixture.expected.render_strategy);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
