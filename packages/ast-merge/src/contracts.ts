@@ -1312,6 +1312,22 @@ export interface PerformanceGuardrails {
   readonly diagnostics: readonly string[];
 }
 
+export interface ProfileSkippedRule {
+  readonly rule: string;
+  readonly reason: string;
+}
+
+export interface ProfileConformanceReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly profile: string;
+  readonly enabled_rules: readonly string[];
+  readonly skipped_rules: readonly ProfileSkippedRule[];
+  readonly fallback_count: number;
+  readonly unresolved_conflict_count: number;
+  readonly diagnostics: readonly string[];
+}
+
 export const genericIndependentCommutativeInsertionsHandler =
   'generic-independent-commutative-insertions';
 export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';

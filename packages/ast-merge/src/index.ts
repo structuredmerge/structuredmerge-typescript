@@ -146,6 +146,8 @@ export type {
   PerformanceTimeoutDiagnostic,
   ProviderRichnessProjection,
   ProviderRichnessSignature,
+  ProfileConformanceReport,
+  ProfileSkippedRule,
   RawMerge,
   RawMergeChange,
   FamilyFeatureProfile,

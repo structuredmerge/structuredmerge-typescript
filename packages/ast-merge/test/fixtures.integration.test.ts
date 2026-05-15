@@ -69,6 +69,7 @@ import type {
   PairwiseMatching,
   PCS,
   PerformanceGuardrails,
+  ProfileConformanceReport,
   RawMerge,
   RenameAwareMatchingReport,
   RenderPlanReport,
@@ -6731,6 +6732,28 @@ describe('ast-merge shared fixtures', () => {
     expect(guardrails.timeout_ms).toBe(fixture.expected.timeout_ms);
     expect(guardrails.timeout_diagnostic.code).toBe(fixture.expected.timeout_code);
     expect(guardrails.timeout_diagnostic.fallback).toBe(fixture.expected.fallback);
+  });
+
+  it('conforms to the slice-905 profile conformance reports fixture', () => {
+    const fixture = readFixture<{
+      report: ProfileConformanceReport;
+      expected: {
+        profile: string;
+        enabled_rule_count: number;
+        skipped_rule_count: number;
+        fallback_count: number;
+        unresolved_conflict_count: number;
+        skipped_rule: string;
+      };
+    }>('diagnostics', 'slice-905-profile-conformance-reports', 'profile-conformance-reports.json');
+    const report = fixture.report;
+
+    expect(report.profile).toBe(fixture.expected.profile);
+    expect(report.enabled_rules).toHaveLength(fixture.expected.enabled_rule_count);
+    expect(report.skipped_rules).toHaveLength(fixture.expected.skipped_rule_count);
+    expect(report.fallback_count).toBe(fixture.expected.fallback_count);
+    expect(report.unresolved_conflict_count).toBe(fixture.expected.unresolved_conflict_count);
+    expect(report.skipped_rules[0]?.rule).toBe(fixture.expected.skipped_rule);
   });
 
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
