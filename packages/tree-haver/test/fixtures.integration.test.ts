@@ -16,6 +16,9 @@ import type {
   BinaryScalarValue,
   ByteEditSpan,
   EditProjectionExecutionResult,
+  EditProjectionProviderMatrix,
+  EditProjectionProviderMatrixEntry,
+  EditProjectionProviderOperation,
   EditProjectionSupport,
   FeatureProfile,
   NativeParserProvider,
@@ -36,6 +39,7 @@ import { processWithLanguagePack } from '../src/index';
 import {
   buildBackendAvailabilityReport,
   buildEditProjectionExecutionResult,
+  buildEditProjectionProviderMatrix,
   buildProviderDiagnosticsReport,
   byteEditDelta,
   byteEditNewRange,
@@ -157,6 +161,31 @@ interface EditProjectionExecutionResultFixture {
   diagnostics: ProviderDiagnostic[];
 }
 
+interface EditProjectionProviderOperationFixture {
+  operation: string;
+  status: 'implemented' | 'planned' | 'unsupported';
+  node_scope: string;
+  correlation_keys: string[];
+  fixture_slices: string[];
+  formatting_preservation: string;
+  diagnostics: string[];
+}
+
+interface EditProjectionProviderMatrixEntryFixture {
+  provider_id: string;
+  backend_ref: BackendReference;
+  language: string;
+  formatting_preservation: string;
+  preserves_source_fragments: boolean;
+  operations: EditProjectionProviderOperationFixture[];
+}
+
+interface EditProjectionProviderMatrixFixture {
+  operations: string[];
+  providers: EditProjectionProviderMatrixEntryFixture[];
+  diagnostics: string[];
+}
+
 function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProjectionSupport {
   return {
     backendRef: fixture.backend_ref,
@@ -211,6 +240,39 @@ function editProjectionExecutionResult(
         correlationValue: operation.correlation_value
       })
     ),
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function editProjectionProviderMatrixEntry(
+  fixture: EditProjectionProviderMatrixEntryFixture
+): EditProjectionProviderMatrixEntry {
+  return {
+    providerId: fixture.provider_id,
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    formattingPreservation: fixture.formatting_preservation,
+    preservesSourceFragments: fixture.preserves_source_fragments,
+    operations: fixture.operations.map(
+      (operation): EditProjectionProviderOperation => ({
+        operation: operation.operation,
+        status: operation.status,
+        nodeScope: operation.node_scope,
+        correlationKeys: operation.correlation_keys,
+        fixtureSlices: operation.fixture_slices,
+        formattingPreservation: operation.formatting_preservation,
+        diagnostics: operation.diagnostics
+      })
+    )
+  };
+}
+
+function editProjectionProviderMatrix(
+  fixture: EditProjectionProviderMatrixFixture
+): EditProjectionProviderMatrix {
+  return {
+    operations: fixture.operations,
+    providers: fixture.providers.map(editProjectionProviderMatrixEntry),
     diagnostics: fixture.diagnostics
   };
 }
@@ -1288,6 +1350,22 @@ describe('tree-haver shared fixtures', () => {
         expected.diagnostics
       )
     ).toEqual(expected);
+  });
+
+  it('conforms to the slice-932 edit projection provider operation matrix fixture', () => {
+    const fixture = readFixture<{
+      operations: string[];
+      providers: EditProjectionProviderMatrixEntryFixture[];
+      expected_matrix: EditProjectionProviderMatrixFixture;
+    }>(
+      'diagnostics',
+      'slice-932-edit-projection-provider-operation-matrix',
+      'provider-operation-matrix.json'
+    );
+
+    const providers = fixture.providers.map(editProjectionProviderMatrixEntry);
+    const expected = editProjectionProviderMatrix(fixture.expected_matrix);
+    expect(buildEditProjectionProviderMatrix(fixture.operations, providers, [])).toEqual(expected);
   });
 
   it('supports temporary backend context selection', () => {

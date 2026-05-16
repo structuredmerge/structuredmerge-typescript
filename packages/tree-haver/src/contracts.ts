@@ -245,6 +245,33 @@ export interface EditProjectionExecutionResult {
   readonly diagnostics: readonly ProviderDiagnostic[];
 }
 
+export type EditProjectionProviderOperationStatus = 'implemented' | 'planned' | 'unsupported';
+
+export interface EditProjectionProviderOperation {
+  readonly operation: string;
+  readonly status: EditProjectionProviderOperationStatus;
+  readonly nodeScope: string;
+  readonly correlationKeys: readonly string[];
+  readonly fixtureSlices: readonly string[];
+  readonly formattingPreservation: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface EditProjectionProviderMatrixEntry {
+  readonly providerId: string;
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly formattingPreservation: string;
+  readonly preservesSourceFragments: boolean;
+  readonly operations: readonly EditProjectionProviderOperation[];
+}
+
+export interface EditProjectionProviderMatrix {
+  readonly operations: readonly string[];
+  readonly providers: readonly EditProjectionProviderMatrixEntry[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface OrderedSiblingEdge {
   readonly parentId: string;
   readonly nodeId: string;
@@ -829,6 +856,14 @@ export function buildEditProjectionExecutionResult(
     appliedOperations,
     diagnostics
   };
+}
+
+export function buildEditProjectionProviderMatrix(
+  operations: readonly string[],
+  providers: readonly EditProjectionProviderMatrixEntry[],
+  diagnostics: readonly string[]
+): EditProjectionProviderMatrix {
+  return { operations, providers, diagnostics };
 }
 
 export function currentBackendId(): string | undefined {
