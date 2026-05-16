@@ -1271,6 +1271,25 @@ describe('tree-haver shared fixtures', () => {
     ).toEqual(expected);
   });
 
+  it('conforms to the slice-931 go-parser edit projection contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-931-go-parser-edit-projection-execution',
+      'edit-projection-execution.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+  });
+
   it('supports temporary backend context selection', () => {
     expect(currentBackendId()).toBeUndefined();
 
