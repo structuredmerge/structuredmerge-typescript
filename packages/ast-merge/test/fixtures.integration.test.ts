@@ -7,10 +7,27 @@ import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
 import {
+  commentAttachmentEmpty,
+  commentAttachmentFreezeMarker,
+  commentAttachmentLayoutGapCount,
+  commentAttachmentLeadingRegionLayoutOwned,
+  commentAttachmentRegionCount,
+  commentAttachmentTrailingRegionLayoutOwned,
+  commentRegionEndLine,
+  commentRegionFreezeActions,
+  commentRegionNormalizedContent,
+  commentRegionSignature,
+  commentRegionStartLine,
+  commentRegionText,
   evaluateProfilePromotion,
   evaluateProfileSelectionRequirement,
   executeGenericConflictHandler,
   initialProfilePromotionPolicy,
+  layoutGapBlankLineCount,
+  layoutGapControllerOwnerId,
+  layoutGapEffectiveControllerOwnerId,
+  layoutGapFallbackOwnerId,
+  layoutGapLineCount,
   promotionProfileJsonKeyedObject,
   promotionProfileRubyGemspecDependencyDeclarations,
   validateLanguageBackendProfile
@@ -55,6 +72,10 @@ import type {
   FallbackUsageReport,
   ChangeSet,
   ClassMappingReport,
+  CommentAttachment,
+  CommentOwnerNode,
+  CommentRegion,
+  CommentStyleDefinition,
   ConflictCategoryReport,
   ConflictHandlerRegistryReport,
   ConflictMarkerRenderingReport,
@@ -72,6 +93,7 @@ import type {
   InconsistencyReport,
   LanguageBackendProfile,
   LanguageProfileHandlerRegistry,
+  LayoutGap,
   LocalLineFallbackReport,
   MatchingDebugArtifacts,
   MergeIR,
@@ -5790,6 +5812,105 @@ describe('ast-merge shared fixtures', () => {
     expect(mergeIR.changes.map((change) => change.kind)).toEqual(fixture.expected.change_kinds);
     expect(mergeIR.node_classes[0]?.node_ids.left).toBe('left-import-fmt');
     expect(mergeIR.changes[1]?.class_id).toBe('class-import-strings');
+  });
+
+  it('conforms to the slice-955 comment trivia attachment contract fixture', () => {
+    const fixture = readFixture<{
+      owner_nodes: readonly CommentOwnerNode[];
+      comment_styles: readonly CommentStyleDefinition[];
+      comment_regions: readonly (CommentRegion & {
+        expected: {
+          start_line: number;
+          end_line: number;
+          text: string;
+          normalized_content: string;
+          signature: readonly string[];
+          freeze_actions: readonly string[];
+        };
+      })[];
+      layout_gaps: readonly (LayoutGap & {
+        expected: {
+          line_count: number;
+          blank_line_count: number;
+          controller_owner_id: string | null;
+          fallback_owner_id: string | null;
+          effective_controller_with_after_removed?: string;
+        };
+      })[];
+      attachments: readonly (CommentAttachment & {
+        expected: {
+          region_count: number;
+          layout_gap_count: number;
+          empty: boolean;
+          leading_region_layout_owned: boolean;
+          trailing_region_layout_owned: boolean;
+          freeze_marker: boolean;
+        };
+      })[];
+      contract_rules: readonly string[];
+      expected: {
+        owner_count: number;
+        comment_region_count: number;
+        layout_gap_count: number;
+        attachment_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-955-comment-trivia-attachment-contract',
+      'comment-trivia-attachment-contract.json'
+    );
+
+    const regions = new Map(fixture.comment_regions.map((region) => [region.id, region]));
+    const gaps = new Map(fixture.layout_gaps.map((gap) => [gap.id, gap]));
+
+    expect(fixture.owner_nodes).toHaveLength(fixture.expected.owner_count);
+    expect(fixture.comment_regions).toHaveLength(fixture.expected.comment_region_count);
+    expect(fixture.layout_gaps).toHaveLength(fixture.expected.layout_gap_count);
+    expect(fixture.attachments).toHaveLength(fixture.expected.attachment_count);
+    expect(fixture.comment_styles[0]?.style).toBe('hash_comment');
+    expect(fixture.comment_styles[0]?.line_prefix).toBe('#');
+
+    for (const region of fixture.comment_regions) {
+      expect(commentRegionStartLine(region)).toBe(region.expected.start_line);
+      expect(commentRegionEndLine(region)).toBe(region.expected.end_line);
+      expect(commentRegionText(region)).toBe(region.expected.text);
+      expect(commentRegionNormalizedContent(region)).toBe(region.expected.normalized_content);
+      expect(commentRegionSignature(region)).toEqual(region.expected.signature);
+      expect(commentRegionFreezeActions(region, 'smorg')).toEqual(region.expected.freeze_actions);
+    }
+
+    for (const gap of fixture.layout_gaps) {
+      expect(layoutGapLineCount(gap)).toBe(gap.expected.line_count);
+      expect(layoutGapBlankLineCount(gap)).toBe(gap.expected.blank_line_count);
+      expect(layoutGapControllerOwnerId(gap) ?? null).toBe(gap.expected.controller_owner_id);
+      expect(layoutGapFallbackOwnerId(gap) ?? null).toBe(gap.expected.fallback_owner_id);
+      if (gap.expected.effective_controller_with_after_removed !== undefined) {
+        expect(layoutGapEffectiveControllerOwnerId(gap, new Set([gap.after_owner_id!]))).toBe(
+          gap.expected.effective_controller_with_after_removed
+        );
+      }
+    }
+
+    for (const attachment of fixture.attachments) {
+      expect(commentAttachmentRegionCount(attachment, regions)).toBe(
+        attachment.expected.region_count
+      );
+      expect(commentAttachmentLayoutGapCount(attachment, gaps)).toBe(
+        attachment.expected.layout_gap_count
+      );
+      expect(commentAttachmentEmpty(attachment, regions)).toBe(attachment.expected.empty);
+      expect(commentAttachmentLeadingRegionLayoutOwned(attachment, regions, gaps)).toBe(
+        attachment.expected.leading_region_layout_owned
+      );
+      expect(commentAttachmentTrailingRegionLayoutOwned(attachment, regions, gaps)).toBe(
+        attachment.expected.trailing_region_layout_owned
+      );
+      expect(commentAttachmentFreezeMarker(attachment, regions, 'smorg')).toBe(
+        attachment.expected.freeze_marker
+      );
+    }
+
+    expect(fixture.contract_rules.some((rule) => rule.includes('passive data'))).toBe(true);
   });
 
   it('conforms to the slice-906 merge engine suite setting fixture', () => {

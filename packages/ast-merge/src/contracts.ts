@@ -478,6 +478,234 @@ export interface MergeIR {
   readonly diagnostics: readonly string[];
 }
 
+export interface LineRange {
+  readonly start_line: number;
+  readonly end_line: number;
+}
+
+export interface CommentOwnerNode {
+  readonly id: string;
+  readonly kind: string;
+  readonly semantic_roles: readonly string[];
+  readonly line_range: LineRange;
+}
+
+export interface CommentStyleDefinition {
+  readonly style: string;
+  readonly line_prefix: string | null;
+  readonly block_prefix: string | null;
+  readonly block_suffix: string | null;
+}
+
+export interface CommentLine {
+  readonly text: string;
+  readonly line_number: number;
+  readonly normalized_content: string;
+}
+
+export interface CommentRegion {
+  readonly id: string;
+  readonly kind: string;
+  readonly style: string;
+  readonly owner_id: string;
+  readonly floating: boolean;
+  readonly nodes: readonly CommentLine[];
+}
+
+export function commentRegionStartLine(region: CommentRegion): number | undefined {
+  return region.nodes.reduce<number | undefined>(
+    (start, node) => (start === undefined ? node.line_number : Math.min(start, node.line_number)),
+    undefined
+  );
+}
+
+export function commentRegionEndLine(region: CommentRegion): number | undefined {
+  return region.nodes.reduce<number | undefined>(
+    (end, node) => (end === undefined ? node.line_number : Math.max(end, node.line_number)),
+    undefined
+  );
+}
+
+export function commentRegionText(region: CommentRegion): string {
+  return region.nodes.map((node) => node.text).join('\n');
+}
+
+export function commentRegionNormalizedContent(region: CommentRegion): string {
+  return region.nodes.map((node) => node.normalized_content).join('\n');
+}
+
+export function commentRegionSignature(region: CommentRegion): readonly string[] {
+  return ['comment_region', region.kind, commentRegionNormalizedContent(region).slice(0, 121)];
+}
+
+export function commentRegionFreezeActions(
+  region: CommentRegion,
+  token: string
+): readonly string[] {
+  if (token.length === 0) return [];
+  const prefix = `${token.toLowerCase()}:`;
+  return region.nodes.flatMap((node) => {
+    const lower = node.text.toLowerCase();
+    if (lower.includes(`${prefix}freeze`)) return ['freeze'];
+    if (lower.includes(`${prefix}unfreeze`)) return ['unfreeze'];
+    return [];
+  });
+}
+
+export interface LayoutGap {
+  readonly id: string;
+  readonly kind: string;
+  readonly start_line: number;
+  readonly end_line: number;
+  readonly lines: readonly string[];
+  readonly before_owner_id: string | null;
+  readonly after_owner_id: string | null;
+  readonly controller_side: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export function layoutGapLineCount(gap: LayoutGap): number {
+  return gap.end_line - gap.start_line + 1;
+}
+
+export function layoutGapBlankLineCount(gap: LayoutGap): number {
+  return gap.lines.filter((line) => line.trim().length === 0).length;
+}
+
+export function layoutGapOwnerIdFor(gap: LayoutGap, side: string): string | undefined {
+  if (side === 'before') return gap.before_owner_id ?? undefined;
+  if (side === 'after') return gap.after_owner_id ?? undefined;
+  return undefined;
+}
+
+export function layoutGapControllerOwnerId(gap: LayoutGap): string | undefined {
+  return layoutGapOwnerIdFor(gap, gap.controller_side);
+}
+
+export function layoutGapFallbackOwnerId(gap: LayoutGap): string | undefined {
+  if (gap.controller_side === 'before') return gap.after_owner_id ?? undefined;
+  if (gap.controller_side === 'after') return gap.before_owner_id ?? undefined;
+  return undefined;
+}
+
+export function layoutGapEffectiveControllerOwnerId(
+  gap: LayoutGap,
+  removedOwners: ReadonlySet<string>
+): string | undefined {
+  const controller = layoutGapControllerOwnerId(gap);
+  if (controller !== undefined && !removedOwners.has(controller)) return controller;
+  const fallback = layoutGapFallbackOwnerId(gap);
+  if (fallback !== undefined && !removedOwners.has(fallback)) return fallback;
+  return undefined;
+}
+
+export function layoutGapLeadingFor(gap: LayoutGap, ownerId: string): boolean {
+  return gap.after_owner_id === ownerId;
+}
+
+export function layoutGapTrailingFor(gap: LayoutGap, ownerId: string): boolean {
+  return gap.before_owner_id === ownerId;
+}
+
+export function layoutGapControlsOutputFor(gap: LayoutGap, ownerId: string): boolean {
+  return layoutGapControllerOwnerId(gap) === ownerId;
+}
+
+export interface CommentAttachment {
+  readonly owner_id: string;
+  readonly leading_region_id: string | null;
+  readonly inline_region_id: string | null;
+  readonly trailing_region_id: string | null;
+  readonly orphan_region_ids: readonly string[];
+  readonly leading_gap_id: string | null;
+  readonly trailing_gap_id: string | null;
+  readonly metadata: Readonly<Record<string, unknown>>;
+}
+
+export function commentAttachmentRegionCount(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>
+): number {
+  const direct = [
+    attachment.leading_region_id,
+    attachment.inline_region_id,
+    attachment.trailing_region_id
+  ].filter((id): id is string => id !== null && regions.has(id)).length;
+  return direct + attachment.orphan_region_ids.filter((id) => regions.has(id)).length;
+}
+
+export function commentAttachmentLayoutGapCount(
+  attachment: CommentAttachment,
+  gaps: ReadonlyMap<string, LayoutGap>
+): number {
+  return new Set(
+    [attachment.leading_gap_id, attachment.trailing_gap_id].filter(
+      (id): id is string => id !== null && gaps.has(id)
+    )
+  ).size;
+}
+
+export function commentAttachmentEmpty(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>
+): boolean {
+  return commentAttachmentRegionCount(attachment, regions) === 0;
+}
+
+export function commentAttachmentLeadingRegionLayoutOwned(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>,
+  gaps: ReadonlyMap<string, LayoutGap>
+): boolean {
+  if (attachment.leading_region_id === null || attachment.leading_gap_id === null) return false;
+  const region = regions.get(attachment.leading_region_id);
+  const gap = gaps.get(attachment.leading_gap_id);
+  return (
+    region !== undefined &&
+    gap !== undefined &&
+    region.floating &&
+    layoutGapLeadingFor(gap, attachment.owner_id) &&
+    layoutGapControlsOutputFor(gap, attachment.owner_id)
+  );
+}
+
+export function commentAttachmentTrailingRegionLayoutOwned(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>,
+  gaps: ReadonlyMap<string, LayoutGap>
+): boolean {
+  if (attachment.trailing_region_id === null || attachment.trailing_gap_id === null) return false;
+  const region = regions.get(attachment.trailing_region_id);
+  const gap = gaps.get(attachment.trailing_gap_id);
+  return (
+    region !== undefined &&
+    gap !== undefined &&
+    region.floating &&
+    layoutGapTrailingFor(gap, attachment.owner_id) &&
+    layoutGapControlsOutputFor(gap, attachment.owner_id)
+  );
+}
+
+export function commentAttachmentFreezeMarker(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>,
+  token: string
+): boolean {
+  return [
+    attachment.leading_region_id,
+    attachment.inline_region_id,
+    attachment.trailing_region_id,
+    ...attachment.orphan_region_ids
+  ]
+    .filter((id): id is string => id !== null)
+    .some((id) => {
+      const region = regions.get(id);
+      if (region === undefined) return false;
+      const actions = commentRegionFreezeActions(region, token);
+      return actions.includes('freeze') || actions.includes('unfreeze');
+    });
+}
+
 export interface PairwiseNodeMatch {
   readonly from_node_id: string;
   readonly to_node_id: string;
