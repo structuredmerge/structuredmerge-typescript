@@ -1,12 +1,9 @@
 {
-  "name": "@structuredmerge/smorg-ts",
+  "name": "@structuredmerge/ast-merge-git",
   "version": "0.2.0",
   "private": false,
   "type": "module",
-  "main": "./src/cli.ts",
-  "bin": {
-    "smorg-ts": "./src/cli.ts"
-  },
+  "main": "./src/index.ts",
   "author": "Peter H. Boling",
   "homepage": "https://structuredmerge.org",
   "repository": {
@@ -17,10 +14,6 @@
     "url": "https://github.com/structuredmerge/structuredmerge-typescript/issues"
   },
   "dependencies": {
-    "@structuredmerge/ast-merge": "workspace:*",
-    "@structuredmerge/ast-merge-git": "workspace:*",
-    "@structuredmerge/go-merge": "workspace:*",
-    "@structuredmerge/json-merge": "workspace:*",
-    "@structuredmerge/plain-merge": "workspace:*"
+    "@structuredmerge/ast-merge": "workspace:*"
   }
 }

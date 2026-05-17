@@ -94,7 +94,26 @@ describe('smorg-ts cli', () => {
     );
 
     expect(exit).toBe(exitUnresolvedConflict);
-    expect(stderr.output()).toContain('destination_parse_error');
+    expect(stderr.output()).toContain('parse_error');
+    expect(stderr.output()).toContain('ours parse error');
+  });
+
+  it('uses the ancestor for JSON same-key conflicts', () => {
+    const ancestor = write('ancestor.json', '{"name":"structuredmerge"}');
+    const current = write('current.json', '{"name":"ours"}');
+    const other = write('other.json', '{"name":"theirs"}');
+    const stdout = writer();
+    const stderr = writer();
+
+    const exit = run(
+      ['merge-driver', '--strict', ancestor, current, other, 'package.json'],
+      stdout.stream,
+      stderr.stream
+    );
+
+    expect(exit).toBe(exitUnresolvedConflict);
+    expect(stderr.output()).toContain('merge_conflict');
+    expect(readFileSync(current, 'utf8')).toBe('{"name":"ours"}');
   });
 
   it('supports check-only exit-code without writing', () => {

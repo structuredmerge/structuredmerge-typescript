@@ -51,6 +51,12 @@ importers:
         specifier: workspace:*
         version: link:../markdown-merge
 
+  packages/ast-merge-git:
+    dependencies:
+      '@structuredmerge/ast-merge':
+        specifier: workspace:*
+        version: link:../ast-merge
+
   packages/ast-template:
     dependencies:
       '@structuredmerge/ast-merge':
@@ -185,6 +191,9 @@ importers:
       '@structuredmerge/ast-merge':
         specifier: workspace:*
         version: link:../ast-merge
+      '@structuredmerge/ast-merge-git':
+        specifier: workspace:*
+        version: link:../ast-merge-git
       '@structuredmerge/go-merge':
         specifier: workspace:*
         version: link:../go-merge

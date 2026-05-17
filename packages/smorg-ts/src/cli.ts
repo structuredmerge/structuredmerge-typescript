@@ -8,6 +8,7 @@ import {
   promotionProfileJsonKeyedObject
 } from '@structuredmerge/ast-merge';
 import type { MergeResult, ProfilePromotionStatus } from '@structuredmerge/ast-merge';
+import { merge3 } from '@structuredmerge/ast-merge-git';
 import { mergeGo } from '@structuredmerge/go-merge';
 import { mergeJson } from '@structuredmerge/json-merge';
 import { mergeText } from '@structuredmerge/plain-merge';
@@ -118,8 +119,6 @@ function runMergeDriver(
     stderr.write(`read merge input: ${String(error)}\n`);
     return exitUserError;
   }
-  void ancestorSource;
-
   const effectivePath = options.pathName ?? options.current;
   const settings = loadPathSettings(effectivePath);
   const profileExit = reportAndEnforceProfile(
@@ -130,7 +129,7 @@ function runMergeDriver(
     stderr
   );
   if (profileExit !== exitSuccess) return profileExit;
-  const result = mergeByPath(effectivePath, settings.language, otherSource, currentSource);
+  const result = mergeByPath(effectivePath, settings.language, ancestorSource, currentSource, otherSource);
   let output = result.output;
   if (!result.ok || output === undefined) {
     if (options.strict || options.fallback === 'none') {
@@ -437,19 +436,48 @@ function runLanguages(
 function mergeByPath(
   pathName: string,
   language: string | undefined,
-  otherSource: string,
-  currentSource: string
+  ancestorSource: string,
+  currentSource: string,
+  otherSource: string
 ): MergeResult<string> {
   switch (normalizeLanguage(language, pathName)) {
     case 'go':
       return mergeGo(otherSource, currentSource, 'go');
     case 'json':
-      return mergeJson(otherSource, currentSource, 'json');
+      return merge3Result(
+        merge3({
+          base_source: ancestorSource,
+          ours_source: currentSource,
+          theirs_source: otherSource,
+          path_name: pathName,
+          language: 'json',
+          dialect: 'json',
+          profile_id: 'json.keyed-object',
+          fallback_policy: 'none',
+          render_policy: 'canonical'
+        })
+      );
     case 'jsonc':
       return mergeJson(otherSource, currentSource, 'jsonc');
     default:
       return mergeText(otherSource, currentSource);
   }
+}
+
+function merge3Result(result: ReturnType<typeof merge3>): MergeResult<string> {
+  if (result.ok && result.merged_source !== undefined) {
+    return {
+      ok: true,
+      diagnostics: result.diagnostics,
+      output: result.merged_source,
+      policies: []
+    };
+  }
+  return {
+    ok: false,
+    diagnostics: result.diagnostics,
+    policies: []
+  };
 }
 
 function normalizeLanguage(language: string | undefined, pathName: string): string {

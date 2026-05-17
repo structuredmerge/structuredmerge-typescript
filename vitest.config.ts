@@ -9,6 +9,9 @@ export default defineConfig({
       '@structuredmerge/ast-merge': fileURLToPath(
         new URL('./packages/ast-merge/src/index.ts', import.meta.url)
       ),
+      '@structuredmerge/ast-merge-git': fileURLToPath(
+        new URL('./packages/ast-merge-git/src/index.ts', import.meta.url)
+      ),
       '@structuredmerge/tree-haver': fileURLToPath(
         new URL('./packages/tree-haver/src/index.ts', import.meta.url)
       ),
