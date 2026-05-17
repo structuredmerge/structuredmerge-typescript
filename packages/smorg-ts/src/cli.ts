@@ -141,7 +141,12 @@ function runMergeDriver(
   if (!result.ok) {
     printDiagnostics(stderr, result);
     if (output === undefined && !options.strict && options.fallback !== 'none') {
-      output = currentSource;
+      output = fullFileConflictOutput(
+        settings.conflictMarkerSize,
+        ancestorSource,
+        currentSource,
+        otherSource
+      );
     }
     if (options.checkOnly) return exitUnresolvedConflict;
     if (output !== undefined) {
@@ -170,6 +175,25 @@ function runMergeDriver(
     return exitInternalError;
   }
   return exitSuccess;
+}
+
+function fullFileConflictOutput(
+  markerSize: number,
+  ancestorSource: string,
+  currentSource: string,
+  otherSource: string
+): string {
+  const size = Math.max(markerSize, 1);
+  return [
+    `${'<'.repeat(size)} ours`,
+    currentSource,
+    `${'|'.repeat(size)} base`,
+    ancestorSource,
+    '='.repeat(size),
+    otherSource,
+    `${'>'.repeat(size)} theirs`,
+    ''
+  ].join('\n');
 }
 
 function parseMergeDriverOptions(

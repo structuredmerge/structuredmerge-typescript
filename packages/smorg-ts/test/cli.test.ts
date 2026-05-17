@@ -143,6 +143,27 @@ describe('smorg-ts cli', () => {
     expect(stderr.output()).toContain('ours parse error');
   });
 
+  it('writes full-file conflict markers for non-strict fallback failures', () => {
+    const ancestor = write('ancestor.json', '{"name":"structuredmerge"}');
+    const current = write('current.json', '{"name":');
+    const other = write('other.json', '{"other":true}');
+    const stdout = writer();
+    const stderr = writer();
+
+    const exit = run(
+      ['merge-driver', ancestor, current, other, 'package.json'],
+      stdout.stream,
+      stderr.stream
+    );
+
+    expect(exit).toBe(exitUnresolvedConflict);
+    const currentSource = readFileSync(current, 'utf8');
+    for (const needle of ['<<<<<<< ours', '||||||| base', '=======', '>>>>>>> theirs']) {
+      expect(currentSource).toContain(needle);
+    }
+    expect(stderr.output()).toContain('parse_error');
+  });
+
   it('uses the ancestor for JSON same-key conflicts', () => {
     const ancestor = write('ancestor.json', '{"name":"structuredmerge"}');
     const current = write('current.json', '{"name":"ours"}');
