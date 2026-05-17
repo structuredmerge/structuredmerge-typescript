@@ -41,6 +41,28 @@ interface GitDriverJsonCase {
   };
 }
 
+interface GitDriverFallbackFixture {
+  readonly cases: readonly GitDriverFallbackCase[];
+}
+
+interface GitDriverFallbackCase {
+  readonly case_id: string;
+  readonly path_name: string;
+  readonly base_source: string;
+  readonly ours_source: string;
+  readonly theirs_source: string;
+  readonly options: {
+    readonly strict?: boolean;
+    readonly fallback?: string;
+  };
+  readonly expected: {
+    readonly exit_code: number;
+    readonly merged_source?: string;
+    readonly source_contains?: readonly string[];
+    readonly stderr_contains: readonly string[];
+  };
+}
+
 function readGitDriverJsonFixture(): GitDriverJsonFixture {
   const source = readFileSync(
     path.join(
@@ -54,6 +76,21 @@ function readGitDriverJsonFixture(): GitDriverJsonFixture {
     'utf8'
   );
   return JSON.parse(source) as GitDriverJsonFixture;
+}
+
+function readGitDriverFallbackFixture(): GitDriverFallbackFixture {
+  const source = readFileSync(
+    path.join(
+      repoRoot,
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-954-git-driver-fallback',
+      'git-driver-fallback.json'
+    ),
+    'utf8'
+  );
+  return JSON.parse(source) as GitDriverFallbackFixture;
 }
 
 function runGit(dir: string, ...args: readonly string[]): void {
@@ -162,6 +199,38 @@ describe('smorg-ts cli', () => {
       expect(currentSource).toContain(needle);
     }
     expect(stderr.output()).toContain('parse_error');
+  });
+
+  it('conforms to the git-driver fallback fixture', () => {
+    const fixture = readGitDriverFallbackFixture();
+    for (const testCase of fixture.cases) {
+      const ancestor = write('ancestor.json', testCase.base_source);
+      const current = write('current.json', testCase.ours_source);
+      const other = write('other.json', testCase.theirs_source);
+      const args = ['merge-driver'];
+      if (testCase.options.strict) args.push('--strict');
+      if (testCase.options.fallback && testCase.options.fallback !== 'full-file') {
+        args.push('--fallback', testCase.options.fallback);
+      }
+      args.push(ancestor, current, other, testCase.path_name);
+      const stdout = writer();
+      const stderr = writer();
+
+      const exit = run(args, stdout.stream, stderr.stream);
+      const currentSource = readFileSync(current, 'utf8');
+      expect(exit, `${testCase.case_id} stderr=${stderr.output()}`).toBe(
+        testCase.expected.exit_code
+      );
+      if (testCase.expected.merged_source !== undefined) {
+        expect(currentSource, testCase.case_id).toBe(testCase.expected.merged_source);
+      }
+      for (const needle of testCase.expected.source_contains ?? []) {
+        expect(currentSource, testCase.case_id).toContain(needle);
+      }
+      for (const needle of testCase.expected.stderr_contains) {
+        expect(stderr.output(), testCase.case_id).toContain(needle);
+      }
+    }
   });
 
   it('uses the ancestor for JSON same-key conflicts', () => {
