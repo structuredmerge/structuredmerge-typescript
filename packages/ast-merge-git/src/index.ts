@@ -25,6 +25,7 @@ export interface Merge3Conflict {
 export interface Merge3Response {
   readonly ok: boolean;
   readonly merged_source?: string;
+  readonly conflicted_source?: string;
   readonly conflicts: readonly Merge3Conflict[];
   readonly diagnostics: readonly Diagnostic[];
   readonly fallbacks: readonly string[];
@@ -71,6 +72,10 @@ export function merge3Json(request: Merge3Request): Merge3Response {
       return response(request, {
         ok: false,
         conflicts,
+        conflicted_source: renderConflictSource(request, conflicts),
+        render_report: {
+          strategy: 'full_file_conflict_markers'
+        },
         diagnostics: [
           {
             severity: 'error',
@@ -112,6 +117,7 @@ function response(
   return {
     ok: fields.ok,
     merged_source: fields.merged_source,
+    conflicted_source: fields.conflicted_source,
     conflicts: fields.conflicts ?? [],
     diagnostics: fields.diagnostics ?? [],
     fallbacks: fields.fallbacks ?? [],
@@ -121,7 +127,7 @@ function response(
       dialect: request.dialect ?? ''
     },
     render_report: {
-      strategy: request.render_policy || 'canonical'
+      strategy: fields.render_report?.strategy ?? request.render_policy ?? 'canonical'
     },
     formatting_preservation: fields.formatting_preservation ?? {
       line_diff_score: 0,
@@ -129,6 +135,21 @@ function response(
     },
     reparse_after_render: fields.reparse_after_render ?? null
   };
+}
+
+function renderConflictSource(request: Merge3Request, conflicts: readonly Merge3Conflict[]): string {
+  const markerSize = Math.max(request.conflict_marker_size ?? 7, 1);
+  return [
+    `/* smorg structured conflicts: ${conflicts.length} unresolved */`,
+    `${'<'.repeat(markerSize)} ours`,
+    request.ours_source,
+    `${'|'.repeat(markerSize)} base`,
+    request.base_source,
+    '='.repeat(markerSize),
+    request.theirs_source,
+    `${'>'.repeat(markerSize)} theirs`,
+    ''
+  ].join('\n');
 }
 
 function parseJsonRole(role: string, source: string): unknown {

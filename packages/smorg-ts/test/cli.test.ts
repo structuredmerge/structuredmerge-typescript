@@ -36,6 +36,7 @@ interface GitDriverJsonCase {
     readonly exit_code: number;
     readonly merged_json?: unknown;
     readonly merged_source?: string;
+    readonly conflicted_source_contains?: readonly string[];
     readonly stderr_contains: readonly string[];
   };
 }
@@ -157,7 +158,10 @@ describe('smorg-ts cli', () => {
 
     expect(exit).toBe(exitUnresolvedConflict);
     expect(stderr.output()).toContain('merge_conflict');
-    expect(readFileSync(current, 'utf8')).toBe('{"name":"ours"}');
+    const currentSource = readFileSync(current, 'utf8');
+    for (const needle of ['<<<<<<< ours', '||||||| base', '=======', '>>>>>>> theirs']) {
+      expect(currentSource).toContain(needle);
+    }
   });
 
   it('conforms to the git-driver JSON integration fixture in a repository', () => {
@@ -204,6 +208,9 @@ describe('smorg-ts cli', () => {
           expect(JSON.parse(mergedSource), testCase.case_id).toEqual(testCase.expected.merged_json);
         } else if (testCase.expected.merged_source !== undefined) {
           expect(mergedSource, testCase.case_id).toBe(testCase.expected.merged_source);
+        }
+        for (const expected of testCase.expected.conflicted_source_contains ?? []) {
+          expect(mergedSource, testCase.case_id).toContain(expected);
         }
       } finally {
         rmSync(caseDir, { force: true, recursive: true });

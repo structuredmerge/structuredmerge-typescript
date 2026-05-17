@@ -17,6 +17,7 @@ interface Fixture {
       readonly conflict_count: number;
       readonly conflict_categories?: readonly string[];
       readonly conflict_paths?: readonly string[];
+      readonly conflicted_source_contains?: readonly string[];
       readonly reparse_after_render: boolean | null;
     };
   }[];
@@ -57,6 +58,9 @@ describe('@structuredmerge/ast-merge-git', () => {
           result.conflicts.map((conflict) => conflict.path),
           testCase.case_id
         ).toEqual(testCase.expected.conflict_paths);
+        for (const needle of testCase.expected.conflicted_source_contains ?? []) {
+          expect(result.conflicted_source, testCase.case_id).toContain(needle);
+        }
       }
     }
   });

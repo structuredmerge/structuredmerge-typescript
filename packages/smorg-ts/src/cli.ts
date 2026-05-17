@@ -129,14 +129,34 @@ function runMergeDriver(
     stderr
   );
   if (profileExit !== exitSuccess) return profileExit;
-  const result = mergeByPath(effectivePath, settings.language, ancestorSource, currentSource, otherSource);
+  const result = mergeByPath(
+    effectivePath,
+    settings.language,
+    settings.conflictMarkerSize,
+    ancestorSource,
+    currentSource,
+    otherSource
+  );
   let output = result.output;
-  if (!result.ok || output === undefined) {
-    if (options.strict || options.fallback === 'none') {
-      printDiagnostics(stderr, result);
-      return exitUnresolvedConflict;
+  if (!result.ok) {
+    printDiagnostics(stderr, result);
+    if (output === undefined && !options.strict && options.fallback !== 'none') {
+      output = currentSource;
     }
-    output = currentSource;
+    if (options.checkOnly) return exitUnresolvedConflict;
+    if (output !== undefined) {
+      try {
+        writeFileSync(options.output ?? options.current, output);
+      } catch (error) {
+        stderr.write(`write output: ${String(error)}\n`);
+        return exitInternalError;
+      }
+    }
+    return exitUnresolvedConflict;
+  }
+  if (output === undefined) {
+    stderr.write('merge completed without output\n');
+    return exitInternalError;
   }
 
   if (options.checkOnly) {
@@ -436,6 +456,7 @@ function runLanguages(
 function mergeByPath(
   pathName: string,
   language: string | undefined,
+  conflictMarkerSize: number,
   ancestorSource: string,
   currentSource: string,
   otherSource: string
@@ -454,6 +475,7 @@ function mergeByPath(
           dialect: 'json',
           profile_id: 'json.keyed-object',
           fallback_policy: 'none',
+          conflict_marker_size: conflictMarkerSize,
           render_policy: 'canonical'
         })
       );
@@ -470,6 +492,14 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeResult<string> {
       ok: true,
       diagnostics: result.diagnostics,
       output: result.merged_source,
+      policies: []
+    };
+  }
+  if (!result.ok && result.conflicted_source !== undefined) {
+    return {
+      ok: false,
+      diagnostics: result.diagnostics,
+      output: result.conflicted_source,
       policies: []
     };
   }
