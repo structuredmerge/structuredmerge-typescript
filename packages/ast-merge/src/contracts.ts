@@ -441,6 +441,38 @@ export interface MergeResult<TOutput> {
   readonly policies?: readonly PolicyReference[];
 }
 
+export interface MergeDecisionRecord {
+  readonly id: string;
+  readonly decision: string;
+  readonly source: string;
+  readonly line: number;
+  readonly owner_id: string;
+  readonly reason: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export function mergeDecisionSummary(
+  decisions: readonly MergeDecisionRecord[]
+): Readonly<Record<string, number>> {
+  return decisions.reduce<Record<string, number>>((summary, decision) => {
+    summary[decision.decision] = (summary[decision.decision] ?? 0) + 1;
+    return summary;
+  }, {});
+}
+
+export function mergeDecisionSourceSummary(
+  decisions: readonly MergeDecisionRecord[]
+): Readonly<Record<string, number>> {
+  return decisions.reduce<Record<string, number>>((summary, decision) => {
+    summary[decision.source] = (summary[decision.source] ?? 0) + 1;
+    return summary;
+  }, {});
+}
+
+export function mergeDecisionReviewRequired(decisions: readonly MergeDecisionRecord[]): boolean {
+  return decisions.some((decision) => decision.decision === 'unresolved');
+}
+
 export interface MergeIRNodeClass {
   readonly class_id: string;
   readonly signature: string;

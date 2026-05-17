@@ -28,6 +28,9 @@ import {
   layoutGapEffectiveControllerOwnerId,
   layoutGapFallbackOwnerId,
   layoutGapLineCount,
+  mergeDecisionReviewRequired,
+  mergeDecisionSourceSummary,
+  mergeDecisionSummary,
   promotionProfileJsonKeyedObject,
   promotionProfileRubyGemspecDependencyDeclarations,
   validateLanguageBackendProfile
@@ -96,6 +99,7 @@ import type {
   LayoutGap,
   LocalLineFallbackReport,
   MatchingDebugArtifacts,
+  MergeDecisionRecord,
   MergeIR,
   MergeIRComparisonReport,
   MoveDetectionMatchingReport,
@@ -5911,6 +5915,37 @@ describe('ast-merge shared fixtures', () => {
     }
 
     expect(fixture.contract_rules.some((rule) => rule.includes('passive data'))).toBe(true);
+  });
+
+  it('conforms to the slice-956 merge result decision contract fixture', () => {
+    const fixture = readFixture<{
+      decisions: readonly MergeDecisionRecord[];
+      expected: {
+        decision_count: number;
+        ordered_decision_ids: readonly string[];
+        decision_summary: Readonly<Record<string, number>>;
+        source_summary: Readonly<Record<string, number>>;
+        unresolved_count: number;
+        review_required: boolean;
+        line_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-956-merge-result-decision-contract',
+      'merge-result-decision-contract.json'
+    );
+    const orderedIds = fixture.decisions.map((decision) => decision.id);
+    const unresolvedCount = fixture.decisions.filter(
+      (decision) => decision.decision === 'unresolved'
+    ).length;
+
+    expect(fixture.decisions).toHaveLength(fixture.expected.decision_count);
+    expect(orderedIds).toEqual(fixture.expected.ordered_decision_ids);
+    expect(mergeDecisionSummary(fixture.decisions)).toEqual(fixture.expected.decision_summary);
+    expect(mergeDecisionSourceSummary(fixture.decisions)).toEqual(fixture.expected.source_summary);
+    expect(unresolvedCount).toBe(fixture.expected.unresolved_count);
+    expect(mergeDecisionReviewRequired(fixture.decisions)).toBe(fixture.expected.review_required);
+    expect(fixture.decisions).toHaveLength(fixture.expected.line_count);
   });
 
   it('conforms to the slice-906 merge engine suite setting fixture', () => {
