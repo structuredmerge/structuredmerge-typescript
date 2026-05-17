@@ -1,10 +1,13 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { exitSuccess, exitUnresolvedConflict, exitUserError, run } from '../src/cli';
+
+const repoRoot = process.cwd();
 
 function writer() {
   let output = '';
@@ -17,6 +20,47 @@ function writer() {
     },
     output: () => output
   };
+}
+
+interface GitDriverJsonFixture {
+  readonly cases: readonly GitDriverJsonCase[];
+}
+
+interface GitDriverJsonCase {
+  readonly case_id: string;
+  readonly path_name: string;
+  readonly base_source: string;
+  readonly ours_source: string;
+  readonly theirs_source: string;
+  readonly expected: {
+    readonly exit_code: number;
+    readonly merged_json?: unknown;
+    readonly merged_source?: string;
+    readonly stderr_contains: readonly string[];
+  };
+}
+
+function readGitDriverJsonFixture(): GitDriverJsonFixture {
+  const source = readFileSync(
+    path.join(
+      repoRoot,
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-951-git-driver-json-integration',
+      'git-driver-json-integration.json'
+    ),
+    'utf8'
+  );
+  return JSON.parse(source) as GitDriverJsonFixture;
+}
+
+function runGit(dir: string, ...args: readonly string[]): void {
+  execFileSync('git', args, {
+    cwd: dir,
+    env: { ...process.env, GIT_CONFIG_NOSYSTEM: '1' },
+    stdio: 'pipe'
+  });
 }
 
 describe('smorg-ts cli', () => {
@@ -114,6 +158,57 @@ describe('smorg-ts cli', () => {
     expect(exit).toBe(exitUnresolvedConflict);
     expect(stderr.output()).toContain('merge_conflict');
     expect(readFileSync(current, 'utf8')).toBe('{"name":"ours"}');
+  });
+
+  it('conforms to the git-driver JSON integration fixture in a repository', () => {
+    try {
+      execFileSync('git', ['--version'], { stdio: 'pipe' });
+    } catch {
+      return;
+    }
+    const fixture = readGitDriverJsonFixture();
+    for (const testCase of fixture.cases) {
+      const caseDir = mkdtempSync(path.join(tmpdir(), 'smorg-ts-git-driver-'));
+      try {
+        runGit(caseDir, 'init');
+        runGit(caseDir, 'config', 'user.email', 'smorg-ts@example.invalid');
+        runGit(caseDir, 'config', 'user.name', 'smorg-ts test');
+        writeFileSync(path.join(caseDir, '.gitattributes'), '*.json merge=smorg-ts smorg.language=json\n');
+        writeFileSync(path.join(caseDir, testCase.path_name), testCase.base_source);
+        runGit(caseDir, 'add', '.');
+        runGit(caseDir, 'commit', '-m', 'base');
+
+        const ancestor = path.join(caseDir, 'ancestor.tmp');
+        const current = path.join(caseDir, testCase.path_name);
+        const other = path.join(caseDir, 'other.tmp');
+        writeFileSync(ancestor, testCase.base_source);
+        writeFileSync(current, testCase.ours_source);
+        writeFileSync(other, testCase.theirs_source);
+        const stdout = writer();
+        const stderr = writer();
+
+        const exit = run(
+          ['merge-driver', '--strict', ancestor, current, other, testCase.path_name],
+          stdout.stream,
+          stderr.stream
+        );
+
+        expect(exit, `${testCase.case_id} stderr=${stderr.output()}`).toBe(
+          testCase.expected.exit_code
+        );
+        for (const expected of testCase.expected.stderr_contains) {
+          expect(stderr.output(), testCase.case_id).toContain(expected);
+        }
+        const mergedSource = readFileSync(current, 'utf8');
+        if (testCase.expected.merged_json !== undefined) {
+          expect(JSON.parse(mergedSource), testCase.case_id).toEqual(testCase.expected.merged_json);
+        } else if (testCase.expected.merged_source !== undefined) {
+          expect(mergedSource, testCase.case_id).toBe(testCase.expected.merged_source);
+        }
+      } finally {
+        rmSync(caseDir, { force: true, recursive: true });
+      }
+    }
   });
 
   it('supports check-only exit-code without writing', () => {
