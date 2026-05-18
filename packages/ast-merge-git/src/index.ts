@@ -46,6 +46,18 @@ export interface Merge3Response {
     readonly weighted: boolean;
     readonly diagnostics: readonly string[];
   };
+  readonly default_driver_evaluation: {
+    readonly status: string;
+    readonly formatting_threshold: number;
+    readonly formatting_score: number;
+    readonly hard_gates: readonly {
+      readonly name: string;
+      readonly passed: boolean;
+      readonly weighted: boolean;
+    }[];
+    readonly blocking_reasons: readonly string[];
+    readonly diagnostics: readonly string[];
+  };
   readonly reparse_after_render: boolean | null;
 }
 
@@ -165,6 +177,15 @@ function response(
   request: Merge3Request,
   fields: Partial<Merge3Response> & { readonly ok: boolean }
 ): Merge3Response {
+  const renderReport = {
+    ...renderIdentity(request),
+    strategy: fields.render_report?.strategy ?? request.render_policy ?? 'canonical'
+  };
+  const formattingPreservation = fields.formatting_preservation ?? {
+    line_diff_score: 0,
+    character_diff_score: 0
+  };
+  const reparseAfterRender = fields.reparse_after_render ?? null;
   return {
     ok: fields.ok,
     merged_source: fields.merged_source,
@@ -177,18 +198,51 @@ function response(
       language: normalizeLanguage(request),
       dialect: request.dialect ?? ''
     },
-    render_report: {
-      ...renderIdentity(request),
-      strategy: fields.render_report?.strategy ?? request.render_policy ?? 'canonical'
-    },
-    formatting_preservation: fields.formatting_preservation ?? {
-      line_diff_score: 0,
-      character_diff_score: 0
-    },
+    render_report: renderReport,
+    formatting_preservation: formattingPreservation,
     secondary_formatting_metrics:
       fields.secondary_formatting_metrics ??
       secondaryFormattingMetrics(fields.merged_source !== undefined),
-    reparse_after_render: fields.reparse_after_render ?? null
+    default_driver_evaluation:
+      fields.default_driver_evaluation ??
+      defaultDriverEvaluation(formattingPreservation, reparseAfterRender, renderReport),
+    reparse_after_render: reparseAfterRender
+  };
+}
+
+function defaultDriverEvaluation(
+  formattingPreservation: Merge3Response['formatting_preservation'],
+  reparseAfterRender: boolean | null,
+  renderReport: Merge3Response['render_report']
+): Merge3Response['default_driver_evaluation'] {
+  const threshold = 0.95;
+  const score =
+    (formattingPreservation.line_diff_score + formattingPreservation.character_diff_score) / 2;
+  const reparsePassed = reparseAfterRender === true;
+  const noFullFileRewrite = renderReport.strategy !== 'full_file_conflict_markers';
+  const coherentConflictMarkers = renderReport.strategy !== 'full_file_conflict_markers';
+  const blockingReasons: string[] = [];
+  if (!reparsePassed) blockingReasons.push('rendered output did not reparse');
+  if (score < threshold) blockingReasons.push('formatting score is below threshold');
+  if (!noFullFileRewrite) blockingReasons.push('full-file rewrite or conflict markers were used');
+  if (!coherentConflictMarkers) {
+    blockingReasons.push('conflict marker placement is not syntactically coherent');
+  }
+  return {
+    status: blockingReasons.length === 0 ? 'recommended' : 'not_recommended',
+    formatting_threshold: threshold,
+    formatting_score: score,
+    hard_gates: [
+      { name: 'reparse_after_render', passed: reparsePassed, weighted: false },
+      { name: 'no_full_file_rewrite', passed: noFullFileRewrite, weighted: false },
+      {
+        name: 'coherent_conflict_marker_placement',
+        passed: coherentConflictMarkers,
+        weighted: false
+      }
+    ],
+    blocking_reasons: blockingReasons,
+    diagnostics: ['default-driver evaluation is advisory unless explicitly required']
   };
 }
 

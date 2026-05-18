@@ -34,6 +34,18 @@ interface Fixture {
         readonly weighted: boolean;
         readonly diagnostics: readonly string[];
       };
+      readonly default_driver_evaluation?: {
+        readonly status: string;
+        readonly formatting_threshold: number;
+        readonly formatting_score: number;
+        readonly hard_gates: readonly {
+          readonly name: string;
+          readonly passed: boolean;
+          readonly weighted: boolean;
+        }[];
+        readonly blocking_reasons: readonly string[];
+        readonly diagnostics: readonly string[];
+      };
       readonly reparse_after_render: boolean | null;
     };
   }[];
@@ -100,6 +112,11 @@ describe('@structuredmerge/ast-merge-git', () => {
       if (testCase.expected.secondary_formatting_metrics !== undefined) {
         expect(result.secondary_formatting_metrics, testCase.case_id).toEqual(
           testCase.expected.secondary_formatting_metrics
+        );
+      }
+      if (testCase.expected.default_driver_evaluation !== undefined) {
+        expect(result.default_driver_evaluation, testCase.case_id).toEqual(
+          testCase.expected.default_driver_evaluation
         );
       }
       if (result.ok) {
