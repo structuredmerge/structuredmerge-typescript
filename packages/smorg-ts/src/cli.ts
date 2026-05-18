@@ -146,6 +146,7 @@ function runMergeDriver(
     effectivePath,
     settings.language,
     settings.conflictMarkerSize,
+    options.strict ? 'none' : options.fallback,
     ancestorSource,
     currentSource,
     otherSource
@@ -614,6 +615,7 @@ function mergeByPath(
   pathName: string,
   language: string | undefined,
   conflictMarkerSize: number,
+  fallbackPolicy: string,
   ancestorSource: string,
   currentSource: string,
   otherSource: string
@@ -631,7 +633,7 @@ function mergeByPath(
           language: 'json',
           dialect: 'json',
           profile_id: 'json.keyed-object',
-          fallback_policy: 'none',
+          fallback_policy: fallbackPolicy,
           conflict_marker_size: conflictMarkerSize,
           render_policy: 'canonical'
         })
