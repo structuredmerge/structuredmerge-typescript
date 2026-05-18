@@ -301,12 +301,16 @@ describe('smorg-ts cli', () => {
     expect(exit).toBe(exitUnresolvedConflict);
     const report = JSON.parse(readFileSync(reportPath, 'utf8')) as {
       render_report: { strategy: string };
+      change_classifications: Array<{ path: string; ours: string; theirs: string }>;
       owned_regions: Array<{ owner_path: string; region_kind: string }>;
       profile: { profile_id: string; language: string };
       formatting_preservation: { line_diff_score: number };
       default_driver_evaluation: { status: string };
     };
     expect(report.render_report.strategy).toBe('owned_region_conflict_markers');
+    expect(report.change_classifications).toEqual([
+      { path: '/enabled', ours: 'edited', theirs: 'edited' }
+    ]);
     expect(report.owned_regions[0]?.owner_path).toBe('/enabled');
     expect(report.owned_regions[0]?.region_kind).toBe('node');
     expect(report.profile.profile_id).toBe('json.keyed-object');
