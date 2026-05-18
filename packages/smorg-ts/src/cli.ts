@@ -12,6 +12,7 @@ import { merge3 } from '@structuredmerge/ast-merge-git';
 import { mergeGo } from '@structuredmerge/go-merge';
 import { mergeJson } from '@structuredmerge/json-merge';
 import { mergeText } from '@structuredmerge/plain-merge';
+import type { Merge3Response } from '@structuredmerge/ast-merge-git';
 
 export const exitSuccess = 0;
 export const exitUnresolvedConflict = 1;
@@ -58,6 +59,11 @@ interface ConflictRegion {
   readonly separatorLine: number;
   readonly endLine: number;
 }
+
+type MergeDriverResult = MergeResult<string> & {
+  readonly owned_regions?: Merge3Response['owned_regions'];
+  readonly render_report?: Merge3Response['render_report'];
+};
 
 export function run(
   args: readonly string[],
@@ -162,6 +168,8 @@ function runMergeDriver(
       false,
       exitUnresolvedConflict,
       fallbacks,
+      result.owned_regions ?? [],
+      result.render_report,
       result.diagnostics,
       stderr
     );
@@ -190,6 +198,8 @@ function runMergeDriver(
       true,
       exit,
       [],
+      result.owned_regions ?? [],
+      result.render_report,
       result.diagnostics,
       stderr
     );
@@ -209,6 +219,8 @@ function runMergeDriver(
     true,
     exitSuccess,
     [],
+    result.owned_regions ?? [],
+    result.render_report,
     result.diagnostics,
     stderr
   );
@@ -222,6 +234,8 @@ function writeMergeDriverMachineReport(
   ok: boolean,
   exitCode: number,
   fallbacks: Array<Record<string, unknown>>,
+  ownedRegions: Merge3Response['owned_regions'],
+  renderReport: Merge3Response['render_report'] | undefined,
   diagnostics: readonly Diagnostic[],
   stderr: Pick<NodeJS.WriteStream, 'write'>
 ): number {
@@ -236,6 +250,8 @@ function writeMergeDriverMachineReport(
           ok,
           exit_code: exitCode,
           fallbacks,
+          owned_regions: ownedRegions,
+          render_report: renderReport,
           diagnostics
         },
         undefined,
@@ -565,7 +581,7 @@ function mergeByPath(
   ancestorSource: string,
   currentSource: string,
   otherSource: string
-): MergeResult<string> {
+): MergeDriverResult {
   switch (normalizeLanguage(language, pathName)) {
     case 'go':
       return mergeGo(otherSource, currentSource, 'go');
@@ -591,12 +607,14 @@ function mergeByPath(
   }
 }
 
-function merge3Result(result: ReturnType<typeof merge3>): MergeResult<string> {
+function merge3Result(result: ReturnType<typeof merge3>): MergeDriverResult {
   if (result.ok && result.merged_source !== undefined) {
     return {
       ok: true,
       diagnostics: result.diagnostics,
       output: result.merged_source,
+      owned_regions: result.owned_regions,
+      render_report: result.render_report,
       policies: []
     };
   }
@@ -605,12 +623,16 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeResult<string> {
       ok: false,
       diagnostics: result.diagnostics,
       output: result.conflicted_source,
+      owned_regions: result.owned_regions,
+      render_report: result.render_report,
       policies: []
     };
   }
   return {
     ok: false,
     diagnostics: result.diagnostics,
+    owned_regions: result.owned_regions,
+    render_report: result.render_report,
     policies: []
   };
 }

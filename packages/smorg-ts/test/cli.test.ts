@@ -280,6 +280,30 @@ describe('smorg-ts cli', () => {
     }
   });
 
+  it('includes owned-region placement in merge-driver reports', () => {
+    const ancestor = write('ancestor.json', '{"name":"demo","enabled":true}');
+    const current = write('current.json', '{"name":"demo","enabled":false}');
+    const other = write('other.json', '{"name":"demo","enabled":"yes"}');
+    const reportPath = path.join(dir, 'merge-report.json');
+    const stdout = writer();
+    const stderr = writer();
+
+    const exit = run(
+      ['merge-driver', '--report', reportPath, ancestor, current, other, 'package.json'],
+      stdout.stream,
+      stderr.stream
+    );
+
+    expect(exit).toBe(exitUnresolvedConflict);
+    const report = JSON.parse(readFileSync(reportPath, 'utf8')) as {
+      render_report: { strategy: string };
+      owned_regions: Array<{ owner_path: string; region_kind: string }>;
+    };
+    expect(report.render_report.strategy).toBe('owned_region_conflict_markers');
+    expect(report.owned_regions[0]?.owner_path).toBe('/enabled');
+    expect(report.owned_regions[0]?.region_kind).toBe('node');
+  });
+
   it('conforms to the git-driver JSON integration fixture in a repository', () => {
     try {
       execFileSync('git', ['--version'], { stdio: 'pipe' });
