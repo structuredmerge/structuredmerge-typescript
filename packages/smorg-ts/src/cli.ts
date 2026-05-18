@@ -64,6 +64,10 @@ type MergeDriverResult = MergeResult<string> & {
   readonly owned_regions?: Merge3Response['owned_regions'];
   readonly render_report?: Merge3Response['render_report'];
   readonly profile?: Merge3Response['profile'];
+  readonly reparse_after_render?: Merge3Response['reparse_after_render'];
+  readonly formatting_preservation?: Merge3Response['formatting_preservation'];
+  readonly secondary_formatting_metrics?: Merge3Response['secondary_formatting_metrics'];
+  readonly default_driver_evaluation?: Merge3Response['default_driver_evaluation'];
 };
 
 export function run(
@@ -172,6 +176,10 @@ function runMergeDriver(
       result.owned_regions ?? [],
       result.render_report,
       result.profile,
+      result.reparse_after_render,
+      result.formatting_preservation,
+      result.secondary_formatting_metrics,
+      result.default_driver_evaluation,
       result.diagnostics,
       stderr
     );
@@ -203,6 +211,10 @@ function runMergeDriver(
       result.owned_regions ?? [],
       result.render_report,
       result.profile,
+      result.reparse_after_render,
+      result.formatting_preservation,
+      result.secondary_formatting_metrics,
+      result.default_driver_evaluation,
       result.diagnostics,
       stderr
     );
@@ -225,6 +237,10 @@ function runMergeDriver(
     result.owned_regions ?? [],
     result.render_report,
     result.profile,
+    result.reparse_after_render,
+    result.formatting_preservation,
+    result.secondary_formatting_metrics,
+    result.default_driver_evaluation,
     result.diagnostics,
     stderr
   );
@@ -241,6 +257,10 @@ function writeMergeDriverMachineReport(
   ownedRegions: Merge3Response['owned_regions'],
   renderReport: Merge3Response['render_report'] | undefined,
   profile: Merge3Response['profile'] | undefined,
+  reparseAfterRender: Merge3Response['reparse_after_render'] | undefined,
+  formattingPreservation: Merge3Response['formatting_preservation'] | undefined,
+  secondaryFormattingMetrics: Merge3Response['secondary_formatting_metrics'] | undefined,
+  defaultDriverEvaluation: Merge3Response['default_driver_evaluation'] | undefined,
   diagnostics: readonly Diagnostic[],
   stderr: Pick<NodeJS.WriteStream, 'write'>
 ): number {
@@ -257,6 +277,10 @@ function writeMergeDriverMachineReport(
           fallbacks,
           owned_regions: ownedRegions,
           render_report: renderReport,
+          reparse_after_render: reparseAfterRender,
+          formatting_preservation: formattingPreservation,
+          secondary_formatting_metrics: secondaryFormattingMetrics,
+          default_driver_evaluation: defaultDriverEvaluation,
           profile,
           diagnostics
         },
@@ -622,6 +646,10 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeDriverResult {
       owned_regions: result.owned_regions,
       render_report: result.render_report,
       profile: result.profile,
+      reparse_after_render: result.reparse_after_render,
+      formatting_preservation: result.formatting_preservation,
+      secondary_formatting_metrics: result.secondary_formatting_metrics,
+      default_driver_evaluation: result.default_driver_evaluation,
       policies: []
     };
   }
@@ -633,6 +661,10 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeDriverResult {
       owned_regions: result.owned_regions,
       render_report: result.render_report,
       profile: result.profile,
+      reparse_after_render: result.reparse_after_render,
+      formatting_preservation: result.formatting_preservation,
+      secondary_formatting_metrics: result.secondary_formatting_metrics,
+      default_driver_evaluation: result.default_driver_evaluation,
       policies: []
     };
   }
@@ -642,6 +674,10 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeDriverResult {
     owned_regions: result.owned_regions,
     render_report: result.render_report,
     profile: result.profile,
+    reparse_after_render: result.reparse_after_render,
+    formatting_preservation: result.formatting_preservation,
+    secondary_formatting_metrics: result.secondary_formatting_metrics,
+    default_driver_evaluation: result.default_driver_evaluation,
     policies: []
   };
 }

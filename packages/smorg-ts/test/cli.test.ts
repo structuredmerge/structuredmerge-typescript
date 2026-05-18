@@ -299,12 +299,16 @@ describe('smorg-ts cli', () => {
       render_report: { strategy: string };
       owned_regions: Array<{ owner_path: string; region_kind: string }>;
       profile: { profile_id: string; language: string };
+      formatting_preservation: { line_diff_score: number };
+      default_driver_evaluation: { status: string };
     };
     expect(report.render_report.strategy).toBe('owned_region_conflict_markers');
     expect(report.owned_regions[0]?.owner_path).toBe('/enabled');
     expect(report.owned_regions[0]?.region_kind).toBe('node');
     expect(report.profile.profile_id).toBe('json.keyed-object');
     expect(report.profile.language).toBe('json');
+    expect(typeof report.formatting_preservation.line_diff_score).toBe('number');
+    expect(typeof report.default_driver_evaluation.status).toBe('string');
   });
 
   it('conforms to the git-driver JSON integration fixture in a repository', () => {
