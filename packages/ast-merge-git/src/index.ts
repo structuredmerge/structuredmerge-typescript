@@ -368,6 +368,7 @@ function jsonMemberSource(
   source: string,
   key: string
 ): { readonly byteRange: SourceRange; readonly text: string } | undefined {
+  if (!source.includes(`"${key}"`)) return undefined;
   const byteRange = jsonKeyByteRange(source, key);
   if (byteRange.end <= byteRange.start || byteRange.end > source.length) return undefined;
   return { byteRange, text: source.slice(byteRange.start, byteRange.end) };
@@ -380,12 +381,20 @@ function jsonOwnedRegionsForConflicts(
   return conflicts.flatMap((conflict) => {
     if (!conflict.path.startsWith('/') || conflict.path.split('/').length !== 2) return [];
     const key = conflict.path.slice(1);
+    const baseRegion = jsonMemberSource(request.base_source, key);
+    if (
+      baseRegion === undefined ||
+      jsonMemberSource(request.ours_source, key) === undefined ||
+      jsonMemberSource(request.theirs_source, key) === undefined
+    ) {
+      return [];
+    }
     return [
       {
         owner_path: conflict.path,
         node_id: `json:key:${key}`,
         region_kind: 'node',
-        byte_range: jsonKeyByteRange(request.base_source, key),
+        byte_range: baseRegion.byteRange,
         line_range: { start: 1, end: 1 },
         attached_spans: [],
         backend_id: 'native-json',
