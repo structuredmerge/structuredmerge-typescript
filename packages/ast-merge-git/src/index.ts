@@ -35,6 +35,7 @@ export interface Merge3Response {
     readonly backend_id?: string;
     readonly parser_identity?: string;
   };
+  readonly owned_regions: readonly OwnedRegionReport[];
   readonly formatting_preservation: {
     readonly line_diff_score: number;
     readonly character_diff_score: number;
@@ -59,6 +60,31 @@ export interface Merge3Response {
     readonly diagnostics: readonly string[];
   };
   readonly reparse_after_render: boolean | null;
+}
+
+export interface SourceRange {
+  readonly start: number;
+  readonly end: number;
+}
+
+export interface AttachedSpan {
+  readonly kind: string;
+  readonly line_range: SourceRange;
+  readonly byte_range?: SourceRange;
+}
+
+export interface OwnedRegionReport {
+  readonly owner_path: string;
+  readonly node_id: string;
+  readonly region_kind: string;
+  readonly byte_range: SourceRange;
+  readonly line_range: SourceRange;
+  readonly attached_spans: readonly AttachedSpan[];
+  readonly backend_id: string;
+  readonly parser_identity: string;
+  readonly can_replace: boolean;
+  readonly can_line_merge: boolean;
+  readonly requires_reparse: boolean;
 }
 
 export interface CommentDeltaResult {
@@ -96,12 +122,17 @@ export function merge3Json(request: Merge3Request): Merge3Response {
     const conflicts: Merge3Conflict[] = [];
     const merged = mergeJsonValue(base, ours, theirs, '', conflicts);
     if (conflicts.length > 0) {
+      const ownedRegions = jsonOwnedRegionsForConflicts(request, conflicts);
       return response(request, {
         ok: false,
         conflicts,
         conflicted_source: renderConflictSource(request, conflicts),
+        owned_regions: ownedRegions,
         render_report: {
-          strategy: 'full_file_conflict_markers'
+          strategy:
+            ownedRegions.length === 0
+              ? 'full_file_conflict_markers'
+              : 'owned_region_conflict_markers'
         },
         diagnostics: [
           {
@@ -193,6 +224,7 @@ function response(
     conflicts: fields.conflicts ?? [],
     diagnostics: fields.diagnostics ?? [],
     fallbacks: fields.fallbacks ?? [],
+    owned_regions: fields.owned_regions ?? [],
     profile: {
       profile_id: request.profile_id ?? '',
       language: normalizeLanguage(request),
@@ -298,6 +330,40 @@ function renderConflictSource(
     `${'>'.repeat(markerSize)} theirs`,
     ''
   ].join('\n');
+}
+
+function jsonOwnedRegionsForConflicts(
+  request: Merge3Request,
+  conflicts: readonly Merge3Conflict[]
+): OwnedRegionReport[] {
+  return conflicts.flatMap((conflict) => {
+    if (!conflict.path.startsWith('/') || conflict.path.split('/').length !== 2) return [];
+    const key = conflict.path.slice(1);
+    return [
+      {
+        owner_path: conflict.path,
+        node_id: `json:key:${key}`,
+        region_kind: 'node',
+        byte_range: jsonKeyByteRange(request.base_source, key),
+        line_range: { start: 1, end: 1 },
+        attached_spans: [],
+        backend_id: 'native-json',
+        parser_identity: 'standard-json',
+        can_replace: true,
+        can_line_merge: false,
+        requires_reparse: true
+      }
+    ];
+  });
+}
+
+function jsonKeyByteRange(source: string, key: string): SourceRange {
+  const needle = `"${key}"`;
+  const start = source.indexOf(needle);
+  if (start < 0) return { start: 0, end: source.length };
+  let end = start + needle.length;
+  while (end < source.length && source[end] !== ',' && source[end] !== '}') end += 1;
+  return { start, end };
 }
 
 function parseJsonRole(role: string, source: string): unknown {

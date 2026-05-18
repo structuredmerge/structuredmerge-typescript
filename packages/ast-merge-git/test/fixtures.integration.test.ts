@@ -46,6 +46,18 @@ interface Fixture {
         readonly blocking_reasons: readonly string[];
         readonly diagnostics: readonly string[];
       };
+      readonly owned_regions?: readonly {
+        readonly owner_path: string;
+        readonly node_id: string;
+        readonly region_kind: string;
+        readonly line_range: { readonly start: number; readonly end: number };
+        readonly attached_spans: readonly unknown[];
+        readonly backend_id: string;
+        readonly parser_identity: string;
+        readonly can_replace: boolean;
+        readonly can_line_merge: boolean;
+        readonly requires_reparse: boolean;
+      }[];
       readonly reparse_after_render: boolean | null;
     };
   }[];
@@ -118,6 +130,14 @@ describe('@structuredmerge/ast-merge-git', () => {
         expect(result.default_driver_evaluation, testCase.case_id).toEqual(
           testCase.expected.default_driver_evaluation
         );
+      }
+      if (testCase.expected.owned_regions !== undefined) {
+        expect(result.owned_regions, testCase.case_id).toHaveLength(
+          testCase.expected.owned_regions.length
+        );
+        for (const [index, expectedRegion] of testCase.expected.owned_regions.entries()) {
+          expect(result.owned_regions[index], testCase.case_id).toMatchObject(expectedRegion);
+        }
       }
       if (result.ok) {
         expect(JSON.parse(result.merged_source ?? ''), testCase.case_id).toEqual(
