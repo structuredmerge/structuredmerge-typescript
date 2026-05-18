@@ -19,9 +19,11 @@ import {
   commentRegionSignature,
   commentRegionStartLine,
   commentRegionText,
+  detectFreezeDirectiveBlocks,
   evaluateProfilePromotion,
   evaluateProfileSelectionRequirement,
   executeGenericConflictHandler,
+  freezeDirectiveBlockForLine,
   initialProfilePromotionPolicy,
   layoutGapBlankLineCount,
   layoutGapControllerOwnerId,
@@ -84,6 +86,8 @@ import type {
   ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
   FalseTextualConflictSuite,
+  FreezeDirectiveBlock,
+  FreezeDirectiveDiagnostic,
   FormattingEdgeFixtureSuite,
   FormattingHardGateReport,
   FormattingPreservationConformanceReport,
@@ -5946,6 +5950,74 @@ describe('ast-merge shared fixtures', () => {
     expect(unresolvedCount).toBe(fixture.expected.unresolved_count);
     expect(mergeDecisionReviewRequired(fixture.decisions)).toBe(fixture.expected.review_required);
     expect(fixture.decisions).toHaveLength(fixture.expected.line_count);
+  });
+
+  it('conforms to the slice-957 freeze directive execution contract fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        id: string;
+        style: string;
+        token: string;
+        lines: readonly string[];
+        expected: {
+          valid: boolean;
+          block_count: number;
+          diagnostic_count: number;
+          blocks: readonly FreezeDirectiveBlock[];
+          diagnostics?: readonly FreezeDirectiveDiagnostic[];
+          line_queries: readonly {
+            line: number;
+            in_freeze: boolean;
+            block_id: string | null;
+          }[];
+        };
+      }[];
+      expected: {
+        case_count: number;
+        valid_case_count: number;
+        invalid_case_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-957-freeze-directive-execution-contract',
+      'freeze-directive-execution-contract.json'
+    );
+    let validCount = 0;
+    let invalidCount = 0;
+
+    for (const testCase of fixture.cases) {
+      const { blocks, diagnostics } = detectFreezeDirectiveBlocks(
+        testCase.id,
+        testCase.lines,
+        testCase.token,
+        testCase.style
+      );
+      if (testCase.expected.valid) validCount += 1;
+      else invalidCount += 1;
+
+      expect(blocks).toHaveLength(testCase.expected.block_count);
+      expect(diagnostics).toHaveLength(testCase.expected.diagnostic_count);
+      expect(diagnostics.length === 0).toBe(testCase.expected.valid);
+      if (blocks.length > 0) expect(blocks).toEqual(testCase.expected.blocks);
+      if (diagnostics.length > 0) {
+        expect(
+          diagnostics.map((diagnostic) => ({
+            category: diagnostic.category,
+            severity: diagnostic.severity,
+            line: diagnostic.line
+          }))
+        ).toEqual(testCase.expected.diagnostics);
+      }
+      for (const query of testCase.expected.line_queries) {
+        const block = freezeDirectiveBlockForLine(blocks, query.line);
+        expect(block !== undefined).toBe(query.in_freeze);
+        if (block !== undefined) expect(block.id).toBe(query.block_id);
+      }
+    }
+
+    expect(fixture.cases).toHaveLength(fixture.expected.case_count);
+    expect(validCount).toBe(fixture.expected.valid_case_count);
+    expect(invalidCount).toBe(fixture.expected.invalid_case_count);
   });
 
   it('conforms to the slice-906 merge engine suite setting fixture', () => {

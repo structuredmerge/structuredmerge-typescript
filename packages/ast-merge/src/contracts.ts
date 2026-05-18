@@ -473,6 +473,122 @@ export function mergeDecisionReviewRequired(decisions: readonly MergeDecisionRec
   return decisions.some((decision) => decision.decision === 'unresolved');
 }
 
+export interface FreezeDirectiveBlock {
+  readonly id: string;
+  readonly style?: string;
+  readonly token?: string;
+  readonly start_line: number;
+  readonly end_line: number;
+  readonly reason: string;
+  readonly content_lines: readonly string[];
+  readonly merge_policy: string;
+  readonly decision: string;
+  readonly signature: readonly string[];
+}
+
+export interface FreezeDirectiveDiagnostic {
+  readonly category: string;
+  readonly severity: string;
+  readonly message?: string;
+  readonly line: number;
+}
+
+export function detectFreezeDirectiveBlocks(
+  caseId: string,
+  lines: readonly string[],
+  token: string,
+  style: string
+): { blocks: readonly FreezeDirectiveBlock[]; diagnostics: readonly FreezeDirectiveDiagnostic[] } {
+  const blocks: FreezeDirectiveBlock[] = [];
+  const diagnostics: FreezeDirectiveDiagnostic[] = [];
+  let openLine: number | undefined;
+  let reason = '';
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    const marker = freezeDirectiveAction(line, token, style);
+    if (marker === undefined) return;
+
+    if (marker.action === 'freeze') {
+      if (openLine !== undefined) {
+        diagnostics.push({ category: 'nested_freeze_open', severity: 'error', line: lineNumber });
+        return;
+      }
+      openLine = lineNumber;
+      reason = marker.reason;
+      return;
+    }
+
+    if (openLine === undefined) {
+      diagnostics.push({ category: 'unmatched_freeze_close', severity: 'error', line: lineNumber });
+      return;
+    }
+    const start = openLine;
+    const end = lineNumber;
+    blocks.push({
+      id: `freeze:${caseId}:${start}-${end}`,
+      style,
+      token,
+      start_line: start,
+      end_line: end,
+      reason,
+      content_lines: lines.slice(start - 1, end),
+      merge_policy: 'destination',
+      decision: 'freeze_block',
+      signature: ['freeze_block', String(start), String(end)]
+    });
+    openLine = undefined;
+    reason = '';
+  });
+
+  if (openLine !== undefined) {
+    diagnostics.push({ category: 'unclosed_freeze_open', severity: 'error', line: openLine });
+    return { blocks: [], diagnostics };
+  }
+  if (diagnostics.length > 0) return { blocks: [], diagnostics };
+  return { blocks, diagnostics };
+}
+
+export function freezeDirectiveBlockForLine(
+  blocks: readonly FreezeDirectiveBlock[],
+  line: number
+): FreezeDirectiveBlock | undefined {
+  return blocks.find((block) => line >= block.start_line && line <= block.end_line);
+}
+
+function freezeDirectiveAction(
+  line: string,
+  token: string,
+  style: string
+): { action: 'freeze' | 'unfreeze'; reason: string } | undefined {
+  const content = freezeDirectiveCommentContent(line, style);
+  if (content === undefined) return undefined;
+  const prefix = `${token.toLowerCase()}:`;
+  if (!content.toLowerCase().startsWith(prefix)) return undefined;
+  const remainder = content.slice(prefix.length).trim();
+  const lower = remainder.toLowerCase();
+  if (lower.startsWith('unfreeze')) {
+    return { action: 'unfreeze', reason: remainder.slice('unfreeze'.length).trim() };
+  }
+  if (lower.startsWith('freeze')) {
+    return { action: 'freeze', reason: remainder.slice('freeze'.length).trim() };
+  }
+  return undefined;
+}
+
+function freezeDirectiveCommentContent(line: string, style: string): string | undefined {
+  const trimmed = line.trim();
+  if (style === 'hash_comment' && trimmed.startsWith('#')) return trimmed.slice(1).trim();
+  if (style === 'c_style_line' && trimmed.startsWith('//')) return trimmed.slice(2).trim();
+  if (style === 'html_comment' && trimmed.startsWith('<!--') && trimmed.endsWith('-->')) {
+    return trimmed.slice(4, -3).trim();
+  }
+  if (style === 'c_style_block' && trimmed.startsWith('/*') && trimmed.endsWith('*/')) {
+    return trimmed.slice(2, -2).trim();
+  }
+  return undefined;
+}
+
 export interface MergeIRNodeClass {
   readonly class_id: string;
   readonly signature: string;
