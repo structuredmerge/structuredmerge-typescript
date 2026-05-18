@@ -18,6 +18,11 @@ interface Fixture {
       readonly conflict_categories?: readonly string[];
       readonly conflict_paths?: readonly string[];
       readonly conflicted_source_contains?: readonly string[];
+      readonly render_report?: {
+        readonly strategy: string;
+        readonly backend_id?: string;
+        readonly parser_identity?: string;
+      };
       readonly reparse_after_render: boolean | null;
     };
   }[];
@@ -73,6 +78,9 @@ describe('@structuredmerge/ast-merge-git', () => {
       expect(result.reparse_after_render, testCase.case_id).toBe(
         testCase.expected.reparse_after_render
       );
+      if (testCase.expected.render_report !== undefined) {
+        expect(result.render_report, testCase.case_id).toEqual(testCase.expected.render_report);
+      }
       if (result.ok) {
         expect(JSON.parse(result.merged_source ?? ''), testCase.case_id).toEqual(
           testCase.expected.merged_json

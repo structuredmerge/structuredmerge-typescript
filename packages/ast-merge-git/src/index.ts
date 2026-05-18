@@ -32,6 +32,8 @@ export interface Merge3Response {
   readonly profile: Readonly<Record<string, string>>;
   readonly render_report: {
     readonly strategy: string;
+    readonly backend_id?: string;
+    readonly parser_identity?: string;
   };
   readonly formatting_preservation: {
     readonly line_diff_score: number;
@@ -169,6 +171,7 @@ function response(
       dialect: request.dialect ?? ''
     },
     render_report: {
+      ...renderIdentity(request),
       strategy: fields.render_report?.strategy ?? request.render_policy ?? 'canonical'
     },
     formatting_preservation: fields.formatting_preservation ?? {
@@ -177,6 +180,19 @@ function response(
     },
     reparse_after_render: fields.reparse_after_render ?? null
   };
+}
+
+function renderIdentity(request: Merge3Request): {
+  readonly backend_id?: string;
+  readonly parser_identity?: string;
+} {
+  if (normalizeLanguage(request) === 'json') {
+    return {
+      backend_id: 'native-json',
+      parser_identity: 'standard-json'
+    };
+  }
+  return {};
 }
 
 function renderConflictSource(
