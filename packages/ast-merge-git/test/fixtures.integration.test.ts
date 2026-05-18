@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { merge3, type Merge3Request } from '../src/index';
+import { merge3, mergeCommentDelta, type Merge3Request } from '../src/index';
 
 interface Fixture {
   readonly contract: {
@@ -26,6 +26,34 @@ interface Fixture {
 function readFixture(...parts: readonly string[]): Fixture {
   const source = readFileSync(path.join('..', 'fixtures', ...parts), 'utf8');
   return JSON.parse(source) as Fixture;
+}
+
+interface CommentDeltaFixture {
+  readonly contract: {
+    readonly package: string;
+    readonly operation: string;
+  };
+  readonly owner: {
+    readonly path: string;
+  };
+  readonly cases: readonly {
+    readonly case_id: string;
+    readonly base_comment: string | null;
+    readonly ours_comment: string | null;
+    readonly theirs_comment: string | null;
+    readonly expected: {
+      readonly ok: boolean;
+      readonly merged_comment?: string | null;
+      readonly conflict_count: number;
+      readonly conflict_categories?: readonly string[];
+      readonly comment_owner_path?: string;
+    };
+  }[];
+}
+
+function readCommentDeltaFixture(...parts: readonly string[]): CommentDeltaFixture {
+  const source = readFileSync(path.join('..', 'fixtures', ...parts), 'utf8');
+  return JSON.parse(source) as CommentDeltaFixture;
 }
 
 describe('@structuredmerge/ast-merge-git', () => {
@@ -61,6 +89,39 @@ describe('@structuredmerge/ast-merge-git', () => {
         for (const needle of testCase.expected.conflicted_source_contains ?? []) {
           expect(result.conflicted_source, testCase.case_id).toContain(needle);
         }
+      }
+    }
+  });
+
+  it('conforms to the git comment delta semantics fixture', () => {
+    const fixture = readCommentDeltaFixture(
+      'diagnostics',
+      'slice-953-git-comment-delta-semantics',
+      'git-comment-delta-semantics.json'
+    );
+    expect(fixture.contract.package).toBe('ast-merge-git');
+    expect(fixture.contract.operation).toBe('comment_delta_semantics');
+
+    for (const testCase of fixture.cases) {
+      const result = mergeCommentDelta(
+        testCase.base_comment,
+        testCase.ours_comment,
+        testCase.theirs_comment,
+        fixture.owner.path
+      );
+      expect(result.ok, testCase.case_id).toBe(testCase.expected.ok);
+      expect(result.conflicts, testCase.case_id).toHaveLength(testCase.expected.conflict_count);
+      if ('merged_comment' in testCase.expected) {
+        expect(result.merged_comment, testCase.case_id).toBe(testCase.expected.merged_comment);
+      }
+      if (testCase.expected.conflict_categories !== undefined) {
+        expect(
+          result.conflicts.map((conflict) => conflict.category),
+          testCase.case_id
+        ).toEqual(testCase.expected.conflict_categories);
+      }
+      if (testCase.expected.comment_owner_path !== undefined) {
+        expect(fixture.owner.path, testCase.case_id).toBe(testCase.expected.comment_owner_path);
       }
     }
   });

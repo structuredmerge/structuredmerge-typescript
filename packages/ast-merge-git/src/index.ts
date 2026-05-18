@@ -40,6 +40,12 @@ export interface Merge3Response {
   readonly reparse_after_render: boolean | null;
 }
 
+export interface CommentDeltaResult {
+  readonly ok: boolean;
+  readonly merged_comment: string | null;
+  readonly conflicts: readonly Merge3Conflict[];
+}
+
 const absent = Symbol('absent');
 type MaybeAbsent = unknown | typeof absent;
 
@@ -110,6 +116,42 @@ export function merge3Json(request: Merge3Request): Merge3Response {
   }
 }
 
+export function mergeCommentDelta(
+  baseComment: string | null,
+  oursComment: string | null,
+  theirsComment: string | null,
+  ownerPath: string
+): CommentDeltaResult {
+  const conflicts: Merge3Conflict[] = [];
+  let mergedComment: string | null = null;
+
+  if (oursComment === theirsComment) {
+    mergedComment = oursComment;
+  } else if (baseComment === oursComment) {
+    mergedComment = theirsComment;
+  } else if (baseComment === theirsComment) {
+    mergedComment = oursComment;
+  } else if (oursComment === null) {
+    conflicts.push(
+      commentConflict('delete_edit', ownerPath, 'ours deleted a comment that theirs edited')
+    );
+  } else if (theirsComment === null) {
+    conflicts.push(
+      commentConflict('delete_edit', ownerPath, 'theirs deleted a comment that ours edited')
+    );
+  } else {
+    conflicts.push(
+      commentConflict('edit_edit', ownerPath, 'comment changed differently in ours and theirs')
+    );
+  }
+
+  return {
+    ok: conflicts.length === 0,
+    merged_comment: conflicts.length === 0 ? mergedComment : null,
+    conflicts
+  };
+}
+
 function response(
   request: Merge3Request,
   fields: Partial<Merge3Response> & { readonly ok: boolean }
@@ -137,7 +179,10 @@ function response(
   };
 }
 
-function renderConflictSource(request: Merge3Request, conflicts: readonly Merge3Conflict[]): string {
+function renderConflictSource(
+  request: Merge3Request,
+  conflicts: readonly Merge3Conflict[]
+): string {
   const markerSize = Math.max(request.conflict_marker_size ?? 7, 1);
   return [
     `/* smorg structured conflicts: ${conflicts.length} unresolved */`,
@@ -186,7 +231,9 @@ function mergeJsonObjects(
   conflicts: Merge3Conflict[]
 ): Readonly<Record<string, unknown>> {
   const result: Record<string, unknown> = {};
-  const keys = [...new Set([...Object.keys(base), ...Object.keys(ours), ...Object.keys(theirs)])].sort();
+  const keys = [
+    ...new Set([...Object.keys(base), ...Object.keys(ours), ...Object.keys(theirs)])
+  ].sort();
   for (const key of keys) {
     const [merged, keep] = mergeJsonEntry(
       Object.hasOwn(base, key) ? base[key] : absent,
@@ -244,6 +291,15 @@ function addConflict(
     path: path || '/',
     message
   });
+}
+
+function commentConflict(category: string, path: string, message: string): Merge3Conflict {
+  return {
+    conflict_id: 'comment-conflict-1',
+    category,
+    path: path || '/',
+    message
+  };
 }
 
 function jsonPointerJoin(parent: string, token: string): string {
