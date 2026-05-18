@@ -60,6 +60,7 @@ interface GitDriverFallbackCase {
     readonly merged_source?: string;
     readonly source_contains?: readonly string[];
     readonly stderr_contains: readonly string[];
+    readonly stderr_not_contains?: readonly string[];
     readonly machine_report: {
       readonly ok: boolean;
       readonly exit_code: number;
@@ -237,6 +238,9 @@ describe('smorg-ts cli', () => {
       }
       for (const needle of testCase.expected.stderr_contains) {
         expect(stderr.output(), testCase.case_id).toContain(needle);
+      }
+      for (const needle of testCase.expected.stderr_not_contains ?? []) {
+        expect(stderr.output(), testCase.case_id).not.toContain(needle);
       }
       const report = JSON.parse(readFileSync(reportPath, 'utf8')) as {
         ok: boolean;
