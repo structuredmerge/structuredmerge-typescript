@@ -66,6 +66,7 @@ interface GitDriverFallbackCase {
       readonly exit_code: number;
       readonly fallbacks: readonly unknown[];
       readonly diagnostics_contain: readonly string[];
+      readonly required_fields?: readonly string[];
     };
   };
 }
@@ -255,6 +256,9 @@ describe('smorg-ts cli', () => {
       const diagnostics = JSON.stringify(report.diagnostics);
       for (const needle of expectedReport.diagnostics_contain) {
         expect(diagnostics, testCase.case_id).toContain(needle);
+      }
+      for (const field of expectedReport.required_fields ?? []) {
+        expect(Object.prototype.hasOwnProperty.call(report, field), testCase.case_id).toBe(true);
       }
     }
   });
