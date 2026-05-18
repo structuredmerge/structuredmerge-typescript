@@ -60,6 +60,12 @@ interface GitDriverFallbackCase {
     readonly merged_source?: string;
     readonly source_contains?: readonly string[];
     readonly stderr_contains: readonly string[];
+    readonly machine_report: {
+      readonly ok: boolean;
+      readonly exit_code: number;
+      readonly fallbacks: readonly unknown[];
+      readonly diagnostics_contain: readonly string[];
+    };
   };
 }
 
@@ -207,11 +213,13 @@ describe('smorg-ts cli', () => {
       const ancestor = write('ancestor.json', testCase.base_source);
       const current = write('current.json', testCase.ours_source);
       const other = write('other.json', testCase.theirs_source);
+      const reportPath = path.join(dir, 'merge-report.json');
       const args = ['merge-driver'];
       if (testCase.options.strict) args.push('--strict');
       if (testCase.options.fallback && testCase.options.fallback !== 'full-file') {
         args.push('--fallback', testCase.options.fallback);
       }
+      args.push('--report', reportPath);
       args.push(ancestor, current, other, testCase.path_name);
       const stdout = writer();
       const stderr = writer();
@@ -229,6 +237,20 @@ describe('smorg-ts cli', () => {
       }
       for (const needle of testCase.expected.stderr_contains) {
         expect(stderr.output(), testCase.case_id).toContain(needle);
+      }
+      const report = JSON.parse(readFileSync(reportPath, 'utf8')) as {
+        ok: boolean;
+        exit_code: number;
+        fallbacks: unknown[];
+        diagnostics: unknown[];
+      };
+      const expectedReport = testCase.expected.machine_report;
+      expect(report.ok, testCase.case_id).toBe(expectedReport.ok);
+      expect(report.exit_code, testCase.case_id).toBe(expectedReport.exit_code);
+      expect(report.fallbacks, testCase.case_id).toEqual(expectedReport.fallbacks);
+      const diagnostics = JSON.stringify(report.diagnostics);
+      for (const needle of expectedReport.diagnostics_contain) {
+        expect(diagnostics, testCase.case_id).toContain(needle);
       }
     }
   });

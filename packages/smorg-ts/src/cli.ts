@@ -7,7 +7,7 @@ import {
   initialProfilePromotionPolicy,
   promotionProfileJsonKeyedObject
 } from '@structuredmerge/ast-merge';
-import type { MergeResult, ProfilePromotionStatus } from '@structuredmerge/ast-merge';
+import type { Diagnostic, MergeResult, ProfilePromotionStatus } from '@structuredmerge/ast-merge';
 import { merge3 } from '@structuredmerge/ast-merge-git';
 import { mergeGo } from '@structuredmerge/go-merge';
 import { mergeJson } from '@structuredmerge/json-merge';
@@ -28,6 +28,7 @@ interface MergeDriverOptions {
   readonly fallback: string;
   readonly checkOnly: boolean;
   readonly exitCode: boolean;
+  readonly report?: string;
   readonly profileId?: string;
   readonly profileReport: boolean;
   readonly requireProfileStatus?: string;
@@ -90,7 +91,7 @@ export function run(
 function printUsage(out: Pick<NodeJS.WriteStream, 'write'>): void {
   out.write(
     [
-      'usage: smorg-ts merge-driver [--path-name PATH] [--output PATH] [--strict] [--fallback=none|line|local|full-file] %O %A %B [%P]',
+      'usage: smorg-ts merge-driver [--path-name PATH] [--output PATH] [--report PATH] [--strict] [--fallback=none|line|local|full-file] %O %A %B [%P]',
       '       smorg-ts merge-driver --ancestor %O --current %A --other %B --path-name %P',
       '       smorg-ts diff-driver [--path-name PATH] OLD NEW',
       '       smorg-ts diff-driver PATH OLD-FILE OLD-HEX OLD-MODE NEW-FILE NEW-HEX NEW-MODE [OLD-PREFIX NEW-PREFIX]',
@@ -140,7 +141,14 @@ function runMergeDriver(
   let output = result.output;
   if (!result.ok) {
     printDiagnostics(stderr, result);
+    const fallbacks: Array<Record<string, unknown>> = [];
     if (output === undefined && !options.strict && options.fallback !== 'none') {
+      fallbacks.push({
+        mode: 'full_file',
+        requested_mode: options.fallback,
+        reason: fallbackReason(result.diagnostics),
+        applied: true
+      });
       output = fullFileConflictOutput(
         settings.conflictMarkerSize,
         ancestorSource,
@@ -148,6 +156,16 @@ function runMergeDriver(
         otherSource
       );
     }
+    const reportExit = writeMergeDriverMachineReport(
+      options.report,
+      effectivePath,
+      false,
+      exitUnresolvedConflict,
+      fallbacks,
+      result.diagnostics,
+      stderr
+    );
+    if (reportExit !== exitSuccess) return reportExit;
     if (options.checkOnly) return exitUnresolvedConflict;
     if (output !== undefined) {
       try {
@@ -165,7 +183,18 @@ function runMergeDriver(
   }
 
   if (options.checkOnly) {
-    return options.exitCode && output !== currentSource ? exitUnresolvedConflict : exitSuccess;
+    const exit = options.exitCode && output !== currentSource ? exitUnresolvedConflict : exitSuccess;
+    const reportExit = writeMergeDriverMachineReport(
+      options.report,
+      effectivePath,
+      true,
+      exit,
+      [],
+      result.diagnostics,
+      stderr
+    );
+    if (reportExit !== exitSuccess) return reportExit;
+    return exit;
   }
 
   try {
@@ -174,7 +203,54 @@ function runMergeDriver(
     stderr.write(`write output: ${String(error)}\n`);
     return exitInternalError;
   }
+  const reportExit = writeMergeDriverMachineReport(
+    options.report,
+    effectivePath,
+    true,
+    exitSuccess,
+    [],
+    result.diagnostics,
+    stderr
+  );
+  if (reportExit !== exitSuccess) return reportExit;
   return exitSuccess;
+}
+
+function writeMergeDriverMachineReport(
+  reportPath: string | undefined,
+  pathName: string,
+  ok: boolean,
+  exitCode: number,
+  fallbacks: Array<Record<string, unknown>>,
+  diagnostics: readonly Diagnostic[],
+  stderr: Pick<NodeJS.WriteStream, 'write'>
+): number {
+  if (!reportPath) return exitSuccess;
+  try {
+    writeFileSync(
+      reportPath,
+      `${JSON.stringify(
+        {
+          command: 'merge-driver',
+          path_name: pathName,
+          ok,
+          exit_code: exitCode,
+          fallbacks,
+          diagnostics
+        },
+        undefined,
+        2
+      )}\n`
+    );
+    return exitSuccess;
+  } catch (error) {
+    stderr.write(`write report: ${String(error)}\n`);
+    return exitInternalError;
+  }
+}
+
+function fallbackReason(diagnostics: readonly Diagnostic[]): string {
+  return diagnostics[0]?.category ?? 'structured_merge_failed';
 }
 
 function fullFileConflictOutput(
@@ -209,6 +285,7 @@ function parseMergeDriverOptions(
   let fallback = 'full-file';
   let checkOnly = false;
   let exitCode = false;
+  let report: string | undefined;
   let profileId: string | undefined;
   let profileReport = false;
   let requireProfileStatus: string | undefined;
@@ -231,6 +308,9 @@ function parseMergeDriverOptions(
         break;
       case '--output':
         output = args[++index];
+        break;
+      case '--report':
+        report = args[++index];
         break;
       case '--strict':
         strict = true;
@@ -288,6 +368,7 @@ function parseMergeDriverOptions(
     fallback,
     checkOnly,
     exitCode,
+    report,
     profileId,
     profileReport,
     requireProfileStatus
