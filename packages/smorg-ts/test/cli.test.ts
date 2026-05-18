@@ -298,10 +298,13 @@ describe('smorg-ts cli', () => {
     const report = JSON.parse(readFileSync(reportPath, 'utf8')) as {
       render_report: { strategy: string };
       owned_regions: Array<{ owner_path: string; region_kind: string }>;
+      profile: { profile_id: string; language: string };
     };
     expect(report.render_report.strategy).toBe('owned_region_conflict_markers');
     expect(report.owned_regions[0]?.owner_path).toBe('/enabled');
     expect(report.owned_regions[0]?.region_kind).toBe('node');
+    expect(report.profile.profile_id).toBe('json.keyed-object');
+    expect(report.profile.language).toBe('json');
   });
 
   it('conforms to the git-driver JSON integration fixture in a repository', () => {

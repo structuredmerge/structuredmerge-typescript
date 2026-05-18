@@ -63,6 +63,7 @@ interface ConflictRegion {
 type MergeDriverResult = MergeResult<string> & {
   readonly owned_regions?: Merge3Response['owned_regions'];
   readonly render_report?: Merge3Response['render_report'];
+  readonly profile?: Merge3Response['profile'];
 };
 
 export function run(
@@ -170,6 +171,7 @@ function runMergeDriver(
       fallbacks,
       result.owned_regions ?? [],
       result.render_report,
+      result.profile,
       result.diagnostics,
       stderr
     );
@@ -200,6 +202,7 @@ function runMergeDriver(
       [],
       result.owned_regions ?? [],
       result.render_report,
+      result.profile,
       result.diagnostics,
       stderr
     );
@@ -221,6 +224,7 @@ function runMergeDriver(
     [],
     result.owned_regions ?? [],
     result.render_report,
+    result.profile,
     result.diagnostics,
     stderr
   );
@@ -236,6 +240,7 @@ function writeMergeDriverMachineReport(
   fallbacks: Array<Record<string, unknown>>,
   ownedRegions: Merge3Response['owned_regions'],
   renderReport: Merge3Response['render_report'] | undefined,
+  profile: Merge3Response['profile'] | undefined,
   diagnostics: readonly Diagnostic[],
   stderr: Pick<NodeJS.WriteStream, 'write'>
 ): number {
@@ -252,6 +257,7 @@ function writeMergeDriverMachineReport(
           fallbacks,
           owned_regions: ownedRegions,
           render_report: renderReport,
+          profile,
           diagnostics
         },
         undefined,
@@ -615,6 +621,7 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeDriverResult {
       output: result.merged_source,
       owned_regions: result.owned_regions,
       render_report: result.render_report,
+      profile: result.profile,
       policies: []
     };
   }
@@ -625,6 +632,7 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeDriverResult {
       output: result.conflicted_source,
       owned_regions: result.owned_regions,
       render_report: result.render_report,
+      profile: result.profile,
       policies: []
     };
   }
@@ -633,6 +641,7 @@ function merge3Result(result: ReturnType<typeof merge3>): MergeDriverResult {
     diagnostics: result.diagnostics,
     owned_regions: result.owned_regions,
     render_report: result.render_report,
+    profile: result.profile,
     policies: []
   };
 }
