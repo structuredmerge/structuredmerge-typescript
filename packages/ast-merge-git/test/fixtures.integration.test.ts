@@ -27,6 +27,13 @@ interface Fixture {
         readonly line_diff_score: number;
         readonly character_diff_score: number;
       };
+      readonly secondary_formatting_metrics?: {
+        readonly unchanged_line_churn: number;
+        readonly output_diff_size: number;
+        readonly source_fragment_retention: number;
+        readonly weighted: boolean;
+        readonly diagnostics: readonly string[];
+      };
       readonly reparse_after_render: boolean | null;
     };
   }[];
@@ -88,6 +95,11 @@ describe('@structuredmerge/ast-merge-git', () => {
       if (testCase.expected.formatting_preservation !== undefined) {
         expect(result.formatting_preservation, testCase.case_id).toEqual(
           testCase.expected.formatting_preservation
+        );
+      }
+      if (testCase.expected.secondary_formatting_metrics !== undefined) {
+        expect(result.secondary_formatting_metrics, testCase.case_id).toEqual(
+          testCase.expected.secondary_formatting_metrics
         );
       }
       if (result.ok) {

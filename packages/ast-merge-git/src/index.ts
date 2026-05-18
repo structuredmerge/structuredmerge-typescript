@@ -39,6 +39,13 @@ export interface Merge3Response {
     readonly line_diff_score: number;
     readonly character_diff_score: number;
   };
+  readonly secondary_formatting_metrics: {
+    readonly unchanged_line_churn: number;
+    readonly output_diff_size: number;
+    readonly source_fragment_retention: number;
+    readonly weighted: boolean;
+    readonly diagnostics: readonly string[];
+  };
   readonly reparse_after_render: boolean | null;
 }
 
@@ -178,7 +185,33 @@ function response(
       line_diff_score: 0,
       character_diff_score: 0
     },
+    secondary_formatting_metrics:
+      fields.secondary_formatting_metrics ??
+      secondaryFormattingMetrics(fields.merged_source !== undefined),
     reparse_after_render: fields.reparse_after_render ?? null
+  };
+}
+
+function secondaryFormattingMetrics(
+  merged: boolean
+): Merge3Response['secondary_formatting_metrics'] {
+  if (merged) {
+    return {
+      unchanged_line_churn: 0,
+      output_diff_size: 0,
+      source_fragment_retention: 1,
+      weighted: false,
+      diagnostics: ['canonical JSON has no trivia-preserving source fragments yet']
+    };
+  }
+  return {
+    unchanged_line_churn: 0,
+    output_diff_size: 0,
+    source_fragment_retention: 0,
+    weighted: false,
+    diagnostics: [
+      'unresolved conflict did not produce a merged source-fragment retention measurement'
+    ]
   };
 }
 
