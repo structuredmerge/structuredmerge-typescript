@@ -22,11 +22,18 @@ export interface Merge3Conflict {
   readonly message: string;
 }
 
+export interface ChangeClassification {
+  readonly path: string;
+  readonly ours: string;
+  readonly theirs: string;
+}
+
 export interface Merge3Response {
   readonly ok: boolean;
   readonly merged_source?: string;
   readonly conflicted_source?: string;
   readonly conflicts: readonly Merge3Conflict[];
+  readonly change_classifications: readonly ChangeClassification[];
   readonly diagnostics: readonly Diagnostic[];
   readonly fallbacks: readonly string[];
   readonly profile: Readonly<Record<string, string>>;
@@ -120,6 +127,7 @@ export function merge3Json(request: Merge3Request): Merge3Response {
     const ours = parseJsonRole('ours', request.ours_source);
     const theirs = parseJsonRole('theirs', request.theirs_source);
     const conflicts: Merge3Conflict[] = [];
+    const changeClassifications = classifyJsonChanges(base, ours, theirs);
     const merged = mergeJsonValue(base, ours, theirs, '', conflicts);
     if (conflicts.length > 0) {
       const ownedRegions = jsonOwnedRegionsForConflicts(request, conflicts);
@@ -129,6 +137,7 @@ export function merge3Json(request: Merge3Request): Merge3Response {
       return response(request, {
         ok: false,
         conflicts,
+        change_classifications: changeClassifications,
         conflicted_source: conflictedSource,
         owned_regions: ownedRegions,
         render_report: {
@@ -151,6 +160,7 @@ export function merge3Json(request: Merge3Request): Merge3Response {
     return response(request, {
       ok: true,
       merged_source: mergedSource,
+      change_classifications: changeClassifications,
       reparse_after_render: JSON.parse(mergedSource) !== undefined,
       formatting_preservation: {
         line_diff_score: 1,
@@ -225,6 +235,7 @@ function response(
     merged_source: fields.merged_source,
     conflicted_source: fields.conflicted_source,
     conflicts: fields.conflicts ?? [],
+    change_classifications: fields.change_classifications ?? [],
     diagnostics: fields.diagnostics ?? [],
     fallbacks: fields.fallbacks ?? [],
     owned_regions: fields.owned_regions ?? [],
@@ -464,6 +475,38 @@ function mergeJsonObjects(
     if (keep) result[key] = merged;
   }
   return result;
+}
+
+function classifyJsonChanges(base: unknown, ours: unknown, theirs: unknown): readonly ChangeClassification[] {
+  if (isRecord(base) && isRecord(ours) && isRecord(theirs)) {
+    const keys = [
+      ...new Set([...Object.keys(base), ...Object.keys(ours), ...Object.keys(theirs)])
+    ].sort();
+    return keys.flatMap((key) => {
+      const oursChange = classifyJsonValueChange(
+        Object.hasOwn(base, key) ? base[key] : absent,
+        Object.hasOwn(ours, key) ? ours[key] : absent
+      );
+      const theirsChange = classifyJsonValueChange(
+        Object.hasOwn(base, key) ? base[key] : absent,
+        Object.hasOwn(theirs, key) ? theirs[key] : absent
+      );
+      if (oursChange === 'unchanged' && theirsChange === 'unchanged') return [];
+      return [{ path: jsonPointerJoin('', key), ours: oursChange, theirs: theirsChange }];
+    });
+  }
+  const oursChange = classifyJsonValueChange(base, ours);
+  const theirsChange = classifyJsonValueChange(base, theirs);
+  if (oursChange === 'unchanged' && theirsChange === 'unchanged') return [];
+  return [{ path: '/', ours: oursChange, theirs: theirsChange }];
+}
+
+function classifyJsonValueChange(base: MaybeAbsent, value: MaybeAbsent): string {
+  if (base === absent && value === absent) return 'unchanged';
+  if (base === absent && value !== absent) return 'added';
+  if (base !== absent && value === absent) return 'deleted';
+  if (jsonEqual(base, value)) return 'unchanged';
+  return 'edited';
 }
 
 function mergeJsonEntry(

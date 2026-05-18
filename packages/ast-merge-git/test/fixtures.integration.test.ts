@@ -15,6 +15,11 @@ interface Fixture {
       readonly ok: boolean;
       readonly merged_json: unknown | null;
       readonly conflict_count: number;
+      readonly change_classifications?: readonly {
+        readonly path: string;
+        readonly ours: string;
+        readonly theirs: string;
+      }[];
       readonly conflict_categories?: readonly string[];
       readonly conflict_paths?: readonly string[];
       readonly conflicted_source_contains?: readonly string[];
@@ -111,6 +116,11 @@ describe('@structuredmerge/ast-merge-git', () => {
       const result = merge3(testCase.request);
       expect(result.ok, testCase.case_id).toBe(testCase.expected.ok);
       expect(result.conflicts, testCase.case_id).toHaveLength(testCase.expected.conflict_count);
+      if (testCase.expected.change_classifications !== undefined) {
+        expect(result.change_classifications, testCase.case_id).toEqual(
+          testCase.expected.change_classifications
+        );
+      }
       expect(result.reparse_after_render, testCase.case_id).toBe(
         testCase.expected.reparse_after_render
       );
