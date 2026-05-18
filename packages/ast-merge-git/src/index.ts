@@ -123,10 +123,13 @@ export function merge3Json(request: Merge3Request): Merge3Response {
     const merged = mergeJsonValue(base, ours, theirs, '', conflicts);
     if (conflicts.length > 0) {
       const ownedRegions = jsonOwnedRegionsForConflicts(request, conflicts);
+      const conflictedSource =
+        renderJsonOwnedRegionConflictSource(request, ownedRegions[0]) ??
+        renderConflictSource(request, conflicts);
       return response(request, {
         ok: false,
         conflicts,
-        conflicted_source: renderConflictSource(request, conflicts),
+        conflicted_source: conflictedSource,
         owned_regions: ownedRegions,
         render_report: {
           strategy:
@@ -330,6 +333,44 @@ function renderConflictSource(
     `${'>'.repeat(markerSize)} theirs`,
     ''
   ].join('\n');
+}
+
+function renderJsonOwnedRegionConflictSource(
+  request: Merge3Request,
+  region: OwnedRegionReport | undefined
+): string | undefined {
+  if (region === undefined || region.region_kind !== 'node') return undefined;
+  const key = region.owner_path.slice(1);
+  const oursRegion = jsonMemberSource(request.ours_source, key);
+  const baseRegion = jsonMemberSource(request.base_source, key);
+  const theirsRegion = jsonMemberSource(request.theirs_source, key);
+  if (oursRegion === undefined || baseRegion === undefined || theirsRegion === undefined) {
+    return undefined;
+  }
+  const markerSize = Math.max(request.conflict_marker_size ?? 7, 1);
+  const replacement = [
+    `${'<'.repeat(markerSize)} ours`,
+    oursRegion.text,
+    `${'|'.repeat(markerSize)} base`,
+    baseRegion.text,
+    '='.repeat(markerSize),
+    theirsRegion.text,
+    `${'>'.repeat(markerSize)} theirs`
+  ].join('\n');
+  return (
+    request.ours_source.slice(0, oursRegion.byteRange.start) +
+    replacement +
+    request.ours_source.slice(oursRegion.byteRange.end)
+  );
+}
+
+function jsonMemberSource(
+  source: string,
+  key: string
+): { readonly byteRange: SourceRange; readonly text: string } | undefined {
+  const byteRange = jsonKeyByteRange(source, key);
+  if (byteRange.end <= byteRange.start || byteRange.end > source.length) return undefined;
+  return { byteRange, text: source.slice(byteRange.start, byteRange.end) };
 }
 
 function jsonOwnedRegionsForConflicts(
