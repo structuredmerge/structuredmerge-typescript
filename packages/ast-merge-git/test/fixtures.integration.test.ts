@@ -23,6 +23,10 @@ interface Fixture {
         readonly backend_id?: string;
         readonly parser_identity?: string;
       };
+      readonly formatting_preservation?: {
+        readonly line_diff_score: number;
+        readonly character_diff_score: number;
+      };
       readonly reparse_after_render: boolean | null;
     };
   }[];
@@ -80,6 +84,11 @@ describe('@structuredmerge/ast-merge-git', () => {
       );
       if (testCase.expected.render_report !== undefined) {
         expect(result.render_report, testCase.case_id).toEqual(testCase.expected.render_report);
+      }
+      if (testCase.expected.formatting_preservation !== undefined) {
+        expect(result.formatting_preservation, testCase.case_id).toEqual(
+          testCase.expected.formatting_preservation
+        );
       }
       if (result.ok) {
         expect(JSON.parse(result.merged_source ?? ''), testCase.case_id).toEqual(
