@@ -7,17 +7,322 @@ import type {
   TemplateTokenConfig,
   TemplateTreeRunResult
 } from '@structuredmerge/ast-merge';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   DEFAULT_TEMPLATE_TOKEN_CONFIG,
   applyTemplateTreeExecutionToDirectory,
   planTemplateTreeExecutionFromDirectories,
-  reportTemplateDirectoryRunner
+  reportTemplateDirectoryRunner,
+  resolveTemplateTokens
 } from '@structuredmerge/ast-merge';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 
 export const packageName = '@structuredmerge/ast-template';
+
+export const README_FAMILY_LANGUAGE_ORDER = ['go', 'ruby', 'rust', 'typescript'] as const;
+
+const README_FAMILY_LANGUAGE_LABELS: Readonly<Record<string, string>> = {
+  go: 'Go',
+  ruby: 'Ruby',
+  rust: 'Rust',
+  typescript: 'TypeScript'
+};
+
+function readmeFamilyLabel(language: string): string {
+  return README_FAMILY_LANGUAGE_LABELS[language] ?? language;
+}
+
+function stringField(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function recordField(value: unknown): Readonly<Record<string, unknown>> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : {};
+}
+
+export function readmeFamilyLanguageAliases(
+  selfLanguage: string,
+  languageOrder: readonly string[] = README_FAMILY_LANGUAGE_ORDER
+): Readonly<Record<string, string>> {
+  const aliases: Record<string, string> = {
+    SELF_LANG: readmeFamilyLabel(selfLanguage),
+    SELF_LANG_ID: selfLanguage
+  };
+  languageOrder
+    .filter((language) => language !== selfLanguage)
+    .forEach((language, index) => {
+      const prefix = `IMP_LANG${index + 1}`;
+      aliases[prefix] = readmeFamilyLabel(language);
+      aliases[`${prefix}_ID`] = language;
+    });
+
+  return aliases;
+}
+
+export function readmeFamilyTokenValues(
+  family: Readonly<Record<string, unknown>>
+): Readonly<Record<string, string>> {
+  const self = recordField(family.self);
+  const selfId = stringField(self.id);
+  const implementations = new Map<string, Readonly<Record<string, unknown>>>();
+  const rawImplementations = Array.isArray(family.implementations) ? family.implementations : [];
+  for (const rawImplementation of rawImplementations) {
+    const implementation = recordField(rawImplementation);
+    implementations.set(stringField(implementation.id), implementation);
+  }
+
+  const tokens: Record<string, string> = {
+    ...readmeFamilyLanguageAliases(selfId),
+    FAMILY_SECTION_HEADING: stringField(family.section_heading),
+    FAMILY_DESCRIPTION: stringField(family.description),
+    SELF_PACKAGE_ROOT: stringField(self.package_root),
+    SELF_PACKAGE_MANAGER: stringField(self.package_manager)
+  };
+
+  README_FAMILY_LANGUAGE_ORDER.filter((language) => language !== selfId).forEach((language, index) => {
+    const implementation = implementations.get(language) ?? {};
+    const prefix = `IMP_LANG${index + 1}`;
+    tokens[`${prefix}_PACKAGE_ROOT`] = stringField(implementation.package_root);
+    tokens[`${prefix}_PACKAGE_MANAGER`] = stringField(implementation.package_manager);
+  });
+
+  return tokens;
+}
+
+export function renderReadmeFamilySection(
+  templatePartial: string,
+  family: Readonly<Record<string, unknown>>,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): string {
+  const replacements: Record<string, string> = {};
+  for (const [key, value] of Object.entries(readmeFamilyTokenValues(family))) {
+    replacements[`SM|${key}`] = value;
+  }
+
+  return resolveTemplateTokens(templatePartial, replacements, config);
+}
+
+export function applyReadmeFamilySection(
+  templatePartial: string,
+  packageMetadata: Readonly<Record<string, unknown>>,
+  family: Readonly<Record<string, unknown>>,
+  destinationContent: string | null,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): { content: string; changed: boolean } {
+  const renderedSection = renderReadmeFamilySection(templatePartial, family, config).replace(/\n+$/u, '');
+  const baseContent =
+    destinationContent ??
+    `# ${stringField(packageMetadata.name)}\n\n${stringField(packageMetadata.summary)}\n`;
+  const content = replaceOrInsertMarkdownHeadingSection(
+    baseContent,
+    stringField(family.section_heading),
+    2,
+    renderedSection
+  );
+
+  return { content, changed: content !== baseContent };
+}
+
+export interface ReadmeFamilyPackage {
+  id: string;
+  readme_path: string;
+  package: Readonly<Record<string, unknown>>;
+  family: Readonly<Record<string, unknown>>;
+}
+
+export interface ReadmeFamilyPackageReportEntry {
+  id: string;
+  readme_path: string;
+  changed: boolean;
+  created: boolean;
+}
+
+export interface ReadmeFamilyPackageReport {
+  package_count: number;
+  changed_count: number;
+  created_count: number;
+  entries: ReadmeFamilyPackageReportEntry[];
+}
+
+export interface ReadmeFamilySectionCommand {
+  profile_name: string;
+  mode?: DirectorySessionMode;
+  root: string;
+  template_partial: string;
+  packages: readonly ReadmeFamilyPackage[];
+}
+
+export interface ReadmeFamilySectionCommandReport {
+  profile_name: string;
+  mode: DirectorySessionMode;
+  runner: ReadmeFamilyPackageReport;
+}
+
+export function applyReadmeFamilySectionsToPackageDirectories(
+  root: string,
+  templatePartial: string,
+  packages: readonly ReadmeFamilyPackage[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilyPackageReport {
+  return runReadmeFamilySectionsForPackageDirectories(root, templatePartial, packages, true, config);
+}
+
+export function planReadmeFamilySectionsForPackageDirectories(
+  root: string,
+  templatePartial: string,
+  packages: readonly ReadmeFamilyPackage[],
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilyPackageReport {
+  return runReadmeFamilySectionsForPackageDirectories(root, templatePartial, packages, false, config);
+}
+
+export function runReadmeFamilySectionCommand(
+  command: ReadmeFamilySectionCommand,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilySectionCommandReport {
+  const mode = command.mode ?? 'plan';
+  return {
+    profile_name: command.profile_name,
+    mode,
+    runner: runReadmeFamilySectionsForPackageDirectories(
+      command.root,
+      command.template_partial,
+      command.packages,
+      mode === 'apply' || mode === 'reapply',
+      config
+    )
+  };
+}
+
+function runReadmeFamilySectionsForPackageDirectories(
+  root: string,
+  templatePartial: string,
+  packages: readonly ReadmeFamilyPackage[],
+  writeChanges: boolean,
+  config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
+): ReadmeFamilyPackageReport {
+  const report: ReadmeFamilyPackageReport = {
+    package_count: packages.length,
+    changed_count: 0,
+    created_count: 0,
+    entries: []
+  };
+
+  for (const packageEntry of packages) {
+    const readmePath = path.join(root, ...packageEntry.readme_path.split('/'));
+    let destinationContent: string | null = null;
+    let created = false;
+    try {
+      destinationContent = readFileSync(readmePath, 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        created = true;
+      } else {
+        throw error;
+      }
+    }
+
+    const application = applyReadmeFamilySection(
+      templatePartial,
+      packageEntry.package,
+      packageEntry.family,
+      destinationContent,
+      config
+    );
+    if (application.changed) {
+      if (writeChanges) {
+        mkdirSync(path.dirname(readmePath), { recursive: true });
+        writeFileSync(readmePath, application.content);
+      }
+      report.changed_count += 1;
+      if (created) {
+        report.created_count += 1;
+      }
+    }
+    report.entries.push({
+      id: packageEntry.id,
+      readme_path: packageEntry.readme_path,
+      changed: application.changed,
+      created: created && application.changed
+    });
+  }
+
+  return report;
+}
+
+function replaceOrInsertMarkdownHeadingSection(
+  content: string,
+  headingText: string,
+  headingLevel: number,
+  replacement: string
+): string {
+  const normalized = content.replace(/\n+$/u, '');
+  if (normalized === '') {
+    return `${replacement}\n`;
+  }
+
+  const lines = normalized.split('\n');
+  const headingPrefix = `${'#'.repeat(headingLevel)} `;
+  const headingIndex = lines.findIndex((line) => line.trim() === `${headingPrefix}${headingText}`);
+  if (headingIndex >= 0) {
+    let end = lines.length;
+    for (let index = headingIndex + 1; index < lines.length; index += 1) {
+      const level = markdownHeadingLevel(lines[index]);
+      if (level > 0 && level <= headingLevel) {
+        end = index;
+        break;
+      }
+    }
+    const outputLines = [
+      ...lines.slice(0, headingIndex),
+      ...replacement.split('\n'),
+      ...(end < lines.length && lines[end] !== '' ? [''] : []),
+      ...lines.slice(end)
+    ];
+    return `${outputLines.join('\n')}\n`;
+  }
+
+  const insertAt = readmeFamilySectionInsertIndex(lines);
+  const outputLines = [
+    ...lines.slice(0, insertAt),
+    ...(insertAt > 0 && lines[insertAt - 1] !== '' ? [''] : []),
+    ...replacement.split('\n'),
+    ...(insertAt < lines.length && lines[insertAt] !== '' ? [''] : []),
+    ...lines.slice(insertAt)
+  ];
+  return `${outputLines.join('\n')}\n`;
+}
+
+function markdownHeadingLevel(line: string): number {
+  const trimmed = line.trim();
+  const match = /^(#{1,6})\s/u.exec(trimmed);
+  return match ? match[1].length : 0;
+}
+
+function readmeFamilySectionInsertIndex(lines: readonly string[]): number {
+  let index = 0;
+  if (markdownHeadingLevel(lines[0] ?? '') === 1) {
+    index = 1;
+    while (index < lines.length && lines[index] === '') {
+      index += 1;
+    }
+  }
+  while (index < lines.length) {
+    if (lines[index] === '') {
+      while (index < lines.length && lines[index] === '') {
+        index += 1;
+      }
+      return index;
+    }
+    index += 1;
+  }
+  return lines.length;
+}
 
 export type DirectorySessionMode = 'plan' | 'apply' | 'reapply';
 

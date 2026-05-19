@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
@@ -74,6 +74,12 @@ import {
   reportDefaultAdapterCapabilitiesFromDirectories,
   importSessionInvocationEnvelope,
   reportTemplateDirectorySessionStatus,
+  applyReadmeFamilySection,
+  applyReadmeFamilySectionsToPackageDirectories,
+  readmeFamilyLanguageAliases,
+  readmeFamilyTokenValues,
+  renderReadmeFamilySection,
+  runReadmeFamilySectionCommand,
   reapplyTemplateDirectorySessionToDirectory,
   sessionCommandEnvelope,
   sessionCommandPayloadEnvelope,
@@ -95,6 +101,119 @@ interface SessionFixtureSection {
   replacements: Record<string, string>;
   expected: unknown;
 }
+
+interface ReadmeFamilySectionTemplateContractFixture {
+  canonical_language_order: string[];
+  alias_derivation_cases: Array<{
+    self: string;
+    expected_aliases: Record<string, string>;
+    expected_alternative_ids: string[];
+  }>;
+  metadata_case: {
+    package: Record<string, unknown>;
+    family: Record<string, unknown>;
+    expected_token_values: Record<string, string>;
+  };
+  template_partial: string;
+  expected_rendered_partial: string;
+  readme_application_cases: Array<{
+    label: string;
+    destination_content: string | null;
+    expected_content: string;
+    changed: boolean;
+  }>;
+  package_directory_case: {
+    packages: Array<{
+      id: string;
+      readme_path: string;
+      package: Record<string, unknown>;
+      family: Record<string, unknown>;
+      initial_content: string | null;
+      expected_content: string;
+    }>;
+    expected_report: unknown;
+  };
+}
+
+describe('README family section template contract fixture', () => {
+  it('conforms to the shared fixture', () => {
+    const fixturePath = path.resolve(
+      process.cwd(),
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-738-readme-family-section-template-contract',
+      'readme-family-section-template-contract.json'
+    );
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as ReadmeFamilySectionTemplateContractFixture;
+
+    for (const testCase of fixture.alias_derivation_cases) {
+      const aliases = readmeFamilyLanguageAliases(testCase.self, fixture.canonical_language_order);
+      for (const [key, expected] of Object.entries(testCase.expected_aliases)) {
+        expect(aliases[key]).toBe(expected);
+      }
+      expect([aliases.IMP_LANG1_ID, aliases.IMP_LANG2_ID, aliases.IMP_LANG3_ID]).toEqual(
+        testCase.expected_alternative_ids
+      );
+    }
+
+    const tokenValues = readmeFamilyTokenValues(fixture.metadata_case.family);
+    for (const [key, expected] of Object.entries(fixture.metadata_case.expected_token_values)) {
+      expect(tokenValues[key]).toBe(expected);
+    }
+    expect(renderReadmeFamilySection(fixture.template_partial, fixture.metadata_case.family)).toBe(
+      fixture.expected_rendered_partial
+    );
+
+    for (const testCase of fixture.readme_application_cases) {
+      const actual = applyReadmeFamilySection(
+        fixture.template_partial,
+        fixture.metadata_case.package,
+        fixture.metadata_case.family,
+        testCase.destination_content
+      );
+      expect(actual.content).toBe(testCase.expected_content);
+      expect(actual.changed).toBe(testCase.changed);
+    }
+
+    const tempRoot = path.resolve(
+      process.cwd(),
+      'packages',
+      'ast-template',
+      'tmp',
+      'readme-family-packages'
+    );
+    rmSync(tempRoot, { recursive: true, force: true });
+    for (const packageCase of fixture.package_directory_case.packages) {
+      if (packageCase.initial_content !== null) {
+        const readmePath = path.join(tempRoot, ...packageCase.readme_path.split('/'));
+        mkdirSync(path.dirname(readmePath), { recursive: true });
+        writeFileSync(readmePath, packageCase.initial_content);
+      }
+    }
+    const report = applyReadmeFamilySectionsToPackageDirectories(
+      tempRoot,
+      fixture.template_partial,
+      fixture.package_directory_case.packages
+    );
+    expect(report).toEqual(fixture.package_directory_case.expected_report);
+    const commandReport = runReadmeFamilySectionCommand({
+      profile_name: 'update-readme-family-section',
+      mode: 'plan',
+      root: tempRoot,
+      template_partial: fixture.template_partial,
+      packages: fixture.package_directory_case.packages
+    });
+    expect(commandReport.profile_name).toBe('update-readme-family-section');
+    expect(commandReport.mode).toBe('plan');
+    expect(commandReport.runner.changed_count).toBe(0);
+    for (const packageCase of fixture.package_directory_case.packages) {
+      const readmePath = path.join(tempRoot, ...packageCase.readme_path.split('/'));
+      expect(readFileSync(readmePath, 'utf8')).toBe(packageCase.expected_content);
+    }
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+});
 
 describe('template directory session report fixture', () => {
   it('conforms to the shared fixture', () => {

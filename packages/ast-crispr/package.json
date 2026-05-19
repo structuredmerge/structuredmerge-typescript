@@ -1,0 +1,20 @@
+{
+  "name": "@structuredmerge/ast-crispr",
+  "version": "0.2.0",
+  "private": false,
+  "type": "module",
+  "main": "./src/index.ts",
+  "author": "Peter H. Boling",
+  "homepage": "https://structuredmerge.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/structuredmerge/structuredmerge-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/structuredmerge/structuredmerge-typescript/issues"
+  },
+  "dependencies": {
+    "@structuredmerge/ast-merge": "workspace:*"
+  }
+}
+

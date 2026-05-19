@@ -25,6 +25,36 @@ pnpm add @structuredmerge/ast-merge @structuredmerge/json-merge
 
 The packages are published under the `@structuredmerge` npm scope.
 
+## Command
+
+The TypeScript implementation ships the implementation-specific `smorg-ts`
+command. Use that name in git configuration unless a package manager or local
+install has provided a `smorg` symlink.
+
+Package-manager formulas may expose the selected implementation as `smorg`.
+For a local user-created symlink:
+
+```sh
+ln -s "$(command -v smorg-ts)" ~/.local/bin/smorg
+```
+
+```sh
+git config merge.smorg-ts.driver 'smorg-ts merge-driver %O %A %B %P'
+git config diff.smorg-ts.command 'smorg-ts diff-driver'
+smorg-ts conflicts diff path/to/file-with-conflicts.go
+smorg-ts languages --gitattributes
+```
+
+`merge-driver` updates Git's `%A` file by default, or writes to `--output` when
+used outside git. `diff-driver` accepts both the two-argument local form and the
+seven- or nine-argument forms Git passes to external diff commands.
+`conflicts diff` reports conflict-marker regions in a file that already contains
+Git conflict markers.
+
+Current semantic merge-driver coverage is fixture-backed for JSON. Other
+language and format paths should be treated as git-compatible command surfaces
+until their `ast-merge-git` coverage is promoted.
+
 ## Packages
 
 Core:

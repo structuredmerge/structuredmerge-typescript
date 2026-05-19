@@ -3,6 +3,20 @@ import path from 'node:path';
 
 export type DiagnosticSeverity = 'info' | 'warning' | 'error';
 
+export type MergeEngine = 'owner_path' | 'merge_ir_experimental';
+
+export const mergeEngineEnvironmentVariable = 'SMORG_MERGE_ENGINE';
+
+export function normalizeMergeEngine(engine?: string): MergeEngine {
+  return engine === 'merge_ir_experimental' ? 'merge_ir_experimental' : 'owner_path';
+}
+
+export function mergeEngineFromEnvironment(
+  env: Readonly<Record<string, string | undefined>>
+): MergeEngine {
+  return normalizeMergeEngine(env[mergeEngineEnvironmentVariable]);
+}
+
 export type DiagnosticCategory =
   | 'parse_error'
   | 'destination_parse_error'
@@ -115,6 +129,62 @@ export interface CompactRuleset {
   readonly comments: readonly string[];
 }
 
+export interface CompactRulesetBackendDeclaration {
+  readonly backend: string;
+  readonly support: string;
+}
+
+export interface CompactRulesetNodeRole {
+  readonly selector: string;
+  readonly role: string;
+}
+
+export interface CompactRulesetAtomicNode {
+  readonly selector: string;
+  readonly atomic: boolean;
+}
+
+export interface CompactRulesetChildGroup {
+  readonly parent_selector: string;
+  readonly name: string;
+  readonly policy: string;
+}
+
+export interface CompactRulesetNamedValue {
+  readonly name: string;
+  readonly value: string;
+}
+
+export interface CompactRulesetSurfaceDeclaration {
+  readonly name: string;
+  readonly selector: string;
+}
+
+export interface CompactRulesetDelegateDeclaration {
+  readonly surface: string;
+  readonly policy: string;
+}
+
+export interface CompactRulesetProfile {
+  readonly format: string;
+  readonly owners: string;
+  readonly match: string;
+  readonly read: string;
+  readonly attach: string;
+  readonly comment_style?: string;
+  readonly render?: string;
+  readonly render_strategy?: string;
+  readonly backends: readonly CompactRulesetBackendDeclaration[];
+  readonly node_roles: readonly CompactRulesetNodeRole[];
+  readonly atomic_nodes: readonly CompactRulesetAtomicNode[];
+  readonly child_groups: readonly CompactRulesetChildGroup[];
+  readonly capabilities: readonly CompactRulesetNamedValue[];
+  readonly logical_owners: readonly CompactRulesetNamedValue[];
+  readonly repairs: readonly CompactRulesetNamedValue[];
+  readonly surfaces: readonly CompactRulesetSurfaceDeclaration[];
+  readonly delegates: readonly CompactRulesetDelegateDeclaration[];
+}
+
 const compactRulesetIdentifierPattern = /^[A-Za-z][A-Za-z0-9_.-]*$/;
 const compactRulesetTokenPattern = /^[\x21\x24-\x7e]+$/;
 const compactRulesetRequiredDirectives = ['format', 'owners', 'match', 'read', 'attach'] as const;
@@ -125,9 +195,14 @@ const compactRulesetSingletonDirectives = new Set([
   'read',
   'attach',
   'comment_style',
-  'render'
+  'render',
+  'render_strategy'
 ]);
 const compactRulesetRepeatableKeyedDirectives = new Set([
+  'backend',
+  'node_role',
+  'atomic',
+  'child_group',
   'capability',
   'logical_owner',
   'repair',
@@ -206,7 +281,7 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
       );
     }
     if (compactRulesetRepeatableKeyedDirectives.has(name)) {
-      const key = `${name}\u0000${args[0]}`;
+      const key = compactRulesetRepeatableKey(name, args);
       if (seenRepeatableKeys.has(key)) {
         diagnostics.push(
           compactRulesetDiagnostic(
@@ -245,10 +320,109 @@ export function parseCompactRuleset(source: string): ParseResult<CompactRuleset>
     : { ok: false, diagnostics, policies: [] };
 }
 
+export function compactRulesetFeatureProfile(ruleset: CompactRuleset): CompactRulesetProfile {
+  const profile: MutableCompactRulesetProfile = {
+    format: '',
+    owners: '',
+    match: '',
+    read: '',
+    attach: '',
+    backends: [],
+    node_roles: [],
+    atomic_nodes: [],
+    child_groups: [],
+    capabilities: [],
+    logical_owners: [],
+    repairs: [],
+    surfaces: [],
+    delegates: []
+  };
+
+  for (const directive of ruleset.directives) {
+    const args = directive.arguments;
+    if (args.length === 0) continue;
+    switch (directive.name) {
+      case 'format':
+        profile.format = args[0];
+        break;
+      case 'owners':
+        profile.owners = args[0];
+        break;
+      case 'match':
+        profile.match = args[0];
+        break;
+      case 'read':
+        profile.read = args[0];
+        break;
+      case 'attach':
+        profile.attach = args[0];
+        break;
+      case 'comment_style':
+        profile.comment_style = args[0];
+        break;
+      case 'render':
+        profile.render = args[0];
+        break;
+      case 'render_strategy':
+        profile.render_strategy = args[0];
+        break;
+      case 'backend':
+        if (args.length > 1) profile.backends.push({ backend: args[0], support: args[1] });
+        break;
+      case 'node_role':
+        if (args.length > 1) profile.node_roles.push({ selector: args[0], role: args[1] });
+        break;
+      case 'atomic':
+        if (args.length > 1)
+          profile.atomic_nodes.push({ selector: args[0], atomic: args[1] === 'true' });
+        break;
+      case 'child_group':
+        if (args.length > 2) {
+          profile.child_groups.push({
+            parent_selector: args[0],
+            name: args[1],
+            policy: args[2]
+          });
+        }
+        break;
+      case 'capability':
+        if (args.length > 1) profile.capabilities.push({ name: args[0], value: args[1] });
+        break;
+      case 'logical_owner':
+        if (args.length > 1) profile.logical_owners.push({ name: args[0], value: args[1] });
+        break;
+      case 'repair':
+        if (args.length > 1) profile.repairs.push({ name: args[0], value: args[1] });
+        break;
+      case 'surface':
+        if (args.length > 1) profile.surfaces.push({ name: args[0], selector: args[1] });
+        break;
+      case 'delegate':
+        if (args.length > 1) profile.delegates.push({ surface: args[0], policy: args[1] });
+        break;
+    }
+  }
+
+  return profile;
+}
+
+type MutableCompactRulesetProfile = {
+  -readonly [K in keyof CompactRulesetProfile]: CompactRulesetProfile[K] extends readonly (infer T)[]
+    ? T[]
+    : CompactRulesetProfile[K];
+};
+
 function compactRulesetKnownDirective(name: string): boolean {
   return (
     compactRulesetSingletonDirectives.has(name) || compactRulesetRepeatableKeyedDirectives.has(name)
   );
+}
+
+function compactRulesetRepeatableKey(name: string, args: readonly string[]): string {
+  if (name === 'child_group' && args.length > 1) {
+    return `${name}\u0000${args[0]}\u0000${args[1]}`;
+  }
+  return `${name}\u0000${args[0]}`;
 }
 
 function compactRulesetDiagnostic(message: string, path?: string): Diagnostic {
@@ -267,6 +441,1848 @@ export interface MergeResult<TOutput> {
   readonly policies?: readonly PolicyReference[];
 }
 
+export interface MergeDecisionRecord {
+  readonly id: string;
+  readonly decision: string;
+  readonly source: string;
+  readonly line: number;
+  readonly owner_id: string;
+  readonly reason: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export function mergeDecisionSummary(
+  decisions: readonly MergeDecisionRecord[]
+): Readonly<Record<string, number>> {
+  return decisions.reduce<Record<string, number>>((summary, decision) => {
+    summary[decision.decision] = (summary[decision.decision] ?? 0) + 1;
+    return summary;
+  }, {});
+}
+
+export function mergeDecisionSourceSummary(
+  decisions: readonly MergeDecisionRecord[]
+): Readonly<Record<string, number>> {
+  return decisions.reduce<Record<string, number>>((summary, decision) => {
+    summary[decision.source] = (summary[decision.source] ?? 0) + 1;
+    return summary;
+  }, {});
+}
+
+export function mergeDecisionReviewRequired(decisions: readonly MergeDecisionRecord[]): boolean {
+  return decisions.some((decision) => decision.decision === 'unresolved');
+}
+
+export interface FreezeDirectiveBlock {
+  readonly id: string;
+  readonly style?: string;
+  readonly token?: string;
+  readonly start_line: number;
+  readonly end_line: number;
+  readonly reason: string;
+  readonly content_lines: readonly string[];
+  readonly merge_policy: string;
+  readonly decision: string;
+  readonly signature: readonly string[];
+}
+
+export interface FreezeDirectiveDiagnostic {
+  readonly category: string;
+  readonly severity: string;
+  readonly message?: string;
+  readonly line: number;
+}
+
+export function detectFreezeDirectiveBlocks(
+  caseId: string,
+  lines: readonly string[],
+  token: string,
+  style: string
+): { blocks: readonly FreezeDirectiveBlock[]; diagnostics: readonly FreezeDirectiveDiagnostic[] } {
+  const blocks: FreezeDirectiveBlock[] = [];
+  const diagnostics: FreezeDirectiveDiagnostic[] = [];
+  let openLine: number | undefined;
+  let reason = '';
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    const marker = freezeDirectiveAction(line, token, style);
+    if (marker === undefined) return;
+
+    if (marker.action === 'freeze') {
+      if (openLine !== undefined) {
+        diagnostics.push({ category: 'nested_freeze_open', severity: 'error', line: lineNumber });
+        return;
+      }
+      openLine = lineNumber;
+      reason = marker.reason;
+      return;
+    }
+
+    if (openLine === undefined) {
+      diagnostics.push({ category: 'unmatched_freeze_close', severity: 'error', line: lineNumber });
+      return;
+    }
+    const start = openLine;
+    const end = lineNumber;
+    blocks.push({
+      id: `freeze:${caseId}:${start}-${end}`,
+      style,
+      token,
+      start_line: start,
+      end_line: end,
+      reason,
+      content_lines: lines.slice(start - 1, end),
+      merge_policy: 'destination',
+      decision: 'freeze_block',
+      signature: ['freeze_block', String(start), String(end)]
+    });
+    openLine = undefined;
+    reason = '';
+  });
+
+  if (openLine !== undefined) {
+    diagnostics.push({ category: 'unclosed_freeze_open', severity: 'error', line: openLine });
+    return { blocks: [], diagnostics };
+  }
+  if (diagnostics.length > 0) return { blocks: [], diagnostics };
+  return { blocks, diagnostics };
+}
+
+export function freezeDirectiveBlockForLine(
+  blocks: readonly FreezeDirectiveBlock[],
+  line: number
+): FreezeDirectiveBlock | undefined {
+  return blocks.find((block) => line >= block.start_line && line <= block.end_line);
+}
+
+function freezeDirectiveAction(
+  line: string,
+  token: string,
+  style: string
+): { action: 'freeze' | 'unfreeze'; reason: string } | undefined {
+  const content = freezeDirectiveCommentContent(line, style);
+  if (content === undefined) return undefined;
+  const prefix = `${token.toLowerCase()}:`;
+  if (!content.toLowerCase().startsWith(prefix)) return undefined;
+  const remainder = content.slice(prefix.length).trim();
+  const lower = remainder.toLowerCase();
+  if (lower.startsWith('unfreeze')) {
+    return { action: 'unfreeze', reason: remainder.slice('unfreeze'.length).trim() };
+  }
+  if (lower.startsWith('freeze')) {
+    return { action: 'freeze', reason: remainder.slice('freeze'.length).trim() };
+  }
+  return undefined;
+}
+
+function freezeDirectiveCommentContent(line: string, style: string): string | undefined {
+  const trimmed = line.trim();
+  if (style === 'hash_comment' && trimmed.startsWith('#')) return trimmed.slice(1).trim();
+  if (style === 'c_style_line' && trimmed.startsWith('//')) return trimmed.slice(2).trim();
+  if (style === 'html_comment' && trimmed.startsWith('<!--') && trimmed.endsWith('-->')) {
+    return trimmed.slice(4, -3).trim();
+  }
+  if (style === 'c_style_block' && trimmed.startsWith('/*') && trimmed.endsWith('*/')) {
+    return trimmed.slice(2, -2).trim();
+  }
+  return undefined;
+}
+
+export interface MergeIRNodeClass {
+  readonly class_id: string;
+  readonly signature: string;
+  readonly node_ids: Readonly<Record<string, string>>;
+  readonly roles: readonly string[];
+}
+
+export interface MergeIROrderedNode {
+  readonly node_id: string;
+  readonly parent_id: string;
+  readonly child_ids: readonly string[];
+  readonly previous_sibling_id: string | null;
+  readonly next_sibling_id: string | null;
+}
+
+export interface MergeIRChange {
+  readonly change_id: string;
+  readonly side: string;
+  readonly kind: string;
+  readonly node_id: string;
+  readonly class_id: string | null;
+  readonly parent_id: string;
+  readonly previous_sibling_id: string | null;
+  readonly next_sibling_id: string | null;
+  readonly content_hash: string;
+}
+
+export interface MergeIR {
+  readonly version: string;
+  readonly tree_id: string;
+  readonly source: string;
+  readonly node_classes: readonly MergeIRNodeClass[];
+  readonly ordered_nodes: readonly MergeIROrderedNode[];
+  readonly changes: readonly MergeIRChange[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface LineRange {
+  readonly start_line: number;
+  readonly end_line: number;
+}
+
+export interface CommentOwnerNode {
+  readonly id: string;
+  readonly kind: string;
+  readonly semantic_roles: readonly string[];
+  readonly line_range: LineRange;
+}
+
+export interface CommentStyleDefinition {
+  readonly style: string;
+  readonly line_prefix: string | null;
+  readonly block_prefix: string | null;
+  readonly block_suffix: string | null;
+}
+
+export interface CommentLine {
+  readonly text: string;
+  readonly line_number: number;
+  readonly normalized_content: string;
+}
+
+export interface CommentRegion {
+  readonly id: string;
+  readonly kind: string;
+  readonly style: string;
+  readonly owner_id: string;
+  readonly floating: boolean;
+  readonly nodes: readonly CommentLine[];
+}
+
+export function commentRegionStartLine(region: CommentRegion): number | undefined {
+  return region.nodes.reduce<number | undefined>(
+    (start, node) => (start === undefined ? node.line_number : Math.min(start, node.line_number)),
+    undefined
+  );
+}
+
+export function commentRegionEndLine(region: CommentRegion): number | undefined {
+  return region.nodes.reduce<number | undefined>(
+    (end, node) => (end === undefined ? node.line_number : Math.max(end, node.line_number)),
+    undefined
+  );
+}
+
+export function commentRegionText(region: CommentRegion): string {
+  return region.nodes.map((node) => node.text).join('\n');
+}
+
+export function commentRegionNormalizedContent(region: CommentRegion): string {
+  return region.nodes.map((node) => node.normalized_content).join('\n');
+}
+
+export function commentRegionSignature(region: CommentRegion): readonly string[] {
+  return ['comment_region', region.kind, commentRegionNormalizedContent(region).slice(0, 121)];
+}
+
+export function commentRegionFreezeActions(
+  region: CommentRegion,
+  token: string
+): readonly string[] {
+  if (token.length === 0) return [];
+  const prefix = `${token.toLowerCase()}:`;
+  return region.nodes.flatMap((node) => {
+    const lower = node.text.toLowerCase();
+    if (lower.includes(`${prefix}freeze`)) return ['freeze'];
+    if (lower.includes(`${prefix}unfreeze`)) return ['unfreeze'];
+    return [];
+  });
+}
+
+export interface LayoutGap {
+  readonly id: string;
+  readonly kind: string;
+  readonly start_line: number;
+  readonly end_line: number;
+  readonly lines: readonly string[];
+  readonly before_owner_id: string | null;
+  readonly after_owner_id: string | null;
+  readonly controller_side: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export function layoutGapLineCount(gap: LayoutGap): number {
+  return gap.end_line - gap.start_line + 1;
+}
+
+export function layoutGapBlankLineCount(gap: LayoutGap): number {
+  return gap.lines.filter((line) => line.trim().length === 0).length;
+}
+
+export function layoutGapOwnerIdFor(gap: LayoutGap, side: string): string | undefined {
+  if (side === 'before') return gap.before_owner_id ?? undefined;
+  if (side === 'after') return gap.after_owner_id ?? undefined;
+  return undefined;
+}
+
+export function layoutGapControllerOwnerId(gap: LayoutGap): string | undefined {
+  return layoutGapOwnerIdFor(gap, gap.controller_side);
+}
+
+export function layoutGapFallbackOwnerId(gap: LayoutGap): string | undefined {
+  if (gap.controller_side === 'before') return gap.after_owner_id ?? undefined;
+  if (gap.controller_side === 'after') return gap.before_owner_id ?? undefined;
+  return undefined;
+}
+
+export function layoutGapEffectiveControllerOwnerId(
+  gap: LayoutGap,
+  removedOwners: ReadonlySet<string>
+): string | undefined {
+  const controller = layoutGapControllerOwnerId(gap);
+  if (controller !== undefined && !removedOwners.has(controller)) return controller;
+  const fallback = layoutGapFallbackOwnerId(gap);
+  if (fallback !== undefined && !removedOwners.has(fallback)) return fallback;
+  return undefined;
+}
+
+export function layoutGapLeadingFor(gap: LayoutGap, ownerId: string): boolean {
+  return gap.after_owner_id === ownerId;
+}
+
+export function layoutGapTrailingFor(gap: LayoutGap, ownerId: string): boolean {
+  return gap.before_owner_id === ownerId;
+}
+
+export function layoutGapControlsOutputFor(gap: LayoutGap, ownerId: string): boolean {
+  return layoutGapControllerOwnerId(gap) === ownerId;
+}
+
+export interface CommentAttachment {
+  readonly owner_id: string;
+  readonly leading_region_id: string | null;
+  readonly inline_region_id: string | null;
+  readonly trailing_region_id: string | null;
+  readonly orphan_region_ids: readonly string[];
+  readonly leading_gap_id: string | null;
+  readonly trailing_gap_id: string | null;
+  readonly metadata: Readonly<Record<string, unknown>>;
+}
+
+export function commentAttachmentRegionCount(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>
+): number {
+  const direct = [
+    attachment.leading_region_id,
+    attachment.inline_region_id,
+    attachment.trailing_region_id
+  ].filter((id): id is string => id !== null && regions.has(id)).length;
+  return direct + attachment.orphan_region_ids.filter((id) => regions.has(id)).length;
+}
+
+export function commentAttachmentLayoutGapCount(
+  attachment: CommentAttachment,
+  gaps: ReadonlyMap<string, LayoutGap>
+): number {
+  return new Set(
+    [attachment.leading_gap_id, attachment.trailing_gap_id].filter(
+      (id): id is string => id !== null && gaps.has(id)
+    )
+  ).size;
+}
+
+export function commentAttachmentEmpty(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>
+): boolean {
+  return commentAttachmentRegionCount(attachment, regions) === 0;
+}
+
+export function commentAttachmentLeadingRegionLayoutOwned(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>,
+  gaps: ReadonlyMap<string, LayoutGap>
+): boolean {
+  if (attachment.leading_region_id === null || attachment.leading_gap_id === null) return false;
+  const region = regions.get(attachment.leading_region_id);
+  const gap = gaps.get(attachment.leading_gap_id);
+  return (
+    region !== undefined &&
+    gap !== undefined &&
+    region.floating &&
+    layoutGapLeadingFor(gap, attachment.owner_id) &&
+    layoutGapControlsOutputFor(gap, attachment.owner_id)
+  );
+}
+
+export function commentAttachmentTrailingRegionLayoutOwned(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>,
+  gaps: ReadonlyMap<string, LayoutGap>
+): boolean {
+  if (attachment.trailing_region_id === null || attachment.trailing_gap_id === null) return false;
+  const region = regions.get(attachment.trailing_region_id);
+  const gap = gaps.get(attachment.trailing_gap_id);
+  return (
+    region !== undefined &&
+    gap !== undefined &&
+    region.floating &&
+    layoutGapTrailingFor(gap, attachment.owner_id) &&
+    layoutGapControlsOutputFor(gap, attachment.owner_id)
+  );
+}
+
+export function commentAttachmentFreezeMarker(
+  attachment: CommentAttachment,
+  regions: ReadonlyMap<string, CommentRegion>,
+  token: string
+): boolean {
+  return [
+    attachment.leading_region_id,
+    attachment.inline_region_id,
+    attachment.trailing_region_id,
+    ...attachment.orphan_region_ids
+  ]
+    .filter((id): id is string => id !== null)
+    .some((id) => {
+      const region = regions.get(id);
+      if (region === undefined) return false;
+      const actions = commentRegionFreezeActions(region, token);
+      return actions.includes('freeze') || actions.includes('unfreeze');
+    });
+}
+
+export interface PairwiseNodeMatch {
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly class_id: string;
+  readonly strategy: string;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface PairwiseMatching {
+  readonly matching_id: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly matches: readonly PairwiseNodeMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+}
+
+export interface ClassMappingNodeClass {
+  readonly class_id: string;
+  readonly signature: string;
+  readonly node_ids: Readonly<Record<string, string>>;
+  readonly matching_ids: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface ClassMappingDiagnostic {
+  readonly severity: string;
+  readonly category: string;
+  readonly class_id: string;
+  readonly message: string;
+  readonly matching_ids: readonly string[];
+}
+
+export interface ClassMappingReport {
+  readonly mapping_id: string;
+  readonly source_matching_ids: readonly string[];
+  readonly node_classes: readonly ClassMappingNodeClass[];
+  readonly diagnostics: readonly ClassMappingDiagnostic[];
+}
+
+export interface PCSConstraint {
+  readonly constraint_id: string;
+  readonly revision: string;
+  readonly parent_class_id: string;
+  readonly predecessor_class_id: string | null;
+  readonly successor_class_id: string | null;
+  readonly relation: string;
+}
+
+export interface PCS {
+  readonly pcs_id: string;
+  readonly tree_id: string;
+  readonly base_revision: string;
+  readonly constraints: readonly PCSConstraint[];
+}
+
+export interface ChangeSetChange {
+  readonly change_id: string;
+  readonly kind: string;
+  readonly class_id: string;
+  readonly parent_class_id: string;
+  readonly predecessor_class_id: string | null;
+  readonly successor_class_id: string | null;
+  readonly content_hash: string;
+}
+
+export interface ChangeSet {
+  readonly change_set_id: string;
+  readonly side: string;
+  readonly changes: readonly ChangeSetChange[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface RawMergeChange {
+  readonly change_id: string;
+  readonly source_change_set_id: string;
+  readonly side: string;
+  readonly kind: string;
+  readonly class_id: string;
+  readonly parent_class_id: string;
+  readonly predecessor_class_id: string | null;
+  readonly successor_class_id: string | null;
+  readonly content_hash: string;
+}
+
+export interface RawMerge {
+  readonly raw_merge_id: string;
+  readonly input_change_set_ids: readonly string[];
+  readonly changes: readonly RawMergeChange[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface MergeInconsistency {
+  readonly inconsistency_id: string;
+  readonly category: string;
+  readonly severity: string;
+  readonly class_ids: readonly string[];
+  readonly change_ids: readonly string[];
+  readonly message: string;
+}
+
+export interface InconsistencyReport {
+  readonly report_id: string;
+  readonly raw_merge_id: string;
+  readonly inconsistencies: readonly MergeInconsistency[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface MergeIREvaluationReport {
+  readonly merge_engine: MergeEngine;
+  readonly raw_merge: RawMerge;
+  readonly inconsistency_report: InconsistencyReport;
+  readonly outcome: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface MergeIRComparisonCase {
+  readonly case_id: string;
+  readonly family: string;
+  readonly scenario: string;
+  readonly owner_path_outcome: string;
+  readonly merge_ir_outcome: string;
+  readonly merge_ir_advantage: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface MergeIRComparisonSummary {
+  readonly owner_path_wins: number;
+  readonly merge_ir_wins: number;
+  readonly neutral: number;
+  readonly defer: number;
+  readonly recommendation: string;
+}
+
+export interface MergeIRComparisonReport {
+  readonly comparison_id: string;
+  readonly baseline: string;
+  readonly prototype: string;
+  readonly cases: readonly MergeIRComparisonCase[];
+  readonly summary: MergeIRComparisonSummary;
+}
+
+export function rawMergeChangeSets(rawMergeId: string, changeSets: readonly ChangeSet[]): RawMerge {
+  return {
+    raw_merge_id: rawMergeId,
+    input_change_set_ids: changeSets.map((changeSet) => changeSet.change_set_id),
+    changes: changeSets.flatMap((changeSet) =>
+      changeSet.changes.map((change) => ({
+        change_id: change.change_id,
+        source_change_set_id: changeSet.change_set_id,
+        side: changeSet.side,
+        kind: change.kind,
+        class_id: change.class_id,
+        parent_class_id: change.parent_class_id,
+        predecessor_class_id: change.predecessor_class_id,
+        successor_class_id: change.successor_class_id,
+        content_hash: change.content_hash
+      }))
+    ),
+    diagnostics: ['raw merge intentionally preserves both sides before inconsistency detection']
+  };
+}
+
+export function detectRawMergeInconsistencies(
+  reportId: string,
+  rawMerge: RawMerge
+): InconsistencyReport {
+  const changesByClass = new Map<string, RawMergeChange[]>();
+  for (const change of rawMerge.changes) {
+    changesByClass.set(change.class_id, [...(changesByClass.get(change.class_id) ?? []), change]);
+  }
+
+  const inconsistencies: MergeInconsistency[] = [];
+  for (const change of rawMerge.changes) {
+    if (change.kind === 'move') {
+      inconsistencies.push({
+        inconsistency_id: `order-${change.class_id}`,
+        category: 'order_conflict',
+        severity: 'warning',
+        class_ids: [change.class_id],
+        change_ids: [change.change_id],
+        message: 'branch changes predecessor/successor ordering relation'
+      });
+    }
+  }
+
+  for (const [classId, changes] of changesByClass) {
+    const changesOfKind = (kind: string) => changes.filter((change) => change.kind === kind);
+    const hashesOfKind = (kind: string) =>
+      new Set(changesOfKind(kind).map((change) => change.content_hash));
+    const insertions = changesOfKind('insert');
+    const deletes = changesOfKind('delete');
+    const contentChanges = changesOfKind('content_change');
+
+    if (insertions.length > 1 && hashesOfKind('insert').size > 1) {
+      inconsistencies.push({
+        inconsistency_id: `duplicate-${classId}`,
+        category: 'duplicate_insertion_conflict',
+        severity: 'error',
+        class_ids: [classId],
+        change_ids: insertions.map((change) => change.change_id),
+        message: 'branches insert the same class with incompatible content hashes'
+      });
+    }
+    if (deletes.length > 0 && contentChanges.length > 0) {
+      inconsistencies.push({
+        inconsistency_id: `delete-edit-${classId}`,
+        category: 'delete_edit_conflict',
+        severity: 'error',
+        class_ids: [classId],
+        change_ids: [
+          ...contentChanges.map((change) => change.change_id),
+          ...deletes.map((change) => change.change_id)
+        ],
+        message: 'one branch edits a class that another branch deletes'
+      });
+    }
+    if (contentChanges.length > 1 && hashesOfKind('content_change').size > 1) {
+      inconsistencies.push({
+        inconsistency_id: `content-${classId}`,
+        category: 'content_conflict',
+        severity: 'error',
+        class_ids: [classId],
+        change_ids: contentChanges.map((change) => change.change_id),
+        message: 'branches change class content differently'
+      });
+    }
+  }
+
+  return {
+    report_id: reportId,
+    raw_merge_id: rawMerge.raw_merge_id,
+    inconsistencies,
+    diagnostics: [
+      'inconsistency detection classifies raw merge candidates before any conflict rendering'
+    ]
+  };
+}
+
+export function evaluateMergeIRChangeSets(
+  engine: MergeEngine | undefined,
+  rawMergeId: string,
+  reportId: string,
+  changeSets: readonly ChangeSet[]
+): MergeIREvaluationReport {
+  const mergeEngine = normalizeMergeEngine(engine);
+  const rawMerge = rawMergeChangeSets(rawMergeId, changeSets);
+  const inconsistencyReport = detectRawMergeInconsistencies(reportId, rawMerge);
+  const blockingCount = inconsistencyReport.inconsistencies.filter(
+    (inconsistency) => inconsistency.severity === 'error'
+  ).length;
+
+  return {
+    merge_engine: mergeEngine,
+    raw_merge: rawMerge,
+    inconsistency_report: inconsistencyReport,
+    outcome: blockingCount > 0 ? 'blocked_by_inconsistency' : 'clean',
+    diagnostics: [
+      'merge_ir_experimental evaluates PCS-style change sets behind the opt-in engine flag'
+    ]
+  };
+}
+
+export interface StructuralPathMatch {
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly confidence: number;
+}
+
+export interface StructuralMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly matches: readonly StructuralPathMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface SignatureMatchingParent {
+  readonly kind: string;
+  readonly role: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly child_order: string;
+}
+
+export interface SignatureNodeMatch {
+  readonly signature: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface SignatureMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly parent_policy: string;
+  readonly signature_components: readonly string[];
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly matches: readonly SignatureNodeMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface SourceTextNormalizedMatch {
+  readonly normalized_text: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly from_source_text: string;
+  readonly to_source_text: string;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface SourceTextNormalizedMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly normalization: readonly string[];
+  readonly leaf_kinds: readonly string[];
+  readonly matches: readonly SourceTextNormalizedMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface MoveDetectionCapability {
+  readonly name: string;
+  readonly enabled: boolean;
+  readonly default_enabled: boolean;
+  readonly requires_stable_node_identity: boolean;
+}
+
+export interface MoveDetectionMatch {
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly signature: string;
+  readonly moved: boolean;
+  readonly from_parent_path: string;
+  readonly to_parent_path: string;
+  readonly from_index: number;
+  readonly to_index: number;
+  readonly confidence: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface MoveDetectionMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly capability: MoveDetectionCapability;
+  readonly matches: readonly MoveDetectionMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface RenameAwareCapability {
+  readonly name: string;
+  readonly status: string;
+  readonly enabled: boolean;
+  readonly requires_explicit_profile: boolean;
+  readonly requires_diagnostics: boolean;
+}
+
+export interface RenameAwareCandidate {
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly from_signature: string;
+  readonly to_signature: string;
+  readonly stable_body_hash: string;
+  readonly rename_distance: number;
+  readonly selected: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface RenameAwareMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly from_revision: string;
+  readonly to_revision: string;
+  readonly capability: RenameAwareCapability;
+  readonly candidates: readonly RenameAwareCandidate[];
+  readonly matches: readonly SignatureNodeMatch[];
+  readonly unmatched_from: readonly string[];
+  readonly unmatched_to: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface MatchingAmbiguity {
+  readonly signature: string;
+  readonly scope_path: string;
+  readonly from_candidates: readonly string[];
+  readonly to_candidates: readonly string[];
+  readonly selected: boolean;
+  readonly reason: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface AmbiguityMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly scope_path: string;
+  readonly ambiguous: boolean;
+  readonly matches: readonly SignatureNodeMatch[];
+  readonly ambiguities: readonly MatchingAmbiguity[];
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+export interface RejectedTieBreakCandidate {
+  readonly from_path: string;
+  readonly from_node_id: string;
+  readonly confidence: number;
+  readonly rejected_by: string;
+}
+
+export interface TieBreakMatch {
+  readonly signature: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly from_node_id: string;
+  readonly to_node_id: string;
+  readonly confidence: number;
+  readonly selected_by: string;
+  readonly rejected_candidates: readonly RejectedTieBreakCandidate[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface TieBreakMatchingReport {
+  readonly matching_id: string;
+  readonly strategy: string;
+  readonly scope_path: string;
+  readonly tie_break_rules: readonly string[];
+  readonly matches: readonly TieBreakMatch[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface MatchingDebugOwnerSet {
+  readonly owner_id: string;
+  readonly scope_path: string;
+  readonly node_paths: readonly string[];
+}
+
+export interface MatchingDebugCandidate {
+  readonly candidate_id: string;
+  readonly signature: string;
+  readonly from_path: string;
+  readonly to_path: string;
+  readonly confidence: number;
+  readonly reason: string;
+}
+
+export interface MatchingDebugSelectedMatch {
+  readonly candidate_id: string;
+  readonly selected_by: string;
+}
+
+export interface MatchingDebugRejectedMatch {
+  readonly candidate_id: string;
+  readonly rejected_by: string;
+  readonly reason: string;
+}
+
+export interface MatchingDebugArtifacts {
+  readonly artifact_id: string;
+  readonly matching_id: string;
+  readonly enabled: boolean;
+  readonly owner_sets: readonly MatchingDebugOwnerSet[];
+  readonly candidates: readonly MatchingDebugCandidate[];
+  readonly selected_matches: readonly MatchingDebugSelectedMatch[];
+  readonly rejected_matches: readonly MatchingDebugRejectedMatch[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface FallbackScopeDefinition {
+  readonly scope: string;
+  readonly path: string;
+  readonly owner_path: string;
+  readonly covers_children: boolean;
+  readonly requires_source_span: boolean;
+  readonly description: string;
+}
+
+export interface FallbackScopeReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly scopes: readonly FallbackScopeDefinition[];
+  readonly default_order: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface MergeConflict {
+  readonly conflict_id: string;
+  readonly category: string;
+  readonly path: string;
+  readonly fallback_scope: string;
+  readonly message: string;
+}
+
+export interface ConflictCategoryReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly categories: readonly string[];
+  readonly conflicts: readonly MergeConflict[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface LineSpan {
+  readonly start_line: number;
+  readonly end_line: number;
+}
+
+export interface LocalLineFallbackReport {
+  readonly fallback_id: string;
+  readonly strategy: string;
+  readonly scope: string;
+  readonly path: string;
+  readonly owner_path: string;
+  readonly base_span: LineSpan;
+  readonly left_span: LineSpan;
+  readonly right_span: LineSpan;
+  readonly result: string;
+  readonly conflict_category: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ConflictMarkerRenderingReport {
+  readonly render_id: string;
+  readonly strategy: string;
+  readonly marker_size: number;
+  readonly path_label: string;
+  readonly left_label: string;
+  readonly base_label: string;
+  readonly right_label: string;
+  readonly include_base: boolean;
+  readonly output: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ConflictHandlerRegistration {
+  readonly handler_id: string;
+  readonly conflict_category: string;
+  readonly fallback_scope: string;
+  readonly node_roles: readonly string[];
+  readonly capability: string;
+  readonly enabled: boolean;
+}
+
+export interface ConflictHandlerRegistryReport {
+  readonly registry_id: string;
+  readonly version: string;
+  readonly handlers: readonly ConflictHandlerRegistration[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface HandlerChildNode {
+  readonly node_id: string;
+  readonly signature: string;
+  readonly source: string;
+}
+
+export interface HandlerKeyedMember {
+  readonly key: string;
+  readonly value: string;
+}
+
+export interface GenericConflictHandlerResult {
+  readonly resolved: boolean;
+  readonly merged_children?: readonly HandlerChildNode[];
+  readonly merged_members?: readonly HandlerKeyedMember[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface GenericConflictHandlerCase {
+  readonly case_id: string;
+  readonly handler_id: string;
+  readonly conflict_category: string;
+  readonly parent_policy?: string;
+  readonly base_children?: readonly HandlerChildNode[];
+  readonly left_insertions?: readonly HandlerChildNode[];
+  readonly right_insertions?: readonly HandlerChildNode[];
+  readonly base_members?: readonly HandlerKeyedMember[];
+  readonly left_edits?: readonly HandlerKeyedMember[];
+  readonly right_edits?: readonly HandlerKeyedMember[];
+  readonly expected_result: GenericConflictHandlerResult;
+}
+
+export interface GenericConflictHandlerExecution {
+  readonly execution_id: string;
+  readonly version: string;
+  readonly cases: readonly GenericConflictHandlerCase[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface LanguageProfileHandlerRegistration {
+  readonly role: string;
+  readonly handler_id: string;
+  readonly conflict_categories: readonly string[];
+  readonly enabled: boolean;
+}
+
+export interface LanguageProfileHandlerRegistry {
+  readonly profile_id: string;
+  readonly language: string;
+  readonly version: string;
+  readonly registrations: readonly LanguageProfileHandlerRegistration[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface FallbackUsageEntry {
+  readonly fallback_id: string;
+  readonly strategy: string;
+  readonly scope: string;
+  readonly path: string;
+  readonly conflict_category: string;
+}
+
+export interface FallbackUsageSummary {
+  readonly fallback_count: number;
+  readonly conflict_count: number;
+  readonly resolved_count: number;
+}
+
+export interface FallbackUsageMachineOutput {
+  readonly fallbacks: readonly FallbackUsageEntry[];
+  readonly summary: FallbackUsageSummary;
+}
+
+export interface GitDriverOutput {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exit_code: number;
+}
+
+export interface FallbackUsageReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly mode: string;
+  readonly quiet_by_default: boolean;
+  readonly machine_output: FallbackUsageMachineOutput;
+  readonly git_driver_output: GitDriverOutput;
+  readonly diagnostics: readonly string[];
+}
+
+export interface RenderByteSpan {
+  readonly start_byte: number;
+  readonly end_byte: number;
+}
+
+export interface RenderStrategyMetadata {
+  readonly strategy: string;
+  readonly path: string;
+  readonly span: RenderByteSpan | null;
+  readonly preserves_source_fragment: boolean;
+  readonly requires_reparse: boolean;
+}
+
+export interface RenderPlanReport {
+  readonly plan_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly strategies: readonly RenderStrategyMetadata[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface RenderVerificationReport {
+  readonly verification_id: string;
+  readonly version: string;
+  readonly mode: string;
+  readonly language: string;
+  readonly render_strategy: string;
+  readonly attempted: boolean;
+  readonly passed: boolean;
+  readonly hard_gate: boolean;
+  readonly parse_errors: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface FormattingPreservationMetrics {
+  readonly expected_output_line_diff_size: number;
+  readonly expected_output_character_diff_size: number;
+  readonly formatting_preservation_score: number;
+}
+
+export interface FormattingPreservationConformanceReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly suite: string;
+  readonly case_id: string;
+  readonly language: string;
+  readonly formatting_metrics: FormattingPreservationMetrics;
+  readonly diagnostics: readonly string[];
+}
+
+export interface FormattingRecommendationWeights {
+  readonly expected_output_line_diff_size: number;
+  readonly expected_output_character_diff_size: number;
+}
+
+export interface FormattingRecommendationGate {
+  readonly gate_id: string;
+  readonly version: string;
+  readonly threshold: number;
+  readonly passed: boolean;
+  readonly weights: FormattingRecommendationWeights;
+  readonly metrics: FormattingPreservationMetrics;
+  readonly diagnostics: readonly string[];
+}
+
+export interface FormattingHardGate {
+  readonly name: string;
+  readonly passed: boolean;
+  readonly weighted: boolean;
+}
+
+export interface FormattingHardGateReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly gates: readonly FormattingHardGate[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface SecondaryFormattingMetricsReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly unchanged_line_churn: number;
+  readonly output_diff_size: number;
+  readonly source_fragment_retention: number;
+  readonly weighted: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface TokenSpanPreservationMetricsReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly source_spans_available: boolean;
+  readonly token_preservation: number;
+  readonly span_preservation: number;
+  readonly weighted: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface FormattingEdgeFixtureCase {
+  readonly case_id: string;
+  readonly category: string;
+  readonly requires_conflict_markers: boolean;
+}
+
+export interface FormattingEdgeFixtureSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly cases: readonly FormattingEdgeFixtureCase[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface RenderSafetyReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly provider_id: string;
+  readonly safe_to_render: boolean;
+  readonly outcome: string;
+  readonly fallback_strategy: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface NativeProviderMetadataReport {
+  readonly provider_id: string;
+  readonly family: string;
+  readonly host_language: string;
+  readonly target_language: string;
+  readonly parser_name: string;
+  readonly parser_version: string;
+  readonly language_version: string;
+  readonly dialect: string;
+  readonly parse_error_behavior: string;
+  readonly source_span_support: string;
+  readonly render_support: string;
+  readonly semantic_role_support: string;
+  readonly retains_native_tree: boolean;
+  readonly native_tree_visibility: string;
+  readonly metadata_policy: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface HostLanguageNativeProviderContract {
+  readonly provider_id: string;
+  readonly host_language: string;
+  readonly target_language: string;
+  readonly parser_name: string;
+}
+
+export interface HostLanguageNativeProviderContracts {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly providers: readonly HostLanguageNativeProviderContract[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface NativeProviderProvingGroundReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly providers: readonly string[];
+  readonly checks: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface GoDSTProviderStackReport {
+  readonly provider_id: string;
+  readonly module: string;
+  readonly backend_family: string;
+  readonly language: string;
+  readonly role: string;
+  readonly compares_with: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface GoProviderComparisonReport {
+  readonly comparison_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly providers: readonly string[];
+  readonly dimensions: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface BackendParityCase {
+  readonly case_id: string;
+  readonly native_provider: string;
+  readonly tree_sitter_provider: string;
+  readonly dimensions: readonly string[];
+}
+
+export interface BackendParitySuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly cases: readonly BackendParityCase[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProviderRichnessSignature {
+  readonly kind: string;
+  readonly name: string;
+  readonly parameters: readonly string[];
+  readonly result: string;
+}
+
+export interface ProviderRichnessProjection {
+  readonly projection_id: string;
+  readonly version: string;
+  readonly provider_id: string;
+  readonly node_path: string;
+  readonly generic_roles: readonly string[];
+  readonly generic_signature: ProviderRichnessSignature;
+  readonly private_metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  readonly requires_private_fields: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface BackendGapConformanceGap {
+  readonly capability: string;
+  readonly status: string;
+  readonly impact: string;
+  readonly diagnostic_code: string;
+  readonly normalized_fallback: string;
+}
+
+export interface BackendGapConformanceSummary {
+  readonly gap_count: number;
+  readonly fallback_count: number;
+  readonly silently_normalized: boolean;
+}
+
+export interface BackendGapConformanceReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly language: string;
+  readonly provider_id: string;
+  readonly compared_provider_id: string;
+  readonly gaps: readonly BackendGapConformanceGap[];
+  readonly summary: BackendGapConformanceSummary;
+  readonly diagnostics: readonly string[];
+}
+
+export interface FalseTextualConflictCase {
+  readonly case_id: string;
+  readonly language: string;
+  readonly category: string;
+  readonly base_path: string;
+  readonly ours_path: string;
+  readonly theirs_path: string;
+  readonly expected_strategy: string;
+  readonly expected_unresolved_conflict: boolean;
+}
+
+export interface FalseTextualConflictSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly source: string;
+  readonly cases: readonly FalseTextualConflictCase[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface GitDriverSmokeCase {
+  readonly case_id: string;
+  readonly family: string;
+  readonly ancestor_placeholder: string;
+  readonly current_placeholder: string;
+  readonly other_placeholder: string;
+  readonly path_placeholder: string;
+  readonly expected_exit_code: number;
+  readonly expected_current_file_updated: boolean;
+}
+
+export interface GitDriverSmokeSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly driver_name: string;
+  readonly cases: readonly GitDriverSmokeCase[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface DiffDriverSmokeCase {
+  readonly case_id: string;
+  readonly argument_count: number;
+  readonly argument_roles: readonly string[];
+  readonly expected_exit_code: number;
+  readonly expected_output_kind: string;
+}
+
+export interface DiffDriverSmokeSuite {
+  readonly suite_id: string;
+  readonly version: string;
+  readonly driver_name: string;
+  readonly cases: readonly DiffDriverSmokeCase[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface PerformanceTimeoutDiagnostic {
+  readonly severity: string;
+  readonly category: string;
+  readonly code: string;
+  readonly fallback: string;
+}
+
+export interface PerformanceGuardrails {
+  readonly guardrail_id: string;
+  readonly version: string;
+  readonly max_bytes: number;
+  readonly max_nodes: number;
+  readonly max_match_candidates: number;
+  readonly timeout_ms: number;
+  readonly timeout_diagnostic: PerformanceTimeoutDiagnostic;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProfileSkippedRule {
+  readonly rule: string;
+  readonly reason: string;
+}
+
+export interface ActiveProfileRuleCounts {
+  readonly node_roles: number;
+  readonly atomic_nodes: number;
+  readonly signatures: number;
+  readonly commutative_parents: number;
+  readonly child_groups: number;
+  readonly comment_attachment: number;
+}
+
+export interface ActiveProfileValidationSummary {
+  readonly ok: boolean;
+  readonly error_count: number;
+  readonly warning_count: number;
+}
+
+export interface ActiveProfileView {
+  readonly profile_id: string;
+  readonly family: string;
+  readonly backend: string;
+  readonly backend_family: string;
+  readonly parser: string;
+  readonly parser_version: string;
+  readonly language_version: string;
+  readonly dialect: string;
+  readonly supported_dialects: readonly string[];
+  readonly rule_counts: ActiveProfileRuleCounts;
+  readonly validation: ActiveProfileValidationSummary;
+}
+
+export interface ProfileConformanceReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly profile: string;
+  readonly active_profile?: ActiveProfileView;
+  readonly enabled_rules: readonly string[];
+  readonly skipped_rules: readonly ProfileSkippedRule[];
+  readonly fallback_count: number;
+  readonly unresolved_conflict_count: number;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProfileDebugOutput {
+  readonly mode: string;
+  readonly active_profile: ActiveProfileView;
+  readonly diagnostics: readonly string[];
+}
+
+export type ProfilePromotionStatus =
+  | 'experimental'
+  | 'available'
+  | 'recommended'
+  | 'default'
+  | 'disabled';
+
+export interface ProfilePromotionHardGate {
+  readonly name: string;
+  readonly passed: boolean;
+  readonly required: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProfilePromotionMetrics {
+  readonly required_fixture_count: number;
+  readonly passed_fixture_count: number;
+  readonly formatting_preservation_score: number;
+  readonly formatting_threshold: number;
+  readonly fallback_count: number;
+  readonly fallback_threshold: number;
+  readonly unresolved_conflict_count: number;
+  readonly backend_parity_passed: boolean;
+}
+
+export interface ProfilePromotionReport {
+  readonly report_id: string;
+  readonly version: string;
+  readonly profile_id: string;
+  readonly backend: string;
+  readonly status: ProfilePromotionStatus;
+  readonly active_profile?: ActiveProfileView;
+  readonly hard_gates: readonly ProfilePromotionHardGate[];
+  readonly metrics: ProfilePromotionMetrics;
+  readonly required_suites: readonly string[];
+  readonly blocking_reasons: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export type ProfilePromotionScope = 'data_format' | 'source_subprofile';
+
+export const promotionProfileJsonKeyedObject = 'json.keyed-object';
+export const promotionProfileGoImportDeclarations = 'go.import-declarations';
+export const promotionProfileRustUseDeclarations = 'rust.use-declarations';
+export const promotionProfileTypeScriptImportDeclarations = 'typescript.import-declarations';
+export const promotionProfileRubyGemspecDependencyDeclarations =
+  'ruby.gemspec-dependency-declarations';
+
+export interface ProfileRecommendationGate {
+  readonly required_fixture_count: number;
+  readonly formatting_threshold: number;
+  readonly fallback_threshold: number;
+  readonly unresolved_conflict_threshold: number;
+  readonly requires_backend_parity: boolean;
+  readonly requires_cross_implementation_parity: boolean;
+}
+
+export interface ProfileDefaultGate {
+  readonly requires_recommended_status: boolean;
+  readonly requires_explicit_package_rollout: boolean;
+  readonly minimum_recommended_days: number;
+  readonly requires_narrow_scope: boolean;
+}
+
+export interface ProfilePromotionPolicyEntry {
+  readonly profile_id: string;
+  readonly family: string;
+  readonly scope: ProfilePromotionScope;
+  readonly eligible_statuses: readonly ProfilePromotionStatus[];
+  readonly recommendation_gate: ProfileRecommendationGate;
+  readonly default_gate: ProfileDefaultGate;
+  readonly required_suites: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface ProfilePromotionPolicy {
+  readonly policy_id: string;
+  readonly version: string;
+  readonly global_hard_gates: readonly string[];
+  readonly profiles: readonly ProfilePromotionPolicyEntry[];
+  readonly diagnostics: readonly string[];
+}
+
+export function initialProfilePromotionPolicy(): ProfilePromotionPolicy {
+  const sourceSubprofile = (profileId: string, family: string): ProfilePromotionPolicyEntry => ({
+    profile_id: profileId,
+    family,
+    scope: 'source_subprofile',
+    eligible_statuses: ['available', 'recommended'],
+    recommendation_gate: {
+      required_fixture_count: 16,
+      formatting_threshold: 0.95,
+      fallback_threshold: 2,
+      unresolved_conflict_threshold: 0,
+      requires_backend_parity: true,
+      requires_cross_implementation_parity: false
+    },
+    default_gate: {
+      requires_recommended_status: true,
+      requires_explicit_package_rollout: true,
+      minimum_recommended_days: 30,
+      requires_narrow_scope: true
+    },
+    required_suites: [
+      'slice-827-backend-parity-fixtures',
+      'slice-815-formatting-preservation-metrics'
+    ],
+    diagnostics: ['source-language profile is narrow and not language-wide']
+  });
+  const rubyProfile = sourceSubprofile(promotionProfileRubyGemspecDependencyDeclarations, 'ruby');
+  return {
+    policy_id: 'initial-profile-promotion-policy',
+    version: '1',
+    global_hard_gates: [
+      'parse_or_fail_closed',
+      'render_or_fail_closed',
+      'coherent_conflict_markers',
+      'performance_guardrails'
+    ],
+    profiles: [
+      {
+        profile_id: promotionProfileJsonKeyedObject,
+        family: 'json',
+        scope: 'data_format',
+        eligible_statuses: ['available', 'recommended', 'default'],
+        recommendation_gate: {
+          required_fixture_count: 12,
+          formatting_threshold: 0.95,
+          fallback_threshold: 1,
+          unresolved_conflict_threshold: 0,
+          requires_backend_parity: true,
+          requires_cross_implementation_parity: true
+        },
+        default_gate: {
+          requires_recommended_status: true,
+          requires_explicit_package_rollout: true,
+          minimum_recommended_days: 30,
+          requires_narrow_scope: true
+        },
+        required_suites: [
+          'slice-901-false-textual-conflicts',
+          'slice-902-git-driver-smoke-fixtures',
+          'slice-815-formatting-preservation-metrics'
+        ],
+        diagnostics: ['data-format profile may become default after recommendation soak time']
+      },
+      sourceSubprofile(promotionProfileGoImportDeclarations, 'go'),
+      sourceSubprofile(promotionProfileRustUseDeclarations, 'rust'),
+      sourceSubprofile(promotionProfileTypeScriptImportDeclarations, 'typescript'),
+      {
+        ...rubyProfile,
+        recommendation_gate: {
+          ...rubyProfile.recommendation_gate,
+          required_fixture_count: 10,
+          fallback_threshold: 1,
+          requires_backend_parity: false
+        },
+        required_suites: [
+          'slice-702-ruby-gemspec-signature-merge-acceptance',
+          'slice-703-ruby-gemspec-field-policy-acceptance',
+          'slice-704-ruby-gemspec-dependency-section-policy-acceptance'
+        ],
+        diagnostics: ['Ruby source subprofile is limited to dependency declarations']
+      }
+    ],
+    diagnostics: [
+      'default status is allowed only after recommendation status and explicit package rollout'
+    ]
+  };
+}
+
+export interface ProfilePromotionEvaluation {
+  readonly profile_id: string;
+  readonly status: ProfilePromotionStatus;
+  readonly blocking_reasons: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export type ProfileSelectionEnforcementMode = 'advisory' | 'required';
+
+export interface ProfileSelectionRequirement {
+  readonly profile_id: string;
+  readonly promotion_policy_id: string;
+  readonly minimum_profile_status: ProfilePromotionStatus;
+  readonly enforcement_mode: ProfileSelectionEnforcementMode;
+}
+
+export interface ProfileSelectionDecision {
+  readonly profile_id: string;
+  readonly promotion_policy_id: string;
+  readonly minimum_profile_status: ProfilePromotionStatus;
+  readonly evaluated_status: ProfilePromotionStatus;
+  readonly enforcement_mode: ProfileSelectionEnforcementMode;
+  readonly satisfied: boolean;
+  readonly enforced: boolean;
+  readonly allowed: boolean;
+  readonly rejection_code?: string;
+  readonly active_profile?: ActiveProfileView;
+  readonly profile_promotion_evaluation: ProfilePromotionEvaluation;
+  readonly blocking_reasons: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export function evaluateProfilePromotion(
+  policy: ProfilePromotionPolicy,
+  report: ProfilePromotionReport
+): ProfilePromotionEvaluation {
+  const entry = policy.profiles.find((profile) => profile.profile_id === report.profile_id);
+  if (!entry) {
+    return {
+      profile_id: report.profile_id,
+      status: 'experimental',
+      blocking_reasons: ['profile has no promotion policy'],
+      diagnostics: []
+    };
+  }
+  const blockingReasons = profilePromotionBlockingReasons(entry, report);
+  const status =
+    blockingReasons.length === 0 && entry.eligible_statuses.includes('recommended')
+      ? 'recommended'
+      : 'available';
+  return {
+    profile_id: report.profile_id,
+    status,
+    blocking_reasons: blockingReasons,
+    diagnostics: []
+  };
+}
+
+export function evaluateProfileSelectionRequirement(
+  requirement: ProfileSelectionRequirement,
+  activeProfile: ActiveProfileView | undefined,
+  evaluation: ProfilePromotionEvaluation
+): ProfileSelectionDecision {
+  const satisfied =
+    profilePromotionStatusRank(evaluation.status) >=
+      profilePromotionStatusRank(requirement.minimum_profile_status) &&
+    evaluation.status !== 'disabled';
+  const enforced = requirement.enforcement_mode === 'required';
+  const allowed = satisfied || !enforced;
+  const blockingReasons = [...evaluation.blocking_reasons];
+  let rejectionCode = '';
+  if (!satisfied) {
+    blockingReasons.unshift(
+      `profile status ${evaluation.status} is below required ${requirement.minimum_profile_status}`
+    );
+    if (enforced) rejectionCode = 'profile_status_unmet';
+  }
+  const diagnostics = [...evaluation.diagnostics];
+  if (requirement.profile_id !== evaluation.profile_id) {
+    diagnostics.push('selected profile does not match promotion evaluation profile');
+  }
+  return {
+    profile_id: requirement.profile_id,
+    promotion_policy_id: requirement.promotion_policy_id,
+    minimum_profile_status: requirement.minimum_profile_status,
+    evaluated_status: evaluation.status,
+    enforcement_mode: requirement.enforcement_mode,
+    satisfied,
+    enforced,
+    allowed,
+    rejection_code: rejectionCode,
+    active_profile: activeProfile,
+    profile_promotion_evaluation: evaluation,
+    blocking_reasons: blockingReasons,
+    diagnostics
+  };
+}
+
+function profilePromotionStatusRank(status: ProfilePromotionStatus): number {
+  switch (status) {
+    case 'experimental':
+      return 1;
+    case 'available':
+      return 2;
+    case 'recommended':
+      return 3;
+    case 'default':
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+function profilePromotionBlockingReasons(
+  entry: ProfilePromotionPolicyEntry,
+  report: ProfilePromotionReport
+): string[] {
+  const reasons: string[] = [];
+  report.hard_gates.forEach((gate) => {
+    if (gate.required && !gate.passed) reasons.push(`required hard gate ${gate.name} failed`);
+  });
+  if (report.metrics.passed_fixture_count < entry.recommendation_gate.required_fixture_count) {
+    reasons.push('passed fixture count is below required fixture count');
+  }
+  if (
+    report.metrics.formatting_preservation_score < entry.recommendation_gate.formatting_threshold
+  ) {
+    reasons.push('formatting preservation score is below threshold');
+  }
+  if (report.metrics.fallback_count > entry.recommendation_gate.fallback_threshold) {
+    reasons.push('fallback count exceeds threshold');
+  }
+  if (
+    report.metrics.unresolved_conflict_count >
+    entry.recommendation_gate.unresolved_conflict_threshold
+  ) {
+    reasons.push('unresolved conflict count exceeds threshold');
+  }
+  if (entry.recommendation_gate.requires_backend_parity && !report.metrics.backend_parity_passed) {
+    reasons.push('backend parity did not pass');
+  }
+  return reasons;
+}
+
+export const genericIndependentCommutativeInsertionsHandler =
+  'generic-independent-commutative-insertions';
+export const genericKeyedMemberEditHandler = 'generic-keyed-member-edit';
+
+export function executeGenericConflictHandler(
+  handlerCase: GenericConflictHandlerCase
+): GenericConflictHandlerResult {
+  if (handlerCase.handler_id === genericIndependentCommutativeInsertionsHandler) {
+    return executeIndependentCommutativeInsertions(handlerCase);
+  }
+  if (handlerCase.handler_id === genericKeyedMemberEditHandler) {
+    return executeIndependentKeyedMemberEdits(handlerCase);
+  }
+
+  return {
+    resolved: false,
+    diagnostics: ['unsupported generic conflict handler']
+  };
+}
+
+function executeIndependentCommutativeInsertions(
+  handlerCase: GenericConflictHandlerCase
+): GenericConflictHandlerResult {
+  if (handlerCase.parent_policy !== 'commutative') {
+    return {
+      resolved: false,
+      diagnostics: ['independent insertion handler requires a commutative parent']
+    };
+  }
+
+  const seen = new Set<string>();
+  const mergedChildren: HandlerChildNode[] = [];
+  const appendUnique = (nodes: readonly HandlerChildNode[] | undefined) => {
+    for (const node of nodes ?? []) {
+      const key = node.signature || node.node_id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      mergedChildren.push(node);
+    }
+  };
+
+  appendUnique(handlerCase.base_children);
+  appendUnique(handlerCase.left_insertions);
+  appendUnique(handlerCase.right_insertions);
+
+  return {
+    resolved: true,
+    merged_children: mergedChildren,
+    diagnostics: ['independent insertions into a commutative parent were unioned deterministically']
+  };
+}
+
+function executeIndependentKeyedMemberEdits(
+  handlerCase: GenericConflictHandlerCase
+): GenericConflictHandlerResult {
+  const order: string[] = [];
+  const values = new Map<string, string>();
+  const setMember = (member: HandlerKeyedMember) => {
+    if (!values.has(member.key)) order.push(member.key);
+    values.set(member.key, member.value);
+  };
+
+  for (const member of handlerCase.base_members ?? []) setMember(member);
+  for (const member of handlerCase.left_edits ?? []) setMember(member);
+  for (const member of handlerCase.right_edits ?? []) {
+    if (
+      values.has(member.key) &&
+      values.get(member.key) !== member.value &&
+      (handlerCase.left_edits ?? []).some((left) => left.key === member.key)
+    ) {
+      return {
+        resolved: false,
+        diagnostics: ['keyed member was edited differently on both sides']
+      };
+    }
+    setMember(member);
+  }
+
+  return {
+    resolved: true,
+    merged_members: order.map((key) => ({ key, value: values.get(key) ?? '' })),
+    diagnostics: ['independent keyed member edits were merged by key']
+  };
+}
+
 export type PolicySurface = 'fallback' | 'array';
 
 export interface PolicyReference {
@@ -278,6 +2294,214 @@ export interface FamilyFeatureProfile {
   readonly family: string;
   readonly supportedDialects: readonly string[];
   readonly supportedPolicies: readonly PolicyReference[];
+}
+
+export interface ParserIdentity {
+  readonly parser: string;
+  readonly backend: string;
+  readonly backend_family: string;
+  readonly parser_version: string;
+  readonly language_version: string;
+}
+
+export interface GitAttributeProfile {
+  readonly attribute_namespace: string;
+  readonly language_attributes: readonly string[];
+  readonly language: string;
+  readonly merge_driver: string;
+  readonly diff_driver: string;
+  readonly conflict_marker_size_attribute: string;
+}
+
+export interface BackendProfile {
+  readonly backend: string;
+  readonly family: string;
+  readonly default: boolean;
+  readonly capabilities: readonly string[];
+}
+
+export interface AtomicNodeRule {
+  readonly selector: string;
+  readonly reason: string;
+}
+
+export interface SignatureDefinition {
+  readonly name: string;
+  readonly selector: string;
+  readonly extractor: string;
+}
+
+export interface CommutativeParentDefinition {
+  readonly selector: string;
+  readonly child_group: string;
+}
+
+export interface ChildGroupDefinition {
+  readonly name: string;
+  readonly separator: string;
+  readonly delimiter: string | null;
+}
+
+export interface CommentAttachmentRule {
+  readonly selector: string;
+  readonly strategy: string;
+}
+
+export interface LanguageBackendProfileRules {
+  readonly node_roles: readonly string[];
+  readonly atomic_nodes: readonly AtomicNodeRule[];
+  readonly signatures: readonly SignatureDefinition[];
+  readonly commutative_parents: readonly CommutativeParentDefinition[];
+  readonly child_groups: readonly ChildGroupDefinition[];
+  readonly comment_attachment: readonly CommentAttachmentRule[];
+}
+
+export interface LanguageBackendProfile {
+  readonly profile_id: string;
+  readonly family: string;
+  readonly version: string;
+  readonly parser_identity: ParserIdentity;
+  readonly extensions: readonly string[];
+  readonly aliases: readonly string[];
+  readonly git_attributes: GitAttributeProfile;
+  readonly supported_dialects: readonly string[];
+  readonly backends: readonly BackendProfile[];
+  readonly rules: LanguageBackendProfileRules;
+}
+
+export interface BackendGrammarInventory {
+  readonly backend_ref: {
+    readonly id: string;
+    readonly family: string;
+  };
+  readonly known_node_kinds?: readonly string[];
+  readonly known_fields?: readonly string[];
+  readonly grammar_inventory?: string;
+}
+
+export interface ProfileValidationDiagnostic {
+  readonly severity: 'error' | 'warning';
+  readonly message: string;
+}
+
+export interface ProfileValidationResult {
+  readonly ok: boolean;
+  readonly errors: readonly ProfileValidationDiagnostic[];
+  readonly warnings: readonly ProfileValidationDiagnostic[];
+  readonly diagnostics: readonly ProfileValidationDiagnostic[];
+}
+
+export function validateLanguageBackendProfile(
+  profile: LanguageBackendProfile,
+  capability?: BackendGrammarInventory
+): ProfileValidationResult {
+  const errors: ProfileValidationDiagnostic[] = [];
+  const warnings: ProfileValidationDiagnostic[] = [];
+  const diagnostics: ProfileValidationDiagnostic[] = [];
+  const addError = (message: string) => {
+    const diagnostic: ProfileValidationDiagnostic = { severity: 'error', message };
+    errors.push(diagnostic);
+    diagnostics.push(diagnostic);
+  };
+  const addWarning = (message: string) => {
+    const diagnostic: ProfileValidationDiagnostic = { severity: 'warning', message };
+    warnings.push(diagnostic);
+    diagnostics.push(diagnostic);
+  };
+
+  const validRoles = new Set([
+    'structural',
+    'token',
+    'trivia',
+    'comment',
+    'delimiter',
+    'separator',
+    'virtual',
+    'error',
+    'opaque'
+  ]);
+  profile.rules.node_roles.forEach((role) => {
+    if (!validRoles.has(role)) addError(`invalid node role ${role}`);
+  });
+
+  const signatureNames = new Set<string>();
+  profile.rules.signatures.forEach((signature) => {
+    if (!signature.name) addError('signature name is required');
+    else if (signatureNames.has(signature.name))
+      addError(`duplicate signature name ${signature.name}`);
+    signatureNames.add(signature.name);
+    if (!signature.selector) addError('signature selector is required');
+    if (!validSignatureExtractor(signature.extractor)) {
+      addError(`unsupported signature extractor ${signature.extractor}`);
+    }
+  });
+
+  const childGroups = new Set<string>();
+  profile.rules.child_groups.forEach((group) => {
+    if (!group.name) addError('child group name is required');
+    else if (childGroups.has(group.name)) addError(`duplicate child group name ${group.name}`);
+    childGroups.add(group.name);
+  });
+  profile.rules.commutative_parents.forEach((parent) => {
+    if (!parent.selector) addError('commutative parent selector is required');
+    if (!childGroups.has(parent.child_group)) {
+      addError(
+        `commutative parent ${parent.selector} references unknown child group ${parent.child_group}`
+      );
+    }
+  });
+  profile.rules.atomic_nodes.forEach((atomic) => {
+    if (!atomic.selector) addError('atomic node selector is required');
+  });
+  profile.rules.comment_attachment.forEach((attachment) => {
+    if (!attachment.selector) addError('comment attachment selector is required');
+    if (!attachment.strategy) addError('comment attachment strategy is required');
+  });
+
+  if (capability?.grammar_inventory) {
+    validateBackendInventory(profile, capability, addError, addWarning);
+  }
+
+  return { ok: errors.length === 0, errors, warnings, diagnostics };
+}
+
+function validSignatureExtractor(extractor: string): boolean {
+  return (
+    extractor === 'text' ||
+    extractor.startsWith('field:') ||
+    extractor.startsWith('kind:') ||
+    extractor.startsWith('custom:')
+  );
+}
+
+function validateBackendInventory(
+  profile: LanguageBackendProfile,
+  capability: BackendGrammarInventory,
+  addError: (message: string) => void,
+  addWarning: (message: string) => void
+): void {
+  const nodeKinds = new Set(capability.known_node_kinds ?? []);
+  const fields = new Set(capability.known_fields ?? []);
+  const report = capability.grammar_inventory === 'exhaustive' ? addError : addWarning;
+  const checkSelector = (prefix: string, selector: string) => {
+    if (selector && nodeKinds.size > 0 && !nodeKinds.has(selector)) report(`${prefix} ${selector}`);
+  };
+  profile.rules.atomic_nodes.forEach((atomic) => {
+    checkSelector('unknown atomic node selector', atomic.selector);
+  });
+  profile.rules.signatures.forEach((signature) => {
+    checkSelector('unknown signature selector', signature.selector);
+    if (signature.extractor.startsWith('field:')) {
+      const field = signature.extractor.slice('field:'.length);
+      if (fields.size > 0 && !fields.has(field)) report(`unknown signature field ${field}`);
+    }
+  });
+  profile.rules.commutative_parents.forEach((parent) => {
+    checkSelector('unknown commutative parent selector', parent.selector);
+  });
+  profile.rules.comment_attachment.forEach((attachment) => {
+    checkSelector('unknown comment attachment selector', attachment.selector);
+  });
 }
 
 export interface StructuredEditStructureProfile {
@@ -430,6 +2654,9 @@ export interface StructuredEditApplicationEnvelope {
 export interface StructuredEditRequestEnvelope {
   readonly kind: 'structured_edit_request';
   readonly version: typeof STRUCTURED_EDIT_TRANSPORT_VERSION;
+  readonly profile_id?: string;
+  readonly minimum_profile_status?: ProfilePromotionStatus;
+  readonly promotion_policy_id?: string;
   readonly request: StructuredEditRequest;
 }
 
@@ -437,6 +2664,10 @@ export interface StructuredEditExecutionReport {
   readonly application: StructuredEditApplication;
   readonly providerFamily: string;
   readonly providerBackend?: string;
+  readonly active_profile?: ActiveProfileView;
+  readonly profile_promotion_evaluation?: ProfilePromotionEvaluation;
+  readonly profile_selection_decision?: ProfileSelectionDecision;
+  readonly profile_blocking_reasons?: readonly string[];
   readonly diagnostics: readonly Diagnostic[];
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -1432,6 +3663,7 @@ export interface ConformanceCaseRun {
   readonly requirements: ConformanceCaseRequirements;
   readonly familyProfile: FamilyFeatureProfile;
   readonly featureProfile?: ConformanceFeatureProfileView;
+  readonly mergeEngine?: MergeEngine;
 }
 
 export interface ConformanceCaseExecution {
@@ -1479,6 +3711,7 @@ export interface NamedConformanceSuiteReport {
 export interface ConformanceFamilyPlanContext {
   readonly familyProfile: FamilyFeatureProfile;
   readonly featureProfile?: ConformanceFeatureProfileView;
+  readonly mergeEngine?: MergeEngine;
 }
 
 export interface NamedConformanceSuitePlan {
@@ -1500,6 +3733,7 @@ export interface ConformanceManifestPlanningOptions {
   readonly contexts?: Readonly<Record<string, ConformanceFamilyPlanContext>>;
   readonly familyProfiles?: Readonly<Record<string, FamilyFeatureProfile>>;
   readonly requireExplicitContexts?: boolean;
+  readonly mergeEngine?: MergeEngine;
 }
 
 export interface ConformanceManifestReport {
@@ -1697,6 +3931,7 @@ export interface ConformanceSuitePlanEntry {
 
 export interface ConformanceSuitePlan {
   readonly family: string;
+  readonly mergeEngine?: MergeEngine;
   readonly entries: readonly ConformanceSuitePlanEntry[];
   readonly missingRoles: readonly string[];
 }
@@ -1800,6 +4035,20 @@ export function structuredEditRequestEnvelope(
     kind: 'structured_edit_request',
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
     request
+  };
+}
+
+export function profileSelectionRequirementFromRequestEnvelope(
+  envelope: StructuredEditRequestEnvelope
+): ProfileSelectionRequirement | undefined {
+  if (!envelope.profile_id && !envelope.minimum_profile_status && !envelope.promotion_policy_id) {
+    return undefined;
+  }
+  return {
+    profile_id: envelope.profile_id ?? '',
+    promotion_policy_id: envelope.promotion_policy_id ?? '',
+    minimum_profile_status: envelope.minimum_profile_status ?? 'available',
+    enforcement_mode: 'required'
   };
 }
 
@@ -5545,6 +7794,20 @@ export function defaultConformanceFamilyContext(
   };
 }
 
+function applyPlanningMergeEngine(
+  context: ConformanceFamilyPlanContext,
+  options: ConformanceManifestPlanningOptions
+): ConformanceFamilyPlanContext {
+  if (context.mergeEngine || !options.mergeEngine) {
+    return context;
+  }
+
+  return {
+    ...context,
+    mergeEngine: normalizeMergeEngine(options.mergeEngine)
+  };
+}
+
 export function reviewRequestIdForFamilyContext(family: string): string {
   return `family_context:${family}`;
 }
@@ -6223,7 +8486,7 @@ export function resolveConformanceFamilyContext(
 
   if (explicitContext) {
     return {
-      context: explicitContext,
+      context: applyPlanningMergeEngine(explicitContext, options),
       diagnostics: []
     };
   }
@@ -6255,7 +8518,7 @@ export function resolveConformanceFamilyContext(
   }
 
   return {
-    context: defaultConformanceFamilyContext(familyProfile),
+    context: applyPlanningMergeEngine(defaultConformanceFamilyContext(familyProfile), options),
     diagnostics: [
       {
         severity: 'warning',
@@ -6729,6 +8992,23 @@ export function planConformanceSuite(
   familyProfile: FamilyFeatureProfile,
   featureProfile?: ConformanceFeatureProfileView
 ): ConformanceSuitePlan {
+  return planConformanceSuiteWithMergeEngine(
+    manifest,
+    family,
+    roles,
+    familyProfile,
+    featureProfile
+  );
+}
+
+export function planConformanceSuiteWithMergeEngine(
+  manifest: ConformanceManifest,
+  family: string,
+  roles: readonly string[],
+  familyProfile: FamilyFeatureProfile,
+  featureProfile?: ConformanceFeatureProfileView,
+  mergeEngine?: MergeEngine
+): ConformanceSuitePlan {
   const entries: ConformanceSuitePlanEntry[] = [];
   const missingRoles: string[] = [];
 
@@ -6755,13 +9035,15 @@ export function planConformanceSuite(
         ref,
         requirements: entry.requirements ?? {},
         familyProfile,
-        featureProfile
+        featureProfile,
+        mergeEngine
       }
     });
   }
 
   return {
     family,
+    mergeEngine,
     entries,
     missingRoles
   };
@@ -6779,7 +9061,7 @@ export function planNamedConformanceSuite(
     return undefined;
   }
 
-  return planConformanceSuite(
+  return planConformanceSuiteWithMergeEngine(
     manifest,
     definition.subject.grammar,
     definition.roles,
@@ -6793,19 +9075,23 @@ export function planNamedConformanceSuiteEntry(
   suiteSelector: ConformanceSuiteSelector,
   context: ConformanceFamilyPlanContext
 ): NamedConformanceSuitePlan | undefined {
-  const plan = planNamedConformanceSuite(
-    manifest,
-    suiteSelector,
-    context.familyProfile,
-    context.featureProfile
-  );
+  const definition = conformanceSuiteDefinition(manifest, suiteSelector);
 
-  if (!plan) {
+  if (!definition) {
     return undefined;
   }
 
+  const plan = planConformanceSuiteWithMergeEngine(
+    manifest,
+    definition.subject.grammar,
+    definition.roles,
+    context.familyProfile,
+    context.featureProfile,
+    context.mergeEngine
+  );
+
   return {
-    suite: conformanceSuiteDefinition(manifest, suiteSelector)!,
+    suite: definition,
     plan
   };
 }

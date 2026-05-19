@@ -3,6 +3,10 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
   AdapterInfo,
+  AppliedEditProjectionOperation,
+  BackendAvailabilityCheck,
+  BackendAvailabilityReport,
+  BackendCapability,
   BackendReference,
   BinaryDiagnostic,
   BinaryMergeReport,
@@ -11,13 +15,32 @@ import type {
   BinaryRenderPolicy,
   BinaryScalarValue,
   ByteEditSpan,
+  EditProjectionExecutionResult,
+  EditProjectionProviderMatrix,
+  EditProjectionProviderMatrixEntry,
+  EditProjectionProviderOperation,
+  EditProjectionSupport,
   FeatureProfile,
+  NativeParserProvider,
+  NativeProviderMetadata,
+  NormalizedParseResult,
+  NormalizedTreeNode,
+  OrderedTreePrimitives,
+  ParseErrorTolerance,
   ParserRequest,
   PolicyReference,
+  ProviderDiagnostic,
+  ProviderDiagnosticsReport,
+  SourceSpan,
+  TreeHaverProfile,
   ZipUnsafeEntry
 } from '../src/index';
 import { processWithLanguagePack } from '../src/index';
 import {
+  buildBackendAvailabilityReport,
+  buildEditProjectionExecutionResult,
+  buildEditProjectionProviderMatrix,
+  buildProviderDiagnosticsReport,
   byteEditDelta,
   byteEditNewRange,
   byteEditOldRange,
@@ -26,6 +49,8 @@ import {
   byteRangeLength,
   byteRangeOverlaps,
   currentBackendId,
+  extractSourceFragment,
+  libraryPathErrors,
   kaitaiAdapterInfo,
   kaitaiFeatureProfile,
   KAITAI_STRUCT_BACKEND,
@@ -34,9 +59,15 @@ import {
   PEGGY_BACKEND,
   peggyAdapterInfo,
   peggyFeatureProfile,
+  nodeRoles,
   registerBackend,
   registeredBackends,
+  safeBackendName,
+  safeLanguageName,
+  safeSymbolName,
+  sanitizeLanguageName,
   sliceByteRange,
+  validateLibraryPath,
   withBackend
 } from '../src/index';
 
@@ -63,6 +94,187 @@ interface FeatureProfileFixture {
 
 interface BackendRegistryFixture {
   backends: BackendReference[];
+}
+
+interface EditProjectionSupportFixture {
+  backend_ref: BackendReference;
+  language: string;
+  supports_edit_projection: boolean;
+  native_edit_target: string;
+  normalized_edit_target: string;
+  supported_operations: string[];
+  required_node_fields: string[];
+  correlation_keys: string[];
+  preserves_source_fragments: boolean;
+  unsupported_reason: string | null;
+  diagnostics: string[];
+}
+
+interface PathValidationCase {
+  name: string;
+  path: string;
+  expected_valid: boolean;
+  expected_errors: string[];
+}
+
+interface NameValidationCase {
+  name: string;
+  value: string;
+  expected_valid: boolean;
+  expected_sanitized?: string | null;
+}
+
+interface PathValidationFixture {
+  library_path_cases: PathValidationCase[];
+  language_name_cases: NameValidationCase[];
+  symbol_name_cases: NameValidationCase[];
+  backend_name_cases: NameValidationCase[];
+}
+
+interface BackendAvailabilityReportFixture {
+  backend_ref: BackendReference;
+  status: 'available' | 'unavailable' | 'unknown';
+  checks: BackendAvailabilityCheck[];
+  diagnostics: string[];
+}
+
+interface ProviderDiagnosticsReportFixture {
+  provider_id: string;
+  backend_ref: BackendReference;
+  language: string;
+  status: 'clean' | 'warning' | 'blocked';
+  diagnostics: ProviderDiagnostic[];
+}
+
+interface AppliedEditProjectionOperationFixture {
+  operation: string;
+  target_node_id: string;
+  correlation_key: string;
+  correlation_value: string;
+}
+
+interface EditProjectionExecutionResultFixture {
+  ok: boolean;
+  status: 'applied' | 'rejected';
+  source: string;
+  applied_operations: AppliedEditProjectionOperationFixture[];
+  diagnostics: ProviderDiagnostic[];
+}
+
+interface EditProjectionProviderOperationFixture {
+  operation: string;
+  status: 'implemented' | 'planned' | 'unsupported';
+  node_scope: string;
+  correlation_keys: string[];
+  fixture_slices: string[];
+  formatting_preservation: string;
+  diagnostics: string[];
+}
+
+interface EditProjectionProviderMatrixEntryFixture {
+  provider_id: string;
+  backend_ref: BackendReference;
+  language: string;
+  formatting_preservation: string;
+  preserves_source_fragments: boolean;
+  operations: EditProjectionProviderOperationFixture[];
+}
+
+interface EditProjectionProviderMatrixFixture {
+  operations: string[];
+  providers: EditProjectionProviderMatrixEntryFixture[];
+  diagnostics: string[];
+}
+
+function editProjectionSupport(fixture: EditProjectionSupportFixture): EditProjectionSupport {
+  return {
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    supportsEditProjection: fixture.supports_edit_projection,
+    nativeEditTarget: fixture.native_edit_target,
+    normalizedEditTarget: fixture.normalized_edit_target,
+    supportedOperations: fixture.supported_operations,
+    requiredNodeFields: fixture.required_node_fields,
+    correlationKeys: fixture.correlation_keys,
+    preservesSourceFragments: fixture.preserves_source_fragments,
+    unsupportedReason: fixture.unsupported_reason ?? undefined,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function backendAvailabilityReport(
+  fixture: BackendAvailabilityReportFixture
+): BackendAvailabilityReport {
+  return {
+    backendRef: fixture.backend_ref,
+    status: fixture.status,
+    checks: fixture.checks,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function providerDiagnosticsReport(
+  fixture: ProviderDiagnosticsReportFixture
+): ProviderDiagnosticsReport {
+  return {
+    providerId: fixture.provider_id,
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    status: fixture.status,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function editProjectionExecutionResult(
+  fixture: EditProjectionExecutionResultFixture
+): EditProjectionExecutionResult {
+  return {
+    ok: fixture.ok,
+    status: fixture.status,
+    source: fixture.source,
+    appliedOperations: fixture.applied_operations.map(
+      (operation): AppliedEditProjectionOperation => ({
+        operation: operation.operation,
+        targetNodeId: operation.target_node_id,
+        correlationKey: operation.correlation_key,
+        correlationValue: operation.correlation_value
+      })
+    ),
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function editProjectionProviderMatrixEntry(
+  fixture: EditProjectionProviderMatrixEntryFixture
+): EditProjectionProviderMatrixEntry {
+  return {
+    providerId: fixture.provider_id,
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    formattingPreservation: fixture.formatting_preservation,
+    preservesSourceFragments: fixture.preserves_source_fragments,
+    operations: fixture.operations.map(
+      (operation): EditProjectionProviderOperation => ({
+        operation: operation.operation,
+        status: operation.status,
+        nodeScope: operation.node_scope,
+        correlationKeys: operation.correlation_keys,
+        fixtureSlices: operation.fixture_slices,
+        formattingPreservation: operation.formatting_preservation,
+        diagnostics: operation.diagnostics
+      })
+    )
+  };
+}
+
+function editProjectionProviderMatrix(
+  fixture: EditProjectionProviderMatrixFixture
+): EditProjectionProviderMatrix {
+  return {
+    operations: fixture.operations,
+    providers: fixture.providers.map(editProjectionProviderMatrixEntry),
+    diagnostics: fixture.diagnostics
+  };
 }
 
 interface KaitaiSubstrateFixture {
@@ -193,6 +405,128 @@ interface ConformanceManifest {
   >;
 }
 
+interface NormalizedTreeNodeFixture {
+  readonly id: string;
+  readonly kind: string;
+  readonly role: NormalizedTreeNode['role'];
+  readonly parent_id: string | null;
+  readonly child_ids: readonly string[];
+  readonly span: {
+    readonly range: { readonly start_byte: number; readonly end_byte: number };
+    readonly start_point: { readonly row: number; readonly column: number };
+    readonly end_point: { readonly row: number; readonly column: number };
+  };
+  readonly field_name: string | null;
+  readonly named: boolean;
+  readonly anonymous: boolean;
+  readonly has_source_text: boolean;
+  readonly source_fragment: string;
+  readonly backend_kind?: string;
+  readonly semantic_roles?: readonly string[];
+  readonly backend_roles?: readonly string[];
+  readonly unsupported_features?: readonly string[];
+  readonly metadata?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
+interface BackendCapabilityFixture {
+  readonly backend_ref: BackendReference;
+  readonly language: string;
+  readonly parser_identity: {
+    readonly name: string;
+    readonly version: string;
+    readonly implementation: string;
+  };
+  readonly language_version: {
+    readonly version: string;
+    readonly dialect: string | null;
+  };
+  readonly parse_error_behavior: string;
+  readonly source_span_support: string;
+  readonly source_fragment_support: string;
+  readonly render_strategies: readonly string[];
+  readonly semantic_role_support: string;
+  readonly normalized_tree_support: boolean;
+  readonly native_node_access: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+interface SourceFragmentExtractionFixture {
+  readonly source: string;
+  readonly strategy: string;
+  readonly span: {
+    readonly range: { readonly start_byte: number; readonly end_byte: number };
+    readonly start_point: { readonly row: number; readonly column: number };
+    readonly end_point: { readonly row: number; readonly column: number };
+  };
+  readonly fragment: {
+    readonly text: string;
+    readonly available: boolean;
+    readonly strategy: string;
+    readonly byte_length: number;
+    readonly diagnostics: readonly string[];
+  };
+}
+
+interface ParseErrorToleranceFixture {
+  readonly backend_ref: BackendReference;
+  readonly language: string;
+  readonly behavior: string;
+  readonly tolerates_errors: boolean;
+  readonly error_nodes: Array<{
+    readonly kind: string;
+    readonly span: SourceFragmentExtractionFixture['span'];
+    readonly message: string;
+  }>;
+  readonly diagnostics: readonly string[];
+}
+
+interface NativeParserProviderFixture {
+  readonly id: string;
+  readonly family: string;
+  readonly language: string;
+  readonly operations: readonly string[];
+  readonly retains_native_tree: boolean;
+  readonly native_tree_visibility: string;
+  readonly metadata_policy: string;
+}
+
+interface NormalizedParseResultFixture {
+  readonly ok: boolean;
+  readonly backend_capability: BackendCapabilityFixture;
+  readonly root_id: string;
+  readonly nodes: readonly NormalizedTreeNodeFixture[];
+  readonly parse_error_tolerance: ParseErrorToleranceFixture;
+  readonly source_fragments_available: boolean;
+  readonly diagnostics: readonly string[];
+  readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
+interface TreeHaverProfileFixture {
+  readonly profile_id: string;
+  readonly language: string;
+  readonly backend_ref: BackendReference;
+  readonly provider_id: string;
+  readonly node_roles: readonly NormalizedTreeNode['role'][];
+  readonly normalized_node_fields: readonly string[];
+  readonly optional_node_features: readonly string[];
+  readonly unsupported_defaults: Readonly<Record<string, string>>;
+  readonly capability: BackendCapabilityFixture;
+  readonly fixture_slices: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+interface OrderedTreePrimitivesFixture {
+  readonly root_id: string;
+  readonly child_order: Readonly<Record<string, readonly string[]>>;
+  readonly sibling_edges: readonly {
+    readonly parent_id: string;
+    readonly node_id: string;
+    readonly previous_sibling_id: string | null;
+    readonly next_sibling_id: string | null;
+  }[];
+  readonly diagnostics: readonly string[];
+}
+
 function readFixture<T>(...segments: string[]): T {
   const fixturePath = path.resolve(process.cwd(), '..', 'fixtures', ...segments);
 
@@ -212,6 +546,135 @@ function diagnosticsFixturePath(role: string): string[] {
   }
 
   return [...entry.path];
+}
+
+function normalizedTreeNode(fixture: NormalizedTreeNodeFixture): NormalizedTreeNode {
+  return {
+    id: fixture.id,
+    kind: fixture.kind,
+    role: fixture.role,
+    parentId: fixture.parent_id ?? undefined,
+    childIds: fixture.child_ids,
+    span: {
+      range: {
+        startByte: fixture.span.range.start_byte,
+        endByte: fixture.span.range.end_byte
+      },
+      startPoint: fixture.span.start_point,
+      endPoint: fixture.span.end_point
+    },
+    fieldName: fixture.field_name ?? undefined,
+    named: fixture.named,
+    anonymous: fixture.anonymous,
+    hasSourceText: fixture.has_source_text,
+    sourceFragment: fixture.source_fragment,
+    backendKind: fixture.backend_kind,
+    semanticRoles: fixture.semantic_roles ?? [],
+    backendRoles: fixture.backend_roles ?? [],
+    unsupportedFeatures: fixture.unsupported_features ?? [],
+    metadata: fixture.metadata ?? {}
+  };
+}
+
+function backendCapability(fixture: BackendCapabilityFixture): BackendCapability {
+  return {
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    parserIdentity: fixture.parser_identity,
+    languageVersion: {
+      version: fixture.language_version.version,
+      dialect: fixture.language_version.dialect ?? undefined
+    },
+    parseErrorBehavior: fixture.parse_error_behavior,
+    sourceSpanSupport: fixture.source_span_support,
+    sourceFragmentSupport: fixture.source_fragment_support,
+    renderStrategies: fixture.render_strategies,
+    semanticRoleSupport: fixture.semantic_role_support,
+    normalizedTreeSupport: fixture.normalized_tree_support,
+    nativeNodeAccess: fixture.native_node_access,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function sourceSpan(fixture: SourceFragmentExtractionFixture['span']): SourceSpan {
+  return {
+    range: {
+      startByte: fixture.range.start_byte,
+      endByte: fixture.range.end_byte
+    },
+    startPoint: fixture.start_point,
+    endPoint: fixture.end_point
+  };
+}
+
+function parseErrorTolerance(fixture: ParseErrorToleranceFixture): ParseErrorTolerance {
+  return {
+    backendRef: fixture.backend_ref,
+    language: fixture.language,
+    behavior: fixture.behavior,
+    toleratesErrors: fixture.tolerates_errors,
+    errorNodes: fixture.error_nodes.map((node) => ({
+      kind: node.kind,
+      span: sourceSpan(node.span),
+      message: node.message
+    })),
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function nativeParserProvider(fixture: NativeParserProviderFixture): NativeParserProvider {
+  return {
+    id: fixture.id,
+    family: fixture.family,
+    language: fixture.language,
+    operations: fixture.operations,
+    retainsNativeTree: fixture.retains_native_tree,
+    nativeTreeVisibility: fixture.native_tree_visibility,
+    metadataPolicy: fixture.metadata_policy
+  };
+}
+
+function normalizedParseResult(fixture: NormalizedParseResultFixture): NormalizedParseResult {
+  return {
+    ok: fixture.ok,
+    backendCapability: backendCapability(fixture.backend_capability),
+    rootId: fixture.root_id,
+    nodes: fixture.nodes.map(normalizedTreeNode),
+    parseErrorTolerance: parseErrorTolerance(fixture.parse_error_tolerance),
+    sourceFragmentsAvailable: fixture.source_fragments_available,
+    diagnostics: fixture.diagnostics,
+    metadata: fixture.metadata
+  };
+}
+
+function treeHaverProfile(fixture: TreeHaverProfileFixture): TreeHaverProfile {
+  return {
+    profileId: fixture.profile_id,
+    language: fixture.language,
+    backendRef: fixture.backend_ref,
+    providerId: fixture.provider_id,
+    nodeRoles: fixture.node_roles,
+    normalizedNodeFields: fixture.normalized_node_fields,
+    optionalNodeFeatures: fixture.optional_node_features,
+    unsupportedDefaults: fixture.unsupported_defaults,
+    capability: backendCapability(fixture.capability),
+    fixtureSlices: fixture.fixture_slices,
+    diagnostics: fixture.diagnostics
+  };
+}
+
+function orderedTreePrimitives(fixture: OrderedTreePrimitivesFixture): OrderedTreePrimitives {
+  return {
+    rootId: fixture.root_id,
+    childOrder: fixture.child_order,
+    siblingEdges: fixture.sibling_edges.map((edge) => ({
+      parentId: edge.parent_id,
+      nodeId: edge.node_id,
+      previousSiblingId: edge.previous_sibling_id ?? undefined,
+      nextSiblingId: edge.next_sibling_id ?? undefined
+    })),
+    diagnostics: fixture.diagnostics
+  };
 }
 
 describe('tree-haver shared fixtures', () => {
@@ -234,6 +697,182 @@ describe('tree-haver shared fixtures', () => {
       backend: adapterInfo.backend,
       supports_dialects: adapterInfo.supportsDialects
     }).toEqual(fixture.adapter_info);
+  });
+
+  it('conforms to the slice-782 normalized tree node fixture', () => {
+    const fixture = readFixture<{
+      node_roles: string[];
+      node: NormalizedTreeNodeFixture;
+      child: NormalizedTreeNodeFixture;
+    }>('diagnostics', 'slice-782-normalized-tree-node', 'normalized-tree-node.json');
+
+    expect(nodeRoles()).toEqual(fixture.node_roles);
+    const node = normalizedTreeNode(fixture.node);
+    const child = normalizedTreeNode(fixture.child);
+
+    expect(node.role).toBe('structural');
+    expect(node.childIds[1]).toBe(child.id);
+    expect(child.parentId).toBe(node.id);
+    expect(child.fieldName).toBe('declaration');
+    expect(child.hasSourceText).toBe(true);
+  });
+
+  it('conforms to the slice-786 progressive node metadata fixture', () => {
+    const fixture = readFixture<{
+      enhanced_node: NormalizedTreeNodeFixture;
+      limited_node: NormalizedTreeNodeFixture;
+    }>('diagnostics', 'slice-786-progressive-node-metadata', 'progressive-node-metadata.json');
+    const enhanced = normalizedTreeNode(fixture.enhanced_node);
+    const limited = normalizedTreeNode(fixture.limited_node);
+
+    expect(enhanced.backendKind).toBe('FuncDecl');
+    expect(enhanced.semanticRoles[0]).toBe('declaration');
+    expect(enhanced.metadata.go_dst?.node_path).toBe('decls[0]');
+    expect(limited.hasSourceText).toBe(false);
+    expect(limited.unsupportedFeatures[1]).toBe('source_fragment');
+    expect(limited.metadata.psych?.location_support).toBe('line_column_only');
+  });
+
+  it('conforms to the slice-787 native parser adapter contract fixture', () => {
+    const fixture = readFixture<{
+      provider: NativeParserProviderFixture;
+      parse_result: NormalizedParseResultFixture;
+    }>(
+      'diagnostics',
+      'slice-787-native-parser-adapter-contract',
+      'native-parser-adapter-contract.json'
+    );
+    const provider = nativeParserProvider(fixture.provider);
+    const result = normalizedParseResult(fixture.parse_result);
+
+    expect(provider.id).toBe('go-dst');
+    expect(provider.retainsNativeTree).toBe(true);
+    expect(provider.nativeTreeVisibility).toBe('provider_internal');
+    expect(result.rootId).toBe(result.nodes[0]?.id);
+    expect(result.nodes[1]?.semanticRoles[1]).toBe('function');
+    expect(result.metadata.go_dst?.native_tree_visibility).toBe('provider_internal');
+    expect(result.sourceFragmentsAvailable).toBe(true);
+  });
+
+  it('conforms to the slice-822 native provider metadata fixture', () => {
+    const fixture = readFixture<{
+      provider_metadata: NativeProviderMetadata;
+      expected: {
+        provider_id: string;
+        family: string;
+        host_language: string;
+        target_language: string;
+        parser_name: string;
+        parse_error_behavior: string;
+        source_span_support: string;
+        render_support: string;
+        semantic_role_support: string;
+        retains_native_tree: boolean;
+        metadata_policy: string;
+      };
+    }>('diagnostics', 'slice-822-native-provider-metadata', 'native-provider-metadata.json');
+    const metadata = fixture.provider_metadata;
+
+    expect(metadata.provider_id).toBe(fixture.expected.provider_id);
+    expect(metadata.family).toBe(fixture.expected.family);
+    expect(metadata.host_language).toBe(fixture.expected.host_language);
+    expect(metadata.target_language).toBe(fixture.expected.target_language);
+    expect(metadata.parser_name).toBe(fixture.expected.parser_name);
+    expect(metadata.parse_error_behavior).toBe(fixture.expected.parse_error_behavior);
+    expect(metadata.source_span_support).toBe(fixture.expected.source_span_support);
+    expect(metadata.render_support).toBe(fixture.expected.render_support);
+    expect(metadata.semantic_role_support).toBe(fixture.expected.semantic_role_support);
+    expect(metadata.retains_native_tree).toBe(fixture.expected.retains_native_tree);
+    expect(metadata.metadata_policy).toBe(fixture.expected.metadata_policy);
+  });
+
+  it('conforms to the slice-788 tree-haver profile fixture', () => {
+    const fixture = readFixture<{ profile: TreeHaverProfileFixture }>(
+      'diagnostics',
+      'slice-788-tree-haver-profile',
+      'tree-haver-profile.json'
+    );
+    const profile = treeHaverProfile(fixture.profile);
+
+    expect(profile.profileId).toBe('go-dst-normalized-tree-v1');
+    expect(profile.backendRef.id).toBe('go-dst');
+    expect(profile.nodeRoles[0]).toBe('structural');
+    expect(profile.normalizedNodeFields.at(-1)).toBe('metadata');
+    expect(profile.unsupportedDefaults.field_name).toBe('null');
+    expect(profile.capability.parserIdentity.name).toBe('github.com/dave/dst');
+    expect(profile.fixtureSlices[0]).toBe('slice-782-normalized-tree-node');
+  });
+
+  it('conforms to the slice-789 ordered tree primitives fixture', () => {
+    const fixture = readFixture<{
+      root_id: string;
+      ordered_tree: OrderedTreePrimitivesFixture;
+      forbidden_merge_terms: readonly string[];
+    }>('diagnostics', 'slice-789-ordered-tree-primitives', 'ordered-tree-primitives.json');
+    const ordered = orderedTreePrimitives(fixture.ordered_tree);
+
+    for (const diagnostic of ordered.diagnostics) {
+      for (const term of fixture.forbidden_merge_terms) {
+        expect(diagnostic.toLowerCase()).not.toContain(term.toLowerCase());
+      }
+    }
+
+    expect(ordered.rootId).toBe(fixture.root_id);
+    expect(ordered.childOrder.file?.[0]).toBe('imports');
+    expect(ordered.childOrder.imports?.[1]).toBe('import-strings');
+    expect(ordered.siblingEdges[2]?.previousSiblingId).toBeUndefined();
+    expect(ordered.siblingEdges[2]?.nextSiblingId).toBe('import-strings');
+  });
+
+  it('conforms to the slice-783 backend capability report fixture', () => {
+    const fixture = readFixture<{ capability: BackendCapabilityFixture }>(
+      'diagnostics',
+      'slice-783-backend-capability-report',
+      'backend-capability-report.json'
+    );
+    const capability = backendCapability(fixture.capability);
+
+    expect(capability.backendRef).toEqual({ id: 'go-dst', family: 'native' });
+    expect(capability.language).toBe('go');
+    expect(capability.parserIdentity.name).toBe('github.com/dave/dst');
+    expect(capability.parseErrorBehavior).toBe('diagnostic_and_partial_tree');
+    expect(capability.renderStrategies[0]).toBe('source_fragment_reuse');
+    expect(capability.normalizedTreeSupport).toBe(true);
+    expect(capability.nativeNodeAccess).toBe(true);
+  });
+
+  it('conforms to the slice-784 source fragment extraction fixture', () => {
+    const fixture = readFixture<SourceFragmentExtractionFixture>(
+      'diagnostics',
+      'slice-784-source-fragment-extraction',
+      'source-fragment-extraction.json'
+    );
+    const fragment = extractSourceFragment(
+      fixture.source,
+      sourceSpan(fixture.span),
+      fixture.strategy
+    );
+
+    expect(fragment.text).toBe(fixture.fragment.text);
+    expect(fragment.available).toBe(fixture.fragment.available);
+    expect(fragment.strategy).toBe(fixture.fragment.strategy);
+    expect(fragment.byteLength).toBe(fixture.fragment.byte_length);
+    expect(fragment.diagnostics).toHaveLength(fixture.fragment.diagnostics.length);
+  });
+
+  it('conforms to the slice-785 parse error tolerance fixture', () => {
+    const fixture = readFixture<{ parse_error_tolerance: ParseErrorToleranceFixture }>(
+      'diagnostics',
+      'slice-785-parse-error-tolerance',
+      'parse-error-tolerance.json'
+    );
+    const tolerance = parseErrorTolerance(fixture.parse_error_tolerance);
+
+    expect(tolerance.backendRef.id).toBe('tree-sitter-go');
+    expect(tolerance.behavior).toBe('diagnostic_and_partial_tree');
+    expect(tolerance.toleratesErrors).toBe(true);
+    expect(tolerance.errorNodes[0]?.span.range.startByte).toBe(27);
+    expect(tolerance.diagnostics[0]).toBe('partial tree contains parser error nodes');
   });
 
   it('conforms to the slice-19 adapter policy support fixture', () => {
@@ -535,6 +1174,236 @@ describe('tree-haver shared fixtures', () => {
     expect(unsafeEntries[0]?.category).toBe('path_traversal');
     expect(unsafeEntries[1]?.normalizedPath).toBe('config/settings.yml');
     expect(unsafeEntries[2]?.category).toBe('encrypted_member');
+  });
+
+  it('conforms to the slice-924 tree_haver edit projection support fixture', () => {
+    const fixture = readFixture<{
+      support: EditProjectionSupportFixture;
+      unsupported: EditProjectionSupportFixture;
+    }>(
+      'diagnostics',
+      'slice-924-tree-haver-edit-projection-support',
+      'edit-projection-support.json'
+    );
+    const support = editProjectionSupport(fixture.support);
+    const unsupported = editProjectionSupport(fixture.unsupported);
+
+    expect(support.supportsEditProjection).toBe(true);
+    expect(support.backendRef.id).toBe('go-dst');
+    expect(support.supportedOperations[0]).toBe('replace_node');
+    expect(support.correlationKeys[1]).toBe('metadata.go_dst.node_path');
+    expect(support.preservesSourceFragments).toBe(true);
+    expect(support.unsupportedReason).toBeUndefined();
+
+    expect(unsupported.supportsEditProjection).toBe(false);
+    expect(unsupported.backendRef.id).toBe('psych');
+    expect(unsupported.unsupportedReason).toBe('backend_does_not_retain_native_tree');
+    expect(unsupported.supportedOperations).toHaveLength(0);
+    expect(unsupported.diagnostics[0]).toBe(
+      'edit projection unavailable: native tree not retained'
+    );
+  });
+
+  it('conforms to the slice-925 tree_haver path validation fixture', () => {
+    const fixture = readFixture<PathValidationFixture>(
+      'diagnostics',
+      'slice-925-tree-haver-path-validation',
+      'path-validation.json'
+    );
+
+    for (const testCase of fixture.library_path_cases) {
+      const validation = validateLibraryPath(testCase.path);
+      expect(validation.path).toBe(testCase.path);
+      expect(validation.valid, testCase.name).toBe(testCase.expected_valid);
+      expect(validation.errors, testCase.name).toEqual(testCase.expected_errors);
+      expect(libraryPathErrors(testCase.path), testCase.name).toEqual(testCase.expected_errors);
+    }
+
+    for (const testCase of fixture.language_name_cases) {
+      expect(safeLanguageName(testCase.value), testCase.name).toBe(testCase.expected_valid);
+      expect(sanitizeLanguageName(testCase.value), testCase.name).toBe(
+        testCase.expected_sanitized ?? undefined
+      );
+    }
+
+    for (const testCase of fixture.symbol_name_cases) {
+      expect(safeSymbolName(testCase.value), testCase.name).toBe(testCase.expected_valid);
+    }
+
+    for (const testCase of fixture.backend_name_cases) {
+      expect(safeBackendName(testCase.value), testCase.name).toBe(testCase.expected_valid);
+    }
+  });
+
+  it('conforms to the slice-926 tree_haver backend availability fixture', () => {
+    const fixture = readFixture<Record<string, BackendAvailabilityReportFixture>>(
+      'diagnostics',
+      'slice-926-tree-haver-backend-availability',
+      'backend-availability.json'
+    );
+
+    for (const name of ['available_report', 'unavailable_report', 'unknown_report']) {
+      const expected = backendAvailabilityReport(fixture[name]!);
+      expect(buildBackendAvailabilityReport(expected.backendRef, expected.checks)).toEqual(
+        expected
+      );
+    }
+  });
+
+  it('conforms to the slice-927 tree_haver provider diagnostics fixture', () => {
+    const fixture = readFixture<Record<string, ProviderDiagnosticsReportFixture>>(
+      'diagnostics',
+      'slice-927-tree-haver-provider-diagnostics',
+      'provider-diagnostics.json'
+    );
+
+    for (const name of ['clean_report', 'warning_report', 'blocked_report']) {
+      const expected = providerDiagnosticsReport(fixture[name]!);
+      expect(
+        buildProviderDiagnosticsReport(
+          expected.providerId,
+          expected.backendRef,
+          expected.language,
+          expected.diagnostics
+        )
+      ).toEqual(expected);
+    }
+  });
+
+  it('conforms to the slice-928 edit projection execution contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+      unsupported_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-928-go-dst-edit-projection-execution',
+      'edit-projection-execution.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+
+    const unsupported = editProjectionExecutionResult(fixture.unsupported_result);
+    expect(
+      buildEditProjectionExecutionResult(unsupported.source, [], unsupported.diagnostics)
+    ).toEqual(unsupported);
+  });
+
+  it('conforms to the slice-929 insert-child edit projection contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-929-go-dst-insert-child-edit-projection',
+      'insert-child-edit-projection.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+  });
+
+  it('conforms to the slice-930 delete-node edit projection contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-930-go-dst-delete-node-edit-projection',
+      'delete-node-edit-projection.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+  });
+
+  it('conforms to the slice-931 go-parser edit projection contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-931-go-parser-edit-projection-execution',
+      'edit-projection-execution.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+  });
+
+  it('conforms to the slice-932 edit projection provider operation matrix fixture', () => {
+    const fixture = readFixture<{
+      operations: string[];
+      providers: EditProjectionProviderMatrixEntryFixture[];
+      expected_matrix: EditProjectionProviderMatrixFixture;
+    }>(
+      'diagnostics',
+      'slice-932-edit-projection-provider-operation-matrix',
+      'provider-operation-matrix.json'
+    );
+
+    const providers = fixture.providers.map(editProjectionProviderMatrixEntry);
+    const expected = editProjectionProviderMatrix(fixture.expected_matrix);
+    expect(buildEditProjectionProviderMatrix(fixture.operations, providers, [])).toEqual(expected);
+  });
+
+  it('conforms to the slice-933 go-parser insert-child edit projection contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-933-go-parser-insert-child-edit-projection',
+      'insert-child-edit-projection.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
+  });
+
+  it('conforms to the slice-934 go-parser delete-node edit projection contract fixture', () => {
+    const fixture = readFixture<{
+      expected_result: EditProjectionExecutionResultFixture;
+    }>(
+      'diagnostics',
+      'slice-934-go-parser-delete-node-edit-projection',
+      'delete-node-edit-projection.json'
+    );
+
+    const expected = editProjectionExecutionResult(fixture.expected_result);
+    expect(
+      buildEditProjectionExecutionResult(
+        expected.source,
+        expected.appliedOperations,
+        expected.diagnostics
+      )
+    ).toEqual(expected);
   });
 
   it('supports temporary backend context selection', () => {

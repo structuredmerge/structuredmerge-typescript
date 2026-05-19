@@ -62,6 +62,230 @@ export interface FeatureProfile {
   readonly supportedPolicies?: readonly PolicyReference[];
 }
 
+export interface ParserIdentity {
+  readonly name: string;
+  readonly version: string;
+  readonly implementation: string;
+}
+
+export interface LanguageVersion {
+  readonly version: string;
+  readonly dialect?: string;
+}
+
+export interface BackendCapability {
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly parserIdentity: ParserIdentity;
+  readonly languageVersion: LanguageVersion;
+  readonly parseErrorBehavior: string;
+  readonly sourceSpanSupport: string;
+  readonly sourceFragmentSupport: string;
+  readonly renderStrategies: readonly string[];
+  readonly semanticRoleSupport: string;
+  readonly normalizedTreeSupport: boolean;
+  readonly nativeNodeAccess: boolean;
+  readonly knownNodeKinds?: readonly string[];
+  readonly knownFields?: readonly string[];
+  readonly grammarInventory?: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface ParseErrorNode {
+  readonly kind: string;
+  readonly span: SourceSpan;
+  readonly message: string;
+}
+
+export interface ParseErrorTolerance {
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly behavior: string;
+  readonly toleratesErrors: boolean;
+  readonly errorNodes: readonly ParseErrorNode[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface NativeParserProvider {
+  readonly id: string;
+  readonly family: string;
+  readonly language: string;
+  readonly operations: readonly string[];
+  readonly retainsNativeTree: boolean;
+  readonly nativeTreeVisibility: string;
+  readonly metadataPolicy: string;
+}
+
+export interface NativeProviderMetadata {
+  readonly provider_id: string;
+  readonly family: string;
+  readonly host_language: string;
+  readonly target_language: string;
+  readonly parser_name: string;
+  readonly parser_version: string;
+  readonly language_version: string;
+  readonly dialect: string;
+  readonly parse_error_behavior: string;
+  readonly source_span_support: string;
+  readonly render_support: string;
+  readonly semantic_role_support: string;
+  readonly retains_native_tree: boolean;
+  readonly native_tree_visibility: string;
+  readonly metadata_policy: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface NormalizedParseResult {
+  readonly ok: boolean;
+  readonly backendCapability: BackendCapability;
+  readonly rootId: string;
+  readonly nodes: readonly NormalizedTreeNode[];
+  readonly parseErrorTolerance: ParseErrorTolerance;
+  readonly sourceFragmentsAvailable: boolean;
+  readonly diagnostics: readonly string[];
+  readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
+export interface TreeHaverProfile {
+  readonly profileId: string;
+  readonly language: string;
+  readonly backendRef: BackendReference;
+  readonly providerId: string;
+  readonly nodeRoles: readonly NodeRole[];
+  readonly normalizedNodeFields: readonly string[];
+  readonly optionalNodeFeatures: readonly string[];
+  readonly unsupportedDefaults: Readonly<Record<string, string>>;
+  readonly capability: BackendCapability;
+  readonly fixtureSlices: readonly string[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface EditProjectionSupport {
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly supportsEditProjection: boolean;
+  readonly nativeEditTarget: string;
+  readonly normalizedEditTarget: string;
+  readonly supportedOperations: readonly string[];
+  readonly requiredNodeFields: readonly string[];
+  readonly correlationKeys: readonly string[];
+  readonly preservesSourceFragments: boolean;
+  readonly unsupportedReason?: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface LibraryPathValidation {
+  readonly path: string;
+  readonly valid: boolean;
+  readonly errors: readonly string[];
+}
+
+export type BackendAvailabilityStatus = 'available' | 'unavailable' | 'unknown';
+
+export interface BackendAvailabilityCheck {
+  readonly name: string;
+  readonly status: BackendAvailabilityStatus;
+  readonly required: boolean;
+  readonly diagnostics: readonly string[];
+}
+
+export interface BackendAvailabilityReport {
+  readonly backendRef: BackendReference;
+  readonly status: BackendAvailabilityStatus;
+  readonly checks: readonly BackendAvailabilityCheck[];
+  readonly diagnostics: readonly string[];
+}
+
+export type ProviderDiagnosticsStatus = 'clean' | 'warning' | 'blocked';
+
+export interface ProviderDiagnostic {
+  readonly severity: DiagnosticSeverity;
+  readonly category: string;
+  readonly code: string;
+  readonly message: string;
+  readonly path: string;
+  readonly blocking: boolean;
+}
+
+export interface ProviderDiagnosticsReport {
+  readonly providerId: string;
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly status: ProviderDiagnosticsStatus;
+  readonly diagnostics: readonly ProviderDiagnostic[];
+}
+
+export interface EditProjectionOperationRequest {
+  readonly operation: string;
+  readonly targetNodeId: string;
+  readonly targetNodePath: string;
+  readonly replacementSource: string;
+}
+
+export interface EditProjectionExecutionRequest {
+  readonly providerId: string;
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly source: string;
+  readonly operations: readonly EditProjectionOperationRequest[];
+}
+
+export interface AppliedEditProjectionOperation {
+  readonly operation: string;
+  readonly targetNodeId: string;
+  readonly correlationKey: string;
+  readonly correlationValue: string;
+}
+
+export interface EditProjectionExecutionResult {
+  readonly ok: boolean;
+  readonly status: 'applied' | 'rejected';
+  readonly source: string;
+  readonly appliedOperations: readonly AppliedEditProjectionOperation[];
+  readonly diagnostics: readonly ProviderDiagnostic[];
+}
+
+export type EditProjectionProviderOperationStatus = 'implemented' | 'planned' | 'unsupported';
+
+export interface EditProjectionProviderOperation {
+  readonly operation: string;
+  readonly status: EditProjectionProviderOperationStatus;
+  readonly nodeScope: string;
+  readonly correlationKeys: readonly string[];
+  readonly fixtureSlices: readonly string[];
+  readonly formattingPreservation: string;
+  readonly diagnostics: readonly string[];
+}
+
+export interface EditProjectionProviderMatrixEntry {
+  readonly providerId: string;
+  readonly backendRef: BackendReference;
+  readonly language: string;
+  readonly formattingPreservation: string;
+  readonly preservesSourceFragments: boolean;
+  readonly operations: readonly EditProjectionProviderOperation[];
+}
+
+export interface EditProjectionProviderMatrix {
+  readonly operations: readonly string[];
+  readonly providers: readonly EditProjectionProviderMatrixEntry[];
+  readonly diagnostics: readonly string[];
+}
+
+export interface OrderedSiblingEdge {
+  readonly parentId: string;
+  readonly nodeId: string;
+  readonly previousSiblingId?: string;
+  readonly nextSiblingId?: string;
+}
+
+export interface OrderedTreePrimitives {
+  readonly rootId: string;
+  readonly childOrder: Readonly<Record<string, readonly string[]>>;
+  readonly siblingEdges: readonly OrderedSiblingEdge[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface ParserAdapter<TAnalysis extends AnalysisHandle> {
   readonly info: AdapterInfo;
   parse(request: ParserRequest): ParseResult<TAnalysis>;
@@ -101,6 +325,59 @@ export interface SourceSpan {
   readonly range: ByteRange;
   readonly startPoint: SourcePoint;
   readonly endPoint: SourcePoint;
+}
+
+export type NodeRole =
+  | 'structural'
+  | 'token'
+  | 'trivia'
+  | 'comment'
+  | 'delimiter'
+  | 'separator'
+  | 'virtual'
+  | 'error'
+  | 'opaque';
+
+export interface NormalizedTreeNode {
+  readonly id: string;
+  readonly kind: string;
+  readonly role: NodeRole;
+  readonly parentId?: string;
+  readonly childIds: readonly string[];
+  readonly span: SourceSpan;
+  readonly fieldName?: string;
+  readonly named: boolean;
+  readonly anonymous: boolean;
+  readonly hasSourceText: boolean;
+  readonly sourceFragment: string;
+  readonly backendKind?: string;
+  readonly semanticRoles: readonly string[];
+  readonly backendRoles: readonly string[];
+  readonly unsupportedFeatures: readonly string[];
+  readonly metadata: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
+export interface SourceFragment {
+  readonly text: string;
+  readonly span: SourceSpan;
+  readonly available: boolean;
+  readonly strategy: string;
+  readonly byteLength: number;
+  readonly diagnostics: readonly string[];
+}
+
+export function nodeRoles(): readonly NodeRole[] {
+  return [
+    'structural',
+    'token',
+    'trivia',
+    'comment',
+    'delimiter',
+    'separator',
+    'virtual',
+    'error',
+    'opaque'
+  ];
 }
 
 export interface ByteEditSpan {
@@ -254,6 +531,34 @@ export function sliceByteRange(source: string, range: ByteRange): string {
   return sourceBytes.subarray(range.startByte, range.endByte).toString('utf8');
 }
 
+export function extractSourceFragment(
+  source: string,
+  span: SourceSpan,
+  strategy: string
+): SourceFragment {
+  try {
+    const text = sliceByteRange(source, span.range);
+
+    return {
+      text,
+      span,
+      available: true,
+      strategy,
+      byteLength: Buffer.from(text, 'utf8').length,
+      diagnostics: []
+    };
+  } catch (error) {
+    return {
+      text: '',
+      span,
+      available: false,
+      strategy,
+      byteLength: 0,
+      diagnostics: [error instanceof Error ? error.message : String(error)]
+    };
+  }
+}
+
 export function byteOffsetForPoint(source: string, point: SourcePoint): number {
   if (point.row < 0 || point.column < 0) {
     throw new RangeError(`invalid source point (${point.row}, ${point.column})`);
@@ -400,6 +705,13 @@ const backendRegistry = new Map<string, BackendReference>([
 ]);
 let currentBackend: string | undefined;
 
+export const MAX_LIBRARY_PATH_LENGTH = 4096;
+
+const VALID_LIBRARY_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+const VALID_LANGUAGE_NAME_PATTERN = /^[a-z][a-z0-9_]*$/u;
+const VALID_SYMBOL_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/u;
+const VERSIONED_SHARED_OBJECT_PATTERN = /\.so\.\d+$/u;
+
 export function registerBackend(backend: BackendReference): void {
   backendRegistry.set(backend.id, { ...backend });
 }
@@ -412,6 +724,146 @@ export function backendReference(id: string): BackendReference | undefined {
 
 export function registeredBackends(): BackendReference[] {
   return [...backendRegistry.values()].map((backend) => ({ ...backend }));
+}
+
+export function validateLibraryPath(libraryPath: string): LibraryPathValidation {
+  const errors = libraryPathErrors(libraryPath);
+
+  return {
+    path: libraryPath,
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function libraryPathErrors(libraryPath: string): string[] {
+  const errors: string[] = [];
+
+  if (libraryPath.length === 0) {
+    errors.push('path_empty');
+  }
+  if (libraryPath.length > MAX_LIBRARY_PATH_LENGTH) {
+    errors.push('path_too_long');
+  }
+  if (libraryPath.includes('\0')) {
+    errors.push('path_contains_null_byte');
+  }
+  if (!libraryPath.startsWith('/') && !windowsAbsolutePath(libraryPath)) {
+    errors.push('path_not_absolute');
+  }
+
+  const segments = libraryPath.split(/[\\/]/u);
+  if (segments.includes('..')) {
+    errors.push('path_contains_parent_traversal');
+  }
+  if (segments.includes('.')) {
+    errors.push('path_contains_current_directory_traversal');
+  }
+  if (!hasAllowedLibraryExtension(libraryPath)) {
+    errors.push('path_extension_not_allowed');
+  }
+
+  const filename = libraryFilename(libraryPath);
+  if (!VALID_LIBRARY_FILENAME_PATTERN.test(filename)) {
+    errors.push('filename_contains_invalid_characters');
+  }
+
+  return errors;
+}
+
+export function safeLanguageName(name: string): boolean {
+  return VALID_LANGUAGE_NAME_PATTERN.test(name);
+}
+
+export function sanitizeLanguageName(name: string): string | undefined {
+  const sanitized = name.toLowerCase().replace(/[^a-z0-9_]/gu, '');
+
+  return safeLanguageName(sanitized) ? sanitized : undefined;
+}
+
+export function safeSymbolName(symbol: string): boolean {
+  return VALID_SYMBOL_NAME_PATTERN.test(symbol);
+}
+
+export function safeBackendName(name: string): boolean {
+  return name === 'auto' || backendRegistry.has(name);
+}
+
+export function buildBackendAvailabilityReport(
+  backendRef: BackendReference,
+  checks: readonly BackendAvailabilityCheck[]
+): BackendAvailabilityReport {
+  if (checks.length === 0) {
+    return {
+      backendRef,
+      status: 'unknown',
+      checks,
+      diagnostics: ['backend availability unknown: no checks supplied']
+    };
+  }
+
+  const diagnostics: string[] = [];
+  let status: BackendAvailabilityStatus = 'available';
+  for (const check of checks) {
+    if (check.required && check.status !== 'available') {
+      status = 'unavailable';
+      diagnostics.push(`backend unavailable: required check ${check.name} is ${check.status}`);
+    }
+  }
+
+  return { backendRef, status, checks, diagnostics };
+}
+
+export function buildProviderDiagnosticsReport(
+  providerId: string,
+  backendRef: BackendReference,
+  language: string,
+  diagnostics: readonly ProviderDiagnostic[]
+): ProviderDiagnosticsReport {
+  let status: ProviderDiagnosticsStatus = 'clean';
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.blocking) {
+      status = 'blocked';
+      break;
+    }
+    if (diagnostic.severity === 'warning') {
+      status = 'warning';
+    }
+  }
+
+  return { providerId, backendRef, language, status, diagnostics };
+}
+
+export function buildEditProjectionExecutionResult(
+  source: string,
+  appliedOperations: readonly AppliedEditProjectionOperation[],
+  diagnostics: readonly ProviderDiagnostic[]
+): EditProjectionExecutionResult {
+  if (diagnostics.some((diagnostic) => diagnostic.blocking)) {
+    return {
+      ok: false,
+      status: 'rejected',
+      source,
+      appliedOperations: [],
+      diagnostics
+    };
+  }
+
+  return {
+    ok: true,
+    status: 'applied',
+    source,
+    appliedOperations,
+    diagnostics
+  };
+}
+
+export function buildEditProjectionProviderMatrix(
+  operations: readonly string[],
+  providers: readonly EditProjectionProviderMatrixEntry[],
+  diagnostics: readonly string[]
+): EditProjectionProviderMatrix {
+  return { operations, providers, diagnostics };
 }
 
 export function currentBackendId(): string | undefined {
@@ -430,6 +882,25 @@ export function withBackend<T>(backendId: string, fn: () => T): T {
   } finally {
     currentBackend = previousBackend;
   }
+}
+
+function windowsAbsolutePath(libraryPath: string): boolean {
+  return /^[A-Za-z]:[\\/]/u.test(libraryPath);
+}
+
+function hasAllowedLibraryExtension(libraryPath: string): boolean {
+  const normalizedPath = libraryPath.toLowerCase();
+
+  return (
+    normalizedPath.endsWith('.so') ||
+    VERSIONED_SHARED_OBJECT_PATTERN.test(normalizedPath) ||
+    normalizedPath.endsWith('.dylib') ||
+    normalizedPath.endsWith('.dll')
+  );
+}
+
+function libraryFilename(libraryPath: string): string {
+  return libraryPath.split(/[\\/]/u).at(-1) ?? '';
 }
 
 export function createPeggyParser(

@@ -5,9 +5,12 @@
     "noEmit": true,
     "paths": {
       "@structuredmerge/ast-merge": ["./packages/ast-merge/src/index.ts"],
+      "@structuredmerge/ast-merge-git": ["./packages/ast-merge-git/src/index.ts"],
+      "@structuredmerge/ast-crispr": ["./packages/ast-crispr/src/index.ts"],
       "@structuredmerge/tree-haver": ["./packages/tree-haver/src/index.ts"],
       "@structuredmerge/plain-merge": ["./packages/plain-merge/src/index.ts"],
       "@structuredmerge/json-merge": ["./packages/json-merge/src/index.ts"],
+      "@structuredmerge/go-merge": ["./packages/go-merge/src/index.ts"],
       "@structuredmerge/toml-merge": ["./packages/toml-merge/src/index.ts"],
       "@structuredmerge/peggy-toml-merge": ["./packages/peggy-toml-merge/src/index.ts"],
       "@structuredmerge/typescript-merge": ["./packages/typescript-merge/src/index.ts"],

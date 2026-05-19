@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseCompactRuleset } from '../src/index';
+import { compactRulesetFeatureProfile, parseCompactRuleset } from '../src/index';
 
 function rulesetFixtures(root: string): string[] {
   return readdirSync(root).flatMap((entry) => {
@@ -39,5 +39,38 @@ describe('parseCompactRuleset', () => {
       expect(result.ok, name).toBe(false);
       expect(result.diagnostics.length, name).toBeGreaterThan(0);
     }
+  });
+
+  it('derives the shared compact ruleset feature profile fixture', () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        path.resolve(
+          import.meta.dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          'fixtures',
+          'diagnostics',
+          'slice-781-compact-ruleset-profile',
+          'module-profile.json'
+        ),
+        'utf8'
+      )
+    ) as { ruleset_path: string[]; profile: unknown };
+
+    const rulesetPath = path.resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      'fixtures',
+      ...fixture.ruleset_path
+    );
+    const result = parseCompactRuleset(readFileSync(rulesetPath, 'utf8'));
+    expect(result.ok, JSON.stringify(result.diagnostics)).toBe(true);
+    expect(result.analysis).toBeDefined();
+    expect(compactRulesetFeatureProfile(result.analysis!)).toEqual(fixture.profile);
   });
 });

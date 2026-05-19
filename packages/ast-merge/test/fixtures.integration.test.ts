@@ -6,7 +6,43 @@ import { describe, expect, it } from 'vitest';
 import { mergeMarkdown } from '../../markdown-merge/src/index';
 import { mergeToml } from '../../toml-merge/src/index';
 import { mergeRuby } from '../../ruby-merge/src/index';
+import {
+  commentAttachmentEmpty,
+  commentAttachmentFreezeMarker,
+  commentAttachmentLayoutGapCount,
+  commentAttachmentLeadingRegionLayoutOwned,
+  commentAttachmentRegionCount,
+  commentAttachmentTrailingRegionLayoutOwned,
+  commentRegionEndLine,
+  commentRegionFreezeActions,
+  commentRegionNormalizedContent,
+  commentRegionSignature,
+  commentRegionStartLine,
+  commentRegionText,
+  detectFreezeDirectiveBlocks,
+  evaluateProfilePromotion,
+  evaluateProfileSelectionRequirement,
+  executeGenericConflictHandler,
+  freezeDirectiveBlockForLine,
+  initialProfilePromotionPolicy,
+  layoutGapBlankLineCount,
+  layoutGapControllerOwnerId,
+  layoutGapEffectiveControllerOwnerId,
+  layoutGapFallbackOwnerId,
+  layoutGapLineCount,
+  mergeDecisionReviewRequired,
+  mergeDecisionSourceSummary,
+  mergeDecisionSummary,
+  promotionProfileJsonKeyedObject,
+  promotionProfileRubyGemspecDependencyDeclarations,
+  validateLanguageBackendProfile
+} from '../src/index';
 import type {
+  ActiveProfileView,
+  AmbiguityMatchingReport,
+  BackendGrammarInventory,
+  BackendGapConformanceReport,
+  BackendParitySuite,
   ConformanceCaseRef,
   ConformanceCaseRun,
   ConformanceCaseExecution,
@@ -35,8 +71,65 @@ import type {
   DelegatedChildSurfaceOutput,
   DiagnosticCategory,
   DiagnosticSeverity,
+  DiffDriverSmokeSuite,
   DiscoveredSurface,
+  FallbackScopeReport,
+  FallbackUsageReport,
+  ChangeSet,
+  ClassMappingReport,
+  CommentAttachment,
+  CommentOwnerNode,
+  CommentRegion,
+  CommentStyleDefinition,
+  ConflictCategoryReport,
+  ConflictHandlerRegistryReport,
+  ConflictMarkerRenderingReport,
   FamilyFeatureProfile,
+  FalseTextualConflictSuite,
+  FreezeDirectiveBlock,
+  FreezeDirectiveDiagnostic,
+  FormattingEdgeFixtureSuite,
+  FormattingHardGateReport,
+  FormattingPreservationConformanceReport,
+  FormattingRecommendationGate,
+  GitDriverSmokeSuite,
+  GenericConflictHandlerExecution,
+  GoDSTProviderStackReport,
+  GoProviderComparisonReport,
+  HostLanguageNativeProviderContracts,
+  InconsistencyReport,
+  LanguageBackendProfile,
+  LanguageProfileHandlerRegistry,
+  LayoutGap,
+  LocalLineFallbackReport,
+  MatchingDebugArtifacts,
+  MergeDecisionRecord,
+  MergeIR,
+  MergeIRComparisonReport,
+  MoveDetectionMatchingReport,
+  PairwiseMatching,
+  PCS,
+  PerformanceGuardrails,
+  ProfileConformanceReport,
+  ProfileDebugOutput,
+  ProfilePromotionEvaluation,
+  ProfilePromotionPolicy,
+  ProfilePromotionReport,
+  ProfileSelectionDecision,
+  ProfileSelectionRequirement,
+  ProfileValidationDiagnostic,
+  RawMerge,
+  RenameAwareMatchingReport,
+  RenderPlanReport,
+  RenderSafetyReport,
+  RenderVerificationReport,
+  SecondaryFormattingMetricsReport,
+  SignatureMatchingParent,
+  SignatureMatchingReport,
+  SourceTextNormalizedMatchingReport,
+  StructuralMatchingReport,
+  TieBreakMatchingReport,
+  TokenSpanPreservationMetricsReport,
   StructuredEditStructureProfile,
   StructuredEditSelectionProfile,
   StructuredEditTargetSelection,
@@ -183,6 +276,10 @@ import type {
   StructuredEditTransportImportError,
   ReviewRequest,
   MergeResult,
+  MergeEngine,
+  NativeProviderMetadataReport,
+  NativeProviderProvingGroundReport,
+  ProviderRichnessProjection,
   TemplateTokenConfig,
   TemplateExecutionPlanEntry,
   TemplateDirectoryApplyReport,
@@ -299,6 +396,10 @@ import {
   conformanceSuiteDefinition,
   conformanceSuiteSelectors,
   defaultConformanceFamilyContext,
+  mergeEngineEnvironmentVariable,
+  mergeEngineFromEnvironment,
+  normalizeMergeEngine,
+  evaluateMergeIRChangeSets,
   planConformanceSuite,
   planNamedConformanceSuiteEntry,
   planNamedConformanceSuitesWithDiagnostics,
@@ -377,6 +478,7 @@ import {
   importStructuredEditProviderBatchExecutionHandoffEnvelope,
   importStructuredEditProviderBatchExecutionPlanEnvelope,
   importStructuredEditExecutionReportEnvelope,
+  profileSelectionRequirementFromRequestEnvelope,
   reviewReplayBundleInputs,
   reviewReplayBundleEnvelope,
   reviewedNestedExecution,
@@ -434,6 +536,118 @@ interface FamilyFeatureProfileFixture {
     supported_dialects: string[];
     supported_policies: PolicyReference[];
   };
+}
+
+interface LanguageBackendProfileSchemaFixture {
+  profile: LanguageBackendProfile;
+  expected: {
+    profile_id: string;
+    family: string;
+    default_backend: string;
+    primary_language_attribute: string;
+    first_signature: string;
+    first_commutative_parent: string;
+  };
+}
+
+interface ProfileValidationFixture {
+  structural_profile: LanguageBackendProfile;
+  backend_metadata: BackendGrammarInventory;
+  partial_backend_metadata: BackendGrammarInventory;
+  unknown_selector_profile: LanguageBackendProfile;
+  expected: {
+    structural_errors: string[];
+    exhaustive_backend_errors: string[];
+    partial_backend_warnings: string[];
+  };
+}
+
+interface ActiveProfileReportingFixture {
+  active_profile: ActiveProfileView;
+  conformance_report: ProfileConformanceReport;
+  debug_output: ProfileDebugOutput;
+  expected: {
+    profile_id: string;
+    family: string;
+    backend: string;
+    parser: string;
+    signature_count: number;
+    validation_ok: boolean;
+    debug_mode: string;
+  };
+}
+
+interface ProfilePromotionReportFixture {
+  report: ProfilePromotionReport;
+  blocked_report: ProfilePromotionReport;
+  expected: {
+    profile_id: string;
+    recommended_status: string;
+    blocked_status: string;
+    hard_gate_count: number;
+    required_fixture_count: number;
+    formatting_threshold: number;
+    blocking_reason_count: number;
+  };
+}
+
+interface ProfilePromotionPolicyFixture {
+  policy: ProfilePromotionPolicy;
+  expected: {
+    policy_id: string;
+    profile_count: number;
+    global_hard_gate_count: number;
+    recommended_eligible_count: number;
+    default_eligible_count: number;
+    source_subprofile_count: number;
+    json_requires_cross_implementation_parity: boolean;
+    ruby_requires_backend_parity: boolean;
+    formatting_threshold: number;
+  };
+}
+
+interface ProfilePromotionEvaluationFixture {
+  policy: ProfilePromotionPolicy;
+  recommended_report: ProfilePromotionReport;
+  blocked_report: ProfilePromotionReport;
+  expected: {
+    recommended_status: string;
+    recommended_blocking_reason_count: number;
+    blocked_status: string;
+    blocked_blocking_reason_count: number;
+    first_blocking_reason: string;
+    unknown_profile_status: string;
+  };
+}
+
+interface ProfileSelectionEnforcementFixture {
+  active_profile: ActiveProfileView;
+  available_evaluation: ProfilePromotionEvaluation;
+  recommended_evaluation: ProfilePromotionEvaluation;
+  advisory_requirement: ProfileSelectionRequirement;
+  required_requirement: ProfileSelectionRequirement;
+  satisfied_requirement: ProfileSelectionRequirement;
+  expected: {
+    advisory_allowed: boolean;
+    advisory_satisfied: boolean;
+    advisory_enforced: boolean;
+    advisory_rejection_code: string;
+    required_allowed: boolean;
+    required_satisfied: boolean;
+    required_enforced: boolean;
+    required_rejection_code: string;
+    required_first_blocking_reason: string;
+    satisfied_allowed: boolean;
+    satisfied_satisfied: boolean;
+    satisfied_enforced: boolean;
+    satisfied_rejection_code: string;
+  };
+}
+
+function sortedProfileValidationMessages(
+  diagnostics: readonly ProfileValidationDiagnostic[]
+): string[] {
+  return diagnostics.map((diagnostic) => diagnostic.message).sort();
 }
 
 interface TemplateSourcePathMappingFixture {
@@ -1213,6 +1427,9 @@ interface StructuredEditRequestEnvelopeFixture {
   expected_envelope: {
     kind: StructuredEditRequestEnvelope['kind'];
     version: number;
+    profile_id?: string;
+    minimum_profile_status?: StructuredEditRequestEnvelope['minimum_profile_status'];
+    promotion_policy_id?: string;
     request: StructuredEditRequestFixture['cases'][number]['request'];
   };
 }
@@ -1246,6 +1463,10 @@ interface StructuredEditExecutionReportFixture {
       application: StructuredEditApplicationFixture['cases'][number]['application'];
       provider_family: string;
       provider_backend?: string | null;
+      active_profile?: ActiveProfileView;
+      profile_promotion_evaluation?: ProfilePromotionEvaluation;
+      profile_selection_decision?: ProfileSelectionDecision;
+      profile_blocking_reasons?: readonly string[];
       diagnostics: DiagnosticFixture['diagnostics'];
       metadata?: Record<string, unknown>;
     };
@@ -2487,6 +2708,18 @@ interface StructuredEditExecutionReportEnvelopeFixture {
     kind: StructuredEditExecutionReportEnvelope['kind'];
     version: number;
     report: StructuredEditExecutionReportFixture['cases'][number]['report'];
+  };
+}
+
+interface StructuredEditProfilePromotionEnvelopeFixture {
+  structured_edit_request: StructuredEditRequestFixture['cases'][number]['request'];
+  profile_selection_requirement: ProfileSelectionRequirement;
+  expected_request_envelope: StructuredEditRequestEnvelopeFixture['expected_envelope'];
+  structured_edit_execution_report: StructuredEditExecutionReportFixture['cases'][number]['report'];
+  expected_execution_report_envelope: StructuredEditExecutionReportEnvelopeFixture['expected_envelope'];
+  expected: {
+    rejection_code: string;
+    profile_blocking_reason_count: number;
   };
 }
 
@@ -4167,6 +4400,9 @@ function normalizeStructuredEditRequestEnvelope(
   return {
     kind: raw.kind,
     version: STRUCTURED_EDIT_TRANSPORT_VERSION,
+    profile_id: raw.profile_id,
+    minimum_profile_status: raw.minimum_profile_status,
+    promotion_policy_id: raw.promotion_policy_id,
     request: normalizeStructuredEditRequest(raw.request)
   };
 }
@@ -4178,6 +4414,10 @@ function normalizeStructuredEditExecutionReport(
     application: normalizeStructuredEditApplication(raw.application),
     providerFamily: raw.provider_family,
     providerBackend: raw.provider_backend ?? undefined,
+    active_profile: raw.active_profile,
+    profile_promotion_evaluation: raw.profile_promotion_evaluation,
+    profile_selection_decision: raw.profile_selection_decision,
+    profile_blocking_reasons: raw.profile_blocking_reasons,
     diagnostics: raw.diagnostics.map((diagnostic) => normalizeDiagnostic(diagnostic)),
     metadata: raw.metadata
   };
@@ -5562,6 +5802,1466 @@ function normalizeProjectedChildReviewGroupProgress(
 }
 
 describe('ast-merge shared fixtures', () => {
+  it('conforms to the slice-790 generic merge IR fixture', () => {
+    const fixture = readFixture<{
+      merge_ir: MergeIR;
+      expected: {
+        version: string;
+        node_class_count: number;
+        change_kinds: readonly string[];
+        ordered_node_count: number;
+      };
+    }>('diagnostics', 'slice-790-generic-merge-ir', 'generic-merge-ir.json');
+    const mergeIR = fixture.merge_ir;
+
+    expect(mergeIR.version).toBe(fixture.expected.version);
+    expect(mergeIR.node_classes).toHaveLength(fixture.expected.node_class_count);
+    expect(mergeIR.ordered_nodes).toHaveLength(fixture.expected.ordered_node_count);
+    expect(mergeIR.changes.map((change) => change.kind)).toEqual(fixture.expected.change_kinds);
+    expect(mergeIR.node_classes[0]?.node_ids.left).toBe('left-import-fmt');
+    expect(mergeIR.changes[1]?.class_id).toBe('class-import-strings');
+  });
+
+  it('conforms to the slice-955 comment trivia attachment contract fixture', () => {
+    const fixture = readFixture<{
+      owner_nodes: readonly CommentOwnerNode[];
+      comment_styles: readonly CommentStyleDefinition[];
+      comment_regions: readonly (CommentRegion & {
+        expected: {
+          start_line: number;
+          end_line: number;
+          text: string;
+          normalized_content: string;
+          signature: readonly string[];
+          freeze_actions: readonly string[];
+        };
+      })[];
+      layout_gaps: readonly (LayoutGap & {
+        expected: {
+          line_count: number;
+          blank_line_count: number;
+          controller_owner_id: string | null;
+          fallback_owner_id: string | null;
+          effective_controller_with_after_removed?: string;
+        };
+      })[];
+      attachments: readonly (CommentAttachment & {
+        expected: {
+          region_count: number;
+          layout_gap_count: number;
+          empty: boolean;
+          leading_region_layout_owned: boolean;
+          trailing_region_layout_owned: boolean;
+          freeze_marker: boolean;
+        };
+      })[];
+      contract_rules: readonly string[];
+      expected: {
+        owner_count: number;
+        comment_region_count: number;
+        layout_gap_count: number;
+        attachment_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-955-comment-trivia-attachment-contract',
+      'comment-trivia-attachment-contract.json'
+    );
+
+    const regions = new Map(fixture.comment_regions.map((region) => [region.id, region]));
+    const gaps = new Map(fixture.layout_gaps.map((gap) => [gap.id, gap]));
+
+    expect(fixture.owner_nodes).toHaveLength(fixture.expected.owner_count);
+    expect(fixture.comment_regions).toHaveLength(fixture.expected.comment_region_count);
+    expect(fixture.layout_gaps).toHaveLength(fixture.expected.layout_gap_count);
+    expect(fixture.attachments).toHaveLength(fixture.expected.attachment_count);
+    expect(fixture.comment_styles[0]?.style).toBe('hash_comment');
+    expect(fixture.comment_styles[0]?.line_prefix).toBe('#');
+
+    for (const region of fixture.comment_regions) {
+      expect(commentRegionStartLine(region)).toBe(region.expected.start_line);
+      expect(commentRegionEndLine(region)).toBe(region.expected.end_line);
+      expect(commentRegionText(region)).toBe(region.expected.text);
+      expect(commentRegionNormalizedContent(region)).toBe(region.expected.normalized_content);
+      expect(commentRegionSignature(region)).toEqual(region.expected.signature);
+      expect(commentRegionFreezeActions(region, 'smorg')).toEqual(region.expected.freeze_actions);
+    }
+
+    for (const gap of fixture.layout_gaps) {
+      expect(layoutGapLineCount(gap)).toBe(gap.expected.line_count);
+      expect(layoutGapBlankLineCount(gap)).toBe(gap.expected.blank_line_count);
+      expect(layoutGapControllerOwnerId(gap) ?? null).toBe(gap.expected.controller_owner_id);
+      expect(layoutGapFallbackOwnerId(gap) ?? null).toBe(gap.expected.fallback_owner_id);
+      if (gap.expected.effective_controller_with_after_removed !== undefined) {
+        expect(layoutGapEffectiveControllerOwnerId(gap, new Set([gap.after_owner_id!]))).toBe(
+          gap.expected.effective_controller_with_after_removed
+        );
+      }
+    }
+
+    for (const attachment of fixture.attachments) {
+      expect(commentAttachmentRegionCount(attachment, regions)).toBe(
+        attachment.expected.region_count
+      );
+      expect(commentAttachmentLayoutGapCount(attachment, gaps)).toBe(
+        attachment.expected.layout_gap_count
+      );
+      expect(commentAttachmentEmpty(attachment, regions)).toBe(attachment.expected.empty);
+      expect(commentAttachmentLeadingRegionLayoutOwned(attachment, regions, gaps)).toBe(
+        attachment.expected.leading_region_layout_owned
+      );
+      expect(commentAttachmentTrailingRegionLayoutOwned(attachment, regions, gaps)).toBe(
+        attachment.expected.trailing_region_layout_owned
+      );
+      expect(commentAttachmentFreezeMarker(attachment, regions, 'smorg')).toBe(
+        attachment.expected.freeze_marker
+      );
+    }
+
+    expect(fixture.contract_rules.some((rule) => rule.includes('passive data'))).toBe(true);
+  });
+
+  it('conforms to the slice-956 merge result decision contract fixture', () => {
+    const fixture = readFixture<{
+      decisions: readonly MergeDecisionRecord[];
+      expected: {
+        decision_count: number;
+        ordered_decision_ids: readonly string[];
+        decision_summary: Readonly<Record<string, number>>;
+        source_summary: Readonly<Record<string, number>>;
+        unresolved_count: number;
+        review_required: boolean;
+        line_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-956-merge-result-decision-contract',
+      'merge-result-decision-contract.json'
+    );
+    const orderedIds = fixture.decisions.map((decision) => decision.id);
+    const unresolvedCount = fixture.decisions.filter(
+      (decision) => decision.decision === 'unresolved'
+    ).length;
+
+    expect(fixture.decisions).toHaveLength(fixture.expected.decision_count);
+    expect(orderedIds).toEqual(fixture.expected.ordered_decision_ids);
+    expect(mergeDecisionSummary(fixture.decisions)).toEqual(fixture.expected.decision_summary);
+    expect(mergeDecisionSourceSummary(fixture.decisions)).toEqual(fixture.expected.source_summary);
+    expect(unresolvedCount).toBe(fixture.expected.unresolved_count);
+    expect(mergeDecisionReviewRequired(fixture.decisions)).toBe(fixture.expected.review_required);
+    expect(fixture.decisions).toHaveLength(fixture.expected.line_count);
+  });
+
+  it('conforms to the slice-957 freeze directive execution contract fixture', () => {
+    const fixture = readFixture<{
+      cases: readonly {
+        id: string;
+        style: string;
+        token: string;
+        lines: readonly string[];
+        expected: {
+          valid: boolean;
+          block_count: number;
+          diagnostic_count: number;
+          blocks: readonly FreezeDirectiveBlock[];
+          diagnostics?: readonly FreezeDirectiveDiagnostic[];
+          line_queries: readonly {
+            line: number;
+            in_freeze: boolean;
+            block_id: string | null;
+          }[];
+        };
+      }[];
+      expected: {
+        case_count: number;
+        valid_case_count: number;
+        invalid_case_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-957-freeze-directive-execution-contract',
+      'freeze-directive-execution-contract.json'
+    );
+    let validCount = 0;
+    let invalidCount = 0;
+
+    for (const testCase of fixture.cases) {
+      const { blocks, diagnostics } = detectFreezeDirectiveBlocks(
+        testCase.id,
+        testCase.lines,
+        testCase.token,
+        testCase.style
+      );
+      if (testCase.expected.valid) validCount += 1;
+      else invalidCount += 1;
+
+      expect(blocks).toHaveLength(testCase.expected.block_count);
+      expect(diagnostics).toHaveLength(testCase.expected.diagnostic_count);
+      expect(diagnostics.length === 0).toBe(testCase.expected.valid);
+      if (blocks.length > 0) expect(blocks).toEqual(testCase.expected.blocks);
+      if (diagnostics.length > 0) {
+        expect(
+          diagnostics.map((diagnostic) => ({
+            category: diagnostic.category,
+            severity: diagnostic.severity,
+            line: diagnostic.line
+          }))
+        ).toEqual(testCase.expected.diagnostics);
+      }
+      for (const query of testCase.expected.line_queries) {
+        const block = freezeDirectiveBlockForLine(blocks, query.line);
+        expect(block !== undefined).toBe(query.in_freeze);
+        if (block !== undefined) expect(block.id).toBe(query.block_id);
+      }
+    }
+
+    expect(fixture.cases).toHaveLength(fixture.expected.case_count);
+    expect(validCount).toBe(fixture.expected.valid_case_count);
+    expect(invalidCount).toBe(fixture.expected.invalid_case_count);
+  });
+
+  it('conforms to the slice-906 merge engine suite setting fixture', () => {
+    const fixture = readFixture<{
+      settings: {
+        default_engine: MergeEngine;
+        experimental_engine: MergeEngine;
+        supported_engines: readonly MergeEngine[];
+        environment_variable: string;
+        experimental_policy: string;
+        runs_same_suite: boolean;
+      };
+      expected: {
+        default_engine: MergeEngine;
+        experimental_engine: MergeEngine;
+        supported_engine_count: number;
+        environment_variable: string;
+        experimental_policy: string;
+        runs_same_suite: boolean;
+      };
+    }>('diagnostics', 'slice-906-merge-engine-suite-setting', 'merge-engine-suite-setting.json');
+
+    expect(normalizeMergeEngine()).toBe(fixture.expected.default_engine);
+    expect(normalizeMergeEngine(fixture.settings.experimental_engine)).toBe(
+      fixture.expected.experimental_engine
+    );
+    expect(fixture.settings.supported_engines).toHaveLength(
+      fixture.expected.supported_engine_count
+    );
+    expect(mergeEngineEnvironmentVariable).toBe(fixture.expected.environment_variable);
+    expect(fixture.settings.experimental_policy).toBe(fixture.expected.experimental_policy);
+    expect(fixture.settings.runs_same_suite).toBe(fixture.expected.runs_same_suite);
+    expect(
+      mergeEngineFromEnvironment({
+        [mergeEngineEnvironmentVariable]: fixture.settings.experimental_engine
+      })
+    ).toBe('merge_ir_experimental');
+
+    const plan = planNamedConformanceSuitesWithDiagnostics(
+      {
+        family_feature_profiles: [],
+        suite_descriptors: [
+          {
+            kind: 'family',
+            subject: { grammar: 'go' },
+            roles: ['case']
+          }
+        ],
+        families: {
+          go: [
+            {
+              role: 'case',
+              path: ['go', 'case.json']
+            }
+          ]
+        }
+      },
+      {
+        familyProfiles: {
+          go: {
+            family: 'go',
+            supportedDialects: [],
+            supportedPolicies: []
+          }
+        },
+        mergeEngine: 'merge_ir_experimental'
+      }
+    );
+
+    expect(plan.entries).toHaveLength(1);
+    expect(plan.entries[0]?.plan.mergeEngine).toBe('merge_ir_experimental');
+    expect(plan.entries[0]?.plan.entries[0]?.run.mergeEngine).toBe('merge_ir_experimental');
+  });
+
+  it('conforms to the slice-791 pairwise matchings fixture', () => {
+    const fixture = readFixture<{
+      pairwise_matchings: readonly PairwiseMatching[];
+      expected: {
+        matching_ids: readonly string[];
+        total_match_count: number;
+        unmatched_insertions: readonly string[];
+        unmatched_deletions: readonly string[];
+      };
+    }>('diagnostics', 'slice-791-pairwise-matchings', 'pairwise-matchings.json');
+    const matchings = fixture.pairwise_matchings;
+
+    expect(matchings.map((matching) => matching.matching_id)).toEqual(
+      fixture.expected.matching_ids
+    );
+    expect(matchings.reduce((sum, matching) => sum + matching.matches.length, 0)).toBe(
+      fixture.expected.total_match_count
+    );
+    expect(matchings[0]?.unmatched_to[0]).toBe('left-import-os');
+    expect(matchings[1]?.unmatched_from[0]).toBe('base-decl-greet');
+    expect(matchings[2]?.matches[1]?.diagnostics[0]).toBe('sibling position changed');
+  });
+
+  it('conforms to the slice-792 class mapping fixture', () => {
+    const fixture = readFixture<{
+      class_mapping: ClassMappingReport;
+      expected: {
+        class_count: number;
+        diagnostic_categories: readonly string[];
+        conflicted_class_ids: readonly string[];
+      };
+    }>('diagnostics', 'slice-792-class-mapping', 'class-mapping.json');
+    const report = fixture.class_mapping;
+
+    expect(report.node_classes).toHaveLength(fixture.expected.class_count);
+    expect(report.diagnostics.map((diagnostic) => diagnostic.category)).toEqual(
+      fixture.expected.diagnostic_categories
+    );
+    expect(report.diagnostics.map((diagnostic) => diagnostic.class_id)).toEqual(
+      fixture.expected.conflicted_class_ids
+    );
+    expect(report.node_classes[2]?.node_ids.right).toBeUndefined();
+    expect(report.diagnostics[1]?.category).toBe('delete_edit_disagreement');
+  });
+
+  it('conforms to the slice-793 PCS change-set generation fixture', () => {
+    const fixture = readFixture<{
+      pcs: PCS;
+      change_sets: readonly ChangeSet[];
+      expected: {
+        pcs_constraint_count: number;
+        change_set_count: number;
+        change_kinds: readonly string[];
+        diagnostic_count: number;
+      };
+    }>('diagnostics', 'slice-793-pcs-change-set-generation', 'pcs-change-set-generation.json');
+    const changeKinds = fixture.change_sets.flatMap((changeSet) =>
+      changeSet.changes.map((change) => change.kind)
+    );
+    const diagnosticCount = fixture.change_sets.reduce(
+      (sum, changeSet) => sum + changeSet.diagnostics.length,
+      0
+    );
+
+    expect(fixture.pcs.constraints).toHaveLength(fixture.expected.pcs_constraint_count);
+    expect(fixture.change_sets).toHaveLength(fixture.expected.change_set_count);
+    expect(changeKinds).toEqual(fixture.expected.change_kinds);
+    expect(diagnosticCount).toBe(fixture.expected.diagnostic_count);
+    expect(fixture.pcs.constraints[2]?.predecessor_class_id).toBe('class-import-strings');
+    expect(fixture.change_sets[1]?.changes[1]?.kind).toBe('delete');
+  });
+
+  it('conforms to the slice-794 raw merge change-set union fixture', () => {
+    const fixture = readFixture<{
+      raw_merge: RawMerge;
+      expected: {
+        raw_change_count: number;
+        input_change_set_count: number;
+        sides: readonly string[];
+        conflicting_class_candidates: readonly string[];
+      };
+    }>('diagnostics', 'slice-794-raw-merge-change-set-union', 'raw-merge-change-set-union.json');
+    const sides = fixture.raw_merge.changes.reduce<string[]>((memo, change) => {
+      if (!memo.includes(change.side)) memo.push(change.side);
+      return memo;
+    }, []);
+    const classDeclGreetCount = fixture.raw_merge.changes.filter(
+      (change) => change.class_id === 'class-decl-greet'
+    ).length;
+
+    expect(fixture.raw_merge.changes).toHaveLength(fixture.expected.raw_change_count);
+    expect(fixture.raw_merge.input_change_set_ids).toHaveLength(
+      fixture.expected.input_change_set_count
+    );
+    expect(sides).toEqual(fixture.expected.sides);
+    expect(classDeclGreetCount).toBe(2);
+    expect(fixture.raw_merge.diagnostics[0]).toBe(
+      'raw merge intentionally preserves both sides before inconsistency detection'
+    );
+  });
+
+  it('conforms to the slice-795 inconsistency detection fixture', () => {
+    const fixture = readFixture<{
+      inconsistency_report: InconsistencyReport;
+      expected: {
+        inconsistency_count: number;
+        categories: readonly string[];
+        blocking_count: number;
+      };
+    }>('diagnostics', 'slice-795-inconsistency-detection', 'inconsistency-detection.json');
+    const report = fixture.inconsistency_report;
+
+    expect(report.inconsistencies).toHaveLength(fixture.expected.inconsistency_count);
+    expect(report.inconsistencies.map((item) => item.category)).toEqual(
+      fixture.expected.categories
+    );
+    expect(report.inconsistencies.filter((item) => item.severity === 'error')).toHaveLength(
+      fixture.expected.blocking_count
+    );
+    expect(report.inconsistencies[1]?.change_ids[1]).toBe('right-delete-greet');
+  });
+
+  it('conforms to the slice-907 merge IR experimental evaluation fixture', () => {
+    const fixture = readFixture<{
+      request: {
+        merge_engine: MergeEngine;
+        raw_merge_id: string;
+        report_id: string;
+        change_sets: readonly ChangeSet[];
+      };
+      expected: {
+        merge_engine: MergeEngine;
+        raw_change_count: number;
+        input_change_set_count: number;
+        categories: readonly string[];
+        blocking_count: number;
+        outcome: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-907-merge-ir-experimental-evaluation',
+      'merge-ir-experimental-evaluation.json'
+    );
+    const report = evaluateMergeIRChangeSets(
+      fixture.request.merge_engine,
+      fixture.request.raw_merge_id,
+      fixture.request.report_id,
+      fixture.request.change_sets
+    );
+    const categories = report.inconsistency_report.inconsistencies.map(
+      (inconsistency) => inconsistency.category
+    );
+    const blockingCount = report.inconsistency_report.inconsistencies.filter(
+      (inconsistency) => inconsistency.severity === 'error'
+    ).length;
+
+    expect(report.merge_engine).toBe(fixture.expected.merge_engine);
+    expect(report.raw_merge.changes).toHaveLength(fixture.expected.raw_change_count);
+    expect(report.raw_merge.input_change_set_ids).toHaveLength(
+      fixture.expected.input_change_set_count
+    );
+    expect(categories).toEqual(fixture.expected.categories);
+    expect(blockingCount).toBe(fixture.expected.blocking_count);
+    expect(report.outcome).toBe(fixture.expected.outcome);
+  });
+
+  it('conforms to the slice-796 merge IR comparison fixture', () => {
+    const fixture = readFixture<{
+      comparison: MergeIRComparisonReport;
+      expected: {
+        case_count: number;
+        families: readonly string[];
+        merge_ir_wins: number;
+        recommendation: string;
+      };
+    }>('diagnostics', 'slice-796-merge-ir-comparison', 'merge-ir-comparison.json');
+    const report = fixture.comparison;
+
+    expect(report.cases).toHaveLength(fixture.expected.case_count);
+    expect(report.cases.map((testCase) => testCase.family)).toEqual(fixture.expected.families);
+    expect(report.summary.merge_ir_wins).toBe(fixture.expected.merge_ir_wins);
+    expect(report.summary.recommendation).toBe(fixture.expected.recommendation);
+    expect(report.cases[4]?.merge_ir_advantage).toBe('defer');
+  });
+
+  it('conforms to the slice-797 structural matching baseline fixture', () => {
+    const fixture = readFixture<{
+      matching: StructuralMatchingReport;
+      expected: {
+        strategy: string;
+        match_count: number;
+        unmatched_from_count: number;
+        unmatched_to_count: number;
+        move_detection: boolean;
+      };
+    }>(
+      'diagnostics',
+      'slice-797-structural-matching-baseline',
+      'structural-matching-baseline.json'
+    );
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.unmatched_from).toHaveLength(fixture.expected.unmatched_from_count);
+    expect(report.unmatched_to).toHaveLength(fixture.expected.unmatched_to_count);
+    expect(fixture.expected.move_detection).toBe(false);
+    expect(report.matches[1]?.from_path).toBe('/declarations/Greet');
+  });
+
+  it('conforms to the slice-798 signature matching commutative parent fixture', () => {
+    const fixture = readFixture<{
+      parent: SignatureMatchingParent;
+      matching: SignatureMatchingReport;
+      expected: {
+        strategy: string;
+        parent_policy: string;
+        signature_components: readonly string[];
+        match_count: number;
+        unmatched_from_count: number;
+        unmatched_to_count: number;
+        order_sensitive: boolean;
+        first_match_signature: string;
+        first_match_to_path: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-798-signature-matching-commutative-parent',
+      'signature-matching-commutative-parent.json'
+    );
+    const report = fixture.matching;
+
+    expect(fixture.parent.child_order).toBe(fixture.expected.parent_policy);
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.parent_policy).toBe(fixture.expected.parent_policy);
+    expect(report.signature_components).toEqual(fixture.expected.signature_components);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.unmatched_from).toHaveLength(fixture.expected.unmatched_from_count);
+    expect(report.unmatched_to).toHaveLength(fixture.expected.unmatched_to_count);
+    expect(fixture.expected.order_sensitive).toBe(false);
+    expect(report.matches[0]?.signature).toBe(fixture.expected.first_match_signature);
+    expect(report.matches[0]?.to_path).toBe(fixture.expected.first_match_to_path);
+  });
+
+  it('conforms to the slice-799 source-text normalized leaf matching fixture', () => {
+    const fixture = readFixture<{
+      matching: SourceTextNormalizedMatchingReport;
+      expected: {
+        strategy: string;
+        normalization: readonly string[];
+        leaf_kinds: readonly string[];
+        match_count: number;
+        unmatched_from_count: number;
+        unmatched_to_count: number;
+        first_match_normalized_text: string;
+        minimum_confidence: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-799-source-text-normalized-leaf-matching',
+      'source-text-normalized-leaf-matching.json'
+    );
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.normalization).toEqual(fixture.expected.normalization);
+    expect(report.leaf_kinds).toEqual(fixture.expected.leaf_kinds);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.unmatched_from).toHaveLength(fixture.expected.unmatched_from_count);
+    expect(report.unmatched_to).toHaveLength(fixture.expected.unmatched_to_count);
+    expect(report.matches[0]?.normalized_text).toBe(fixture.expected.first_match_normalized_text);
+    expect(report.matches[0]?.confidence).toBeGreaterThanOrEqual(
+      fixture.expected.minimum_confidence
+    );
+  });
+
+  it('conforms to the slice-800 move detection opt-in fixture', () => {
+    const fixture = readFixture<{
+      matching: MoveDetectionMatchingReport;
+      expected: {
+        strategy: string;
+        capability: string;
+        enabled: boolean;
+        default_enabled: boolean;
+        requires_stable_node_identity: boolean;
+        match_count: number;
+        move_count: number;
+        first_moved_signature: string;
+        first_moved_from_index: number;
+        first_moved_to_index: number;
+      };
+    }>('diagnostics', 'slice-800-move-detection-opt-in', 'move-detection-opt-in.json');
+    const report = fixture.matching;
+    const moveCount = report.matches.filter((match) => match.moved).length;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.capability.name).toBe(fixture.expected.capability);
+    expect(report.capability.enabled).toBe(fixture.expected.enabled);
+    expect(report.capability.default_enabled).toBe(fixture.expected.default_enabled);
+    expect(report.capability.requires_stable_node_identity).toBe(
+      fixture.expected.requires_stable_node_identity
+    );
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(moveCount).toBe(fixture.expected.move_count);
+    expect(report.matches[0]?.signature).toBe(fixture.expected.first_moved_signature);
+    expect(report.matches[0]?.from_index).toBe(fixture.expected.first_moved_from_index);
+    expect(report.matches[0]?.to_index).toBe(fixture.expected.first_moved_to_index);
+  });
+
+  it('conforms to the slice-801 rename-aware matching gated fixture', () => {
+    const fixture = readFixture<{
+      matching: RenameAwareMatchingReport;
+      expected: {
+        strategy: string;
+        capability: string;
+        status: string;
+        enabled: boolean;
+        requires_explicit_profile: boolean;
+        requires_diagnostics: boolean;
+        candidate_count: number;
+        match_count: number;
+        first_candidate_selected: boolean;
+        first_candidate_body_hash: string;
+      };
+    }>('diagnostics', 'slice-801-rename-aware-matching-gated', 'rename-aware-matching-gated.json');
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.capability.name).toBe(fixture.expected.capability);
+    expect(report.capability.status).toBe(fixture.expected.status);
+    expect(report.capability.enabled).toBe(fixture.expected.enabled);
+    expect(report.capability.requires_explicit_profile).toBe(
+      fixture.expected.requires_explicit_profile
+    );
+    expect(report.capability.requires_diagnostics).toBe(fixture.expected.requires_diagnostics);
+    expect(report.candidates).toHaveLength(fixture.expected.candidate_count);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.candidates[0]?.selected).toBe(fixture.expected.first_candidate_selected);
+    expect(report.candidates[0]?.stable_body_hash).toBe(fixture.expected.first_candidate_body_hash);
+  });
+
+  it('conforms to the slice-802 ambiguity diagnostics fixture', () => {
+    const fixture = readFixture<{
+      matching: AmbiguityMatchingReport;
+      expected: {
+        strategy: string;
+        scope_path: string;
+        ambiguous: boolean;
+        match_count: number;
+        ambiguity_count: number;
+        diagnostic_category: string;
+        first_ambiguity_signature: string;
+        first_ambiguity_reason: string;
+        first_ambiguity_selected: boolean;
+      };
+    }>('diagnostics', 'slice-802-ambiguity-diagnostics', 'ambiguity-diagnostics.json');
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.scope_path).toBe(fixture.expected.scope_path);
+    expect(report.ambiguous).toBe(fixture.expected.ambiguous);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.ambiguities).toHaveLength(fixture.expected.ambiguity_count);
+    expect(report.diagnostics[0]?.category).toBe(fixture.expected.diagnostic_category);
+    expect(report.ambiguities[0]?.signature).toBe(fixture.expected.first_ambiguity_signature);
+    expect(report.ambiguities[0]?.reason).toBe(fixture.expected.first_ambiguity_reason);
+    expect(report.ambiguities[0]?.selected).toBe(fixture.expected.first_ambiguity_selected);
+  });
+
+  it('conforms to the slice-803 duplicate signature tie-break fixture', () => {
+    const fixture = readFixture<{
+      matching: TieBreakMatchingReport;
+      expected: {
+        strategy: string;
+        scope_path: string;
+        tie_break_rules: readonly string[];
+        match_count: number;
+        first_match_signature: string;
+        first_match_selected_by: string;
+        rejected_candidate_count: number;
+        first_rejected_by: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-803-duplicate-signature-tie-break',
+      'duplicate-signature-tie-break.json'
+    );
+    const report = fixture.matching;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.scope_path).toBe(fixture.expected.scope_path);
+    expect(report.tie_break_rules).toEqual(fixture.expected.tie_break_rules);
+    expect(report.matches).toHaveLength(fixture.expected.match_count);
+    expect(report.matches[0]?.signature).toBe(fixture.expected.first_match_signature);
+    expect(report.matches[0]?.selected_by).toBe(fixture.expected.first_match_selected_by);
+    expect(report.matches[0]?.rejected_candidates).toHaveLength(
+      fixture.expected.rejected_candidate_count
+    );
+    expect(report.matches[0]?.rejected_candidates[0]?.rejected_by).toBe(
+      fixture.expected.first_rejected_by
+    );
+  });
+
+  it('conforms to the slice-804 matching debug artifacts fixture', () => {
+    const fixture = readFixture<{
+      debug_artifacts: MatchingDebugArtifacts;
+      expected: {
+        enabled: boolean;
+        owner_set_count: number;
+        candidate_count: number;
+        selected_count: number;
+        rejected_count: number;
+        first_rejection_reason: string;
+      };
+    }>('diagnostics', 'slice-804-matching-debug-artifacts', 'matching-debug-artifacts.json');
+    const artifacts = fixture.debug_artifacts;
+
+    expect(artifacts.enabled).toBe(fixture.expected.enabled);
+    expect(artifacts.owner_sets).toHaveLength(fixture.expected.owner_set_count);
+    expect(artifacts.candidates).toHaveLength(fixture.expected.candidate_count);
+    expect(artifacts.selected_matches).toHaveLength(fixture.expected.selected_count);
+    expect(artifacts.rejected_matches).toHaveLength(fixture.expected.rejected_count);
+    expect(artifacts.rejected_matches[0]?.reason).toBe(fixture.expected.first_rejection_reason);
+  });
+
+  it('conforms to the slice-805 fallback scopes fixture', () => {
+    const fixture = readFixture<{
+      fallback: FallbackScopeReport;
+      expected: {
+        scope_count: number;
+        default_order: readonly string[];
+        first_scope: string;
+        last_scope: string;
+        whole_file_requires_source_span: boolean;
+      };
+    }>('diagnostics', 'slice-805-fallback-scopes', 'fallback-scopes.json');
+    const report = fixture.fallback;
+
+    expect(report.scopes).toHaveLength(fixture.expected.scope_count);
+    expect(report.default_order).toEqual(fixture.expected.default_order);
+    expect(report.scopes[0]?.scope).toBe(fixture.expected.first_scope);
+    expect(report.scopes.at(-1)?.scope).toBe(fixture.expected.last_scope);
+    expect(report.scopes.at(-1)?.requires_source_span).toBe(
+      fixture.expected.whole_file_requires_source_span
+    );
+  });
+
+  it('conforms to the slice-806 conflict categories fixture', () => {
+    const fixture = readFixture<{
+      conflicts: ConflictCategoryReport;
+      expected: {
+        category_count: number;
+        conflict_count: number;
+        first_category: string;
+        last_category: string;
+        parse_limited_fallback_scope: string;
+      };
+    }>('diagnostics', 'slice-806-conflict-categories', 'conflict-categories.json');
+    const report = fixture.conflicts;
+    const parseLimited = report.conflicts.find((conflict) => conflict.category === 'parse_limited');
+
+    expect(report.categories).toHaveLength(fixture.expected.category_count);
+    expect(report.conflicts).toHaveLength(fixture.expected.conflict_count);
+    expect(report.categories[0]).toBe(fixture.expected.first_category);
+    expect(report.categories.at(-1)).toBe(fixture.expected.last_category);
+    expect(parseLimited?.fallback_scope).toBe(fixture.expected.parse_limited_fallback_scope);
+  });
+
+  it('conforms to the slice-807 local line-based fallback fixture', () => {
+    const fixture = readFixture<{
+      fallback: LocalLineFallbackReport;
+      expected: {
+        strategy: string;
+        scope: string;
+        path: string;
+        result: string;
+        conflict_category: string;
+        left_line_count: number;
+        right_line_count: number;
+      };
+    }>('diagnostics', 'slice-807-local-line-based-fallback', 'local-line-based-fallback.json');
+    const report = fixture.fallback;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.scope).toBe(fixture.expected.scope);
+    expect(report.path).toBe(fixture.expected.path);
+    expect(report.result).toBe(fixture.expected.result);
+    expect(report.conflict_category).toBe(fixture.expected.conflict_category);
+    expect(report.left_span.end_line - report.left_span.start_line + 1).toBe(
+      fixture.expected.left_line_count
+    );
+    expect(report.right_span.end_line - report.right_span.start_line + 1).toBe(
+      fixture.expected.right_line_count
+    );
+  });
+
+  it('conforms to the slice-808 conflict marker rendering fixture', () => {
+    const fixture = readFixture<{
+      rendering: ConflictMarkerRenderingReport;
+      expected: {
+        strategy: string;
+        marker_size: number;
+        path_label: string;
+        include_base: boolean;
+        starts_with: string;
+        contains_base_marker: string;
+        ends_with: string;
+      };
+    }>('diagnostics', 'slice-808-conflict-marker-rendering', 'conflict-marker-rendering.json');
+    const report = fixture.rendering;
+
+    expect(report.strategy).toBe(fixture.expected.strategy);
+    expect(report.marker_size).toBe(fixture.expected.marker_size);
+    expect(report.path_label).toBe(fixture.expected.path_label);
+    expect(report.include_base).toBe(fixture.expected.include_base);
+    expect(report.output.startsWith(fixture.expected.starts_with)).toBe(true);
+    expect(report.output.includes(fixture.expected.contains_base_marker)).toBe(true);
+    expect(report.output.endsWith(fixture.expected.ends_with)).toBe(true);
+  });
+
+  it('conforms to the slice-809 typed conflict handler extension points fixture', () => {
+    const fixture = readFixture<{
+      handlers: ConflictHandlerRegistryReport;
+      expected: {
+        handler_count: number;
+        enabled_count: number;
+        first_handler_category: string;
+        second_handler_scope: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-809-typed-conflict-handler-extension-points',
+      'typed-conflict-handler-extension-points.json'
+    );
+    const report = fixture.handlers;
+    const enabledCount = report.handlers.filter((handler) => handler.enabled).length;
+
+    expect(report.handlers).toHaveLength(fixture.expected.handler_count);
+    expect(enabledCount).toBe(fixture.expected.enabled_count);
+    expect(report.handlers[0]?.conflict_category).toBe(fixture.expected.first_handler_category);
+    expect(report.handlers[1]?.fallback_scope).toBe(fixture.expected.second_handler_scope);
+  });
+
+  it('conforms to the slice-810 generic conflict handler execution fixture', () => {
+    const fixture = readFixture<{
+      execution: GenericConflictHandlerExecution;
+      expected: {
+        case_count: number;
+        resolved_count: number;
+        first_handler_id: string;
+        first_merged_child_count: number;
+        second_handler_id: string;
+        second_merged_member_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-810-generic-conflict-handler-execution',
+      'generic-conflict-handler-execution.json'
+    );
+    const execution = fixture.execution;
+    const resolvedCount = execution.cases.filter(
+      (handlerCase) => handlerCase.expected_result.resolved
+    ).length;
+    const results = execution.cases.map((handlerCase) =>
+      executeGenericConflictHandler(handlerCase)
+    );
+
+    execution.cases.forEach((handlerCase, index) => {
+      expect(results[index]).toEqual(handlerCase.expected_result);
+    });
+
+    expect(execution.cases).toHaveLength(fixture.expected.case_count);
+    expect(resolvedCount).toBe(fixture.expected.resolved_count);
+    expect(execution.cases[0]?.handler_id).toBe(fixture.expected.first_handler_id);
+    expect(results[0]?.merged_children).toHaveLength(fixture.expected.first_merged_child_count);
+    expect(execution.cases[1]?.handler_id).toBe(fixture.expected.second_handler_id);
+    expect(results[1]?.merged_members).toHaveLength(fixture.expected.second_merged_member_count);
+  });
+
+  it('conforms to the slice-811 language profile handler registration fixture', () => {
+    const fixture = readFixture<{
+      profile_handlers: LanguageProfileHandlerRegistry;
+      expected: {
+        language: string;
+        registration_count: number;
+        enabled_count: number;
+        roles: readonly string[];
+        duplicate_member_handler: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-811-language-profile-handler-registration',
+      'language-profile-handler-registration.json'
+    );
+    const registry = fixture.profile_handlers;
+    const enabledCount = registry.registrations.filter(
+      (registration) => registration.enabled
+    ).length;
+    const roles = registry.registrations.map((registration) => registration.role);
+    const duplicateMemberHandler = registry.registrations.find(
+      (registration) => registration.role === 'duplicate_members'
+    )?.handler_id;
+
+    expect(registry.language).toBe(fixture.expected.language);
+    expect(registry.registrations).toHaveLength(fixture.expected.registration_count);
+    expect(enabledCount).toBe(fixture.expected.enabled_count);
+    expect(roles).toEqual(fixture.expected.roles);
+    expect(duplicateMemberHandler).toBe(fixture.expected.duplicate_member_handler);
+  });
+
+  it('conforms to the slice-812 fallback usage machine output fixture', () => {
+    const fixture = readFixture<{
+      fallback_usage: FallbackUsageReport;
+      expected: {
+        mode: string;
+        quiet_by_default: boolean;
+        fallback_count: number;
+        conflict_count: number;
+        stdout: string;
+        stderr: string;
+        exit_code: number;
+        first_fallback_scope: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-812-fallback-usage-machine-output',
+      'fallback-usage-machine-output.json'
+    );
+    const report = fixture.fallback_usage;
+
+    expect(report.mode).toBe(fixture.expected.mode);
+    expect(report.quiet_by_default).toBe(fixture.expected.quiet_by_default);
+    expect(report.machine_output.summary.fallback_count).toBe(fixture.expected.fallback_count);
+    expect(report.machine_output.summary.conflict_count).toBe(fixture.expected.conflict_count);
+    expect(report.git_driver_output.stdout).toBe(fixture.expected.stdout);
+    expect(report.git_driver_output.stderr).toBe(fixture.expected.stderr);
+    expect(report.git_driver_output.exit_code).toBe(fixture.expected.exit_code);
+    expect(report.machine_output.fallbacks[0]?.scope).toBe(fixture.expected.first_fallback_scope);
+  });
+
+  it('conforms to the slice-813 render strategy metadata fixture', () => {
+    const fixture = readFixture<{
+      render_plan: RenderPlanReport;
+      expected: {
+        language: string;
+        strategy_count: number;
+        strategies: readonly string[];
+        source_reuse_preserves_fragment: boolean;
+        full_file_requires_reparse: boolean;
+      };
+    }>('diagnostics', 'slice-813-render-strategy-metadata', 'render-strategy-metadata.json');
+    const report = fixture.render_plan;
+    const strategies = report.strategies.map((strategy) => strategy.strategy);
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.strategies).toHaveLength(fixture.expected.strategy_count);
+    expect(strategies).toEqual(fixture.expected.strategies);
+    expect(report.strategies[0]?.preserves_source_fragment).toBe(
+      fixture.expected.source_reuse_preserves_fragment
+    );
+    expect(report.strategies.at(-1)?.requires_reparse).toBe(
+      fixture.expected.full_file_requires_reparse
+    );
+  });
+
+  it('conforms to the slice-814 reparse after render verification fixture', () => {
+    const fixture = readFixture<{
+      render_verification: RenderVerificationReport;
+      expected: {
+        mode: string;
+        language: string;
+        attempted: boolean;
+        passed: boolean;
+        hard_gate: boolean;
+        parse_error_count: number;
+        render_strategy: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-814-reparse-after-render-verification',
+      'reparse-after-render-verification.json'
+    );
+    const report = fixture.render_verification;
+
+    expect(report.mode).toBe(fixture.expected.mode);
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.attempted).toBe(fixture.expected.attempted);
+    expect(report.passed).toBe(fixture.expected.passed);
+    expect(report.hard_gate).toBe(fixture.expected.hard_gate);
+    expect(report.parse_errors).toHaveLength(fixture.expected.parse_error_count);
+    expect(report.render_strategy).toBe(fixture.expected.render_strategy);
+  });
+
+  it('conforms to the slice-815 formatting preservation metrics fixture', () => {
+    const fixture = readFixture<{
+      conformance_report: FormattingPreservationConformanceReport;
+      expected: {
+        suite: string;
+        language: string;
+        line_diff_size: number;
+        character_diff_size: number;
+        score: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-815-formatting-preservation-metrics',
+      'formatting-preservation-metrics.json'
+    );
+    const report = fixture.conformance_report;
+
+    expect(report.suite).toBe(fixture.expected.suite);
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.formatting_metrics.expected_output_line_diff_size).toBe(
+      fixture.expected.line_diff_size
+    );
+    expect(report.formatting_metrics.expected_output_character_diff_size).toBe(
+      fixture.expected.character_diff_size
+    );
+    expect(report.formatting_metrics.formatting_preservation_score).toBe(fixture.expected.score);
+  });
+
+  it('conforms to the slice-816 formatting recommendation gate fixture', () => {
+    const fixture = readFixture<{
+      recommendation_gate: FormattingRecommendationGate;
+      expected: {
+        threshold: number;
+        passed: boolean;
+        line_weight: number;
+        character_weight: number;
+        score: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-816-formatting-recommendation-gate',
+      'formatting-recommendation-gate.json'
+    );
+    const gate = fixture.recommendation_gate;
+
+    expect(gate.threshold).toBe(fixture.expected.threshold);
+    expect(gate.passed).toBe(fixture.expected.passed);
+    expect(gate.weights.expected_output_line_diff_size).toBe(fixture.expected.line_weight);
+    expect(gate.weights.expected_output_character_diff_size).toBe(
+      fixture.expected.character_weight
+    );
+    expect(gate.metrics.formatting_preservation_score).toBe(fixture.expected.score);
+  });
+
+  it('conforms to the slice-817 formatting hard gates fixture', () => {
+    const fixture = readFixture<{
+      hard_gate_report: FormattingHardGateReport;
+      expected: {
+        gate_count: number;
+        all_passed: boolean;
+        weighted_gate_count: number;
+        first_gate: string;
+        second_gate: string;
+      };
+    }>('diagnostics', 'slice-817-formatting-hard-gates', 'formatting-hard-gates.json');
+    const report = fixture.hard_gate_report;
+    const passedCount = report.gates.filter((gate) => gate.passed).length;
+    const weightedCount = report.gates.filter((gate) => gate.weighted).length;
+
+    expect(report.gates).toHaveLength(fixture.expected.gate_count);
+    expect(passedCount === report.gates.length).toBe(fixture.expected.all_passed);
+    expect(weightedCount).toBe(fixture.expected.weighted_gate_count);
+    expect(report.gates[0]?.name).toBe(fixture.expected.first_gate);
+    expect(report.gates[1]?.name).toBe(fixture.expected.second_gate);
+  });
+
+  it('conforms to the slice-818 secondary formatting metrics fixture', () => {
+    const fixture = readFixture<{
+      secondary_metrics: SecondaryFormattingMetricsReport;
+      expected: {
+        unchanged_line_churn: number;
+        output_diff_size: number;
+        source_fragment_retention: number;
+        weighted: boolean;
+      };
+    }>(
+      'diagnostics',
+      'slice-818-secondary-formatting-metrics',
+      'secondary-formatting-metrics.json'
+    );
+    const report = fixture.secondary_metrics;
+
+    expect(report.unchanged_line_churn).toBe(fixture.expected.unchanged_line_churn);
+    expect(report.output_diff_size).toBe(fixture.expected.output_diff_size);
+    expect(report.source_fragment_retention).toBe(fixture.expected.source_fragment_retention);
+    expect(report.weighted).toBe(fixture.expected.weighted);
+  });
+
+  it('conforms to the slice-819 token span preservation metrics fixture', () => {
+    const fixture = readFixture<{
+      token_span_metrics: TokenSpanPreservationMetricsReport;
+      expected: {
+        source_spans_available: boolean;
+        token_preservation: number;
+        span_preservation: number;
+        weighted: boolean;
+      };
+    }>(
+      'diagnostics',
+      'slice-819-token-span-preservation-metrics',
+      'token-span-preservation-metrics.json'
+    );
+    const report = fixture.token_span_metrics;
+
+    expect(report.source_spans_available).toBe(fixture.expected.source_spans_available);
+    expect(report.token_preservation).toBe(fixture.expected.token_preservation);
+    expect(report.span_preservation).toBe(fixture.expected.span_preservation);
+    expect(report.weighted).toBe(fixture.expected.weighted);
+  });
+
+  it('conforms to the slice-820 formatting edge fixtures fixture', () => {
+    const fixture = readFixture<{
+      fixture_suite: FormattingEdgeFixtureSuite;
+      expected: {
+        case_count: number;
+        categories: readonly string[];
+        conflict_marker_case_count: number;
+      };
+    }>('diagnostics', 'slice-820-formatting-edge-fixtures', 'formatting-edge-fixtures.json');
+    const suite = fixture.fixture_suite;
+    const categories = suite.cases.map((fixtureCase) => fixtureCase.category);
+    const conflictMarkerCaseCount = suite.cases.filter(
+      (fixtureCase) => fixtureCase.requires_conflict_markers
+    ).length;
+
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(categories).toEqual(fixture.expected.categories);
+    expect(conflictMarkerCaseCount).toBe(fixture.expected.conflict_marker_case_count);
+  });
+
+  it('conforms to the slice-821 unsafe render fallback or failure fixture', () => {
+    const fixture = readFixture<{
+      render_safety: RenderSafetyReport;
+      expected: {
+        safe_to_render: boolean;
+        allowed_outcomes: readonly string[];
+        outcome: string;
+        fallback_strategy: string;
+        diagnostic_count: number;
+      };
+    }>(
+      'diagnostics',
+      'slice-821-unsafe-render-fallback-or-failure',
+      'unsafe-render-fallback-or-failure.json'
+    );
+    const report = fixture.render_safety;
+
+    expect(report.safe_to_render).toBe(fixture.expected.safe_to_render);
+    expect(fixture.expected.allowed_outcomes).toContain(report.outcome);
+    expect(report.outcome).toBe(fixture.expected.outcome);
+    expect(report.fallback_strategy).toBe(fixture.expected.fallback_strategy);
+    expect(report.diagnostics).toHaveLength(fixture.expected.diagnostic_count);
+  });
+
+  it('conforms to the slice-822 native provider metadata fixture', () => {
+    const fixture = readFixture<{
+      provider_metadata: NativeProviderMetadataReport;
+      expected: {
+        provider_id: string;
+        family: string;
+        host_language: string;
+        target_language: string;
+        parser_name: string;
+        parse_error_behavior: string;
+        source_span_support: string;
+        render_support: string;
+        semantic_role_support: string;
+        retains_native_tree: boolean;
+        metadata_policy: string;
+      };
+    }>('diagnostics', 'slice-822-native-provider-metadata', 'native-provider-metadata.json');
+    const report = fixture.provider_metadata;
+
+    expect(report.provider_id).toBe(fixture.expected.provider_id);
+    expect(report.family).toBe(fixture.expected.family);
+    expect(report.host_language).toBe(fixture.expected.host_language);
+    expect(report.target_language).toBe(fixture.expected.target_language);
+    expect(report.parser_name).toBe(fixture.expected.parser_name);
+    expect(report.parse_error_behavior).toBe(fixture.expected.parse_error_behavior);
+    expect(report.source_span_support).toBe(fixture.expected.source_span_support);
+    expect(report.render_support).toBe(fixture.expected.render_support);
+    expect(report.semantic_role_support).toBe(fixture.expected.semantic_role_support);
+    expect(report.retains_native_tree).toBe(fixture.expected.retains_native_tree);
+    expect(report.metadata_policy).toBe(fixture.expected.metadata_policy);
+  });
+
+  it('conforms to the slice-823 host language native provider contracts fixture', () => {
+    const fixture = readFixture<{
+      native_provider_contracts: HostLanguageNativeProviderContracts;
+      expected: {
+        provider_count: number;
+        provider_ids: readonly string[];
+        ruby_provider_count: number;
+        first_provider_parser: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-823-host-language-native-provider-contracts',
+      'host-language-native-provider-contracts.json'
+    );
+    const contracts = fixture.native_provider_contracts;
+    const providerIds = contracts.providers.map((provider) => provider.provider_id);
+    const rubyProviderCount = contracts.providers.filter(
+      (provider) => provider.host_language === 'ruby'
+    ).length;
+
+    expect(contracts.providers).toHaveLength(fixture.expected.provider_count);
+    expect(providerIds).toEqual(fixture.expected.provider_ids);
+    expect(rubyProviderCount).toBe(fixture.expected.ruby_provider_count);
+    expect(contracts.providers[0]?.parser_name).toBe(fixture.expected.first_provider_parser);
+  });
+
+  it('conforms to the slice-824 Go native proving ground fixture', () => {
+    const fixture = readFixture<{
+      proving_ground: NativeProviderProvingGroundReport;
+      expected: {
+        language: string;
+        provider_count: number;
+        providers: readonly string[];
+        checks: readonly string[];
+      };
+    }>('diagnostics', 'slice-824-go-native-proving-ground', 'go-native-proving-ground.json');
+    const report = fixture.proving_ground;
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.providers).toHaveLength(fixture.expected.provider_count);
+    expect(report.providers).toEqual(fixture.expected.providers);
+    expect(report.checks).toEqual(fixture.expected.checks);
+  });
+
+  it('conforms to the slice-825 go-dst provider stack fixture', () => {
+    const fixture = readFixture<{
+      provider_stack: GoDSTProviderStackReport;
+      expected: {
+        provider_id: string;
+        module: string;
+        backend_family: string;
+        language: string;
+        comparison_count: number;
+      };
+    }>('diagnostics', 'slice-825-go-dst-provider-stack', 'go-dst-provider-stack.json');
+    const report = fixture.provider_stack;
+
+    expect(report.provider_id).toBe(fixture.expected.provider_id);
+    expect(report.module).toBe(fixture.expected.module);
+    expect(report.backend_family).toBe(fixture.expected.backend_family);
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.compares_with).toHaveLength(fixture.expected.comparison_count);
+  });
+
+  it('conforms to the slice-826 Go provider comparison fixture', () => {
+    const fixture = readFixture<{
+      comparison: GoProviderComparisonReport;
+      expected: {
+        language: string;
+        provider_count: number;
+        dimension_count: number;
+        includes_backend_deficiencies: boolean;
+      };
+    }>('diagnostics', 'slice-826-go-provider-comparison', 'go-provider-comparison.json');
+    const report = fixture.comparison;
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.providers).toHaveLength(fixture.expected.provider_count);
+    expect(report.dimensions).toHaveLength(fixture.expected.dimension_count);
+    expect(report.dimensions.includes('backend_deficiencies')).toBe(
+      fixture.expected.includes_backend_deficiencies
+    );
+  });
+
+  it('conforms to the slice-827 backend parity fixtures fixture', () => {
+    const fixture = readFixture<{
+      parity_suite: BackendParitySuite;
+      expected: {
+        language: string;
+        case_count: number;
+        native_providers: readonly string[];
+        tree_sitter_provider: string;
+        source_span_case_count: number;
+      };
+    }>('diagnostics', 'slice-827-backend-parity-fixtures', 'backend-parity-fixtures.json');
+    const suite = fixture.parity_suite;
+    const nativeProviders = suite.cases.map((parityCase) => parityCase.native_provider);
+    const sourceSpanCaseCount = suite.cases.filter((parityCase) =>
+      parityCase.dimensions.includes('source_spans')
+    ).length;
+
+    expect(suite.language).toBe(fixture.expected.language);
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(nativeProviders).toEqual(fixture.expected.native_providers);
+    expect(suite.cases[0]?.tree_sitter_provider).toBe(fixture.expected.tree_sitter_provider);
+    expect(sourceSpanCaseCount).toBe(fixture.expected.source_span_case_count);
+  });
+
+  it('conforms to the slice-828 provider richness projection fixture', () => {
+    const fixture = readFixture<{
+      projection: ProviderRichnessProjection;
+      expected: {
+        provider_id: string;
+        role_count: number;
+        signature_kind: string;
+        signature_name: string;
+        requires_private_fields: boolean;
+        private_metadata_namespace: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-828-provider-richness-projection',
+      'provider-richness-projection.json'
+    );
+    const projection = fixture.projection;
+
+    expect(projection.provider_id).toBe(fixture.expected.provider_id);
+    expect(projection.generic_roles).toHaveLength(fixture.expected.role_count);
+    expect(projection.generic_signature.kind).toBe(fixture.expected.signature_kind);
+    expect(projection.generic_signature.name).toBe(fixture.expected.signature_name);
+    expect(projection.requires_private_fields).toBe(fixture.expected.requires_private_fields);
+    expect(projection.private_metadata[fixture.expected.private_metadata_namespace]).toBeDefined();
+  });
+
+  it('conforms to the slice-829 backend gap conformance report fixture', () => {
+    const fixture = readFixture<{
+      report: BackendGapConformanceReport;
+      expected: {
+        language: string;
+        provider_id: string;
+        compared_provider_id: string;
+        gap_count: number;
+        fallback_count: number;
+        silently_normalized: boolean;
+        first_diagnostic_code: string;
+      };
+    }>(
+      'diagnostics',
+      'slice-829-backend-gap-conformance-report',
+      'backend-gap-conformance-report.json'
+    );
+    const report = fixture.report;
+
+    expect(report.language).toBe(fixture.expected.language);
+    expect(report.provider_id).toBe(fixture.expected.provider_id);
+    expect(report.compared_provider_id).toBe(fixture.expected.compared_provider_id);
+    expect(report.gaps).toHaveLength(fixture.expected.gap_count);
+    expect(report.summary.fallback_count).toBe(fixture.expected.fallback_count);
+    expect(report.summary.silently_normalized).toBe(fixture.expected.silently_normalized);
+    expect(report.gaps[0]?.diagnostic_code).toBe(fixture.expected.first_diagnostic_code);
+  });
+
+  it('conforms to the slice-901 false textual conflicts fixture', () => {
+    const fixture = readFixture<{
+      suite: FalseTextualConflictSuite;
+      expected: {
+        case_count: number;
+        languages: readonly string[];
+        categories: readonly string[];
+        expected_unresolved_conflict_count: number;
+      };
+    }>('diagnostics', 'slice-901-false-textual-conflicts', 'false-textual-conflicts.json');
+    const suite = fixture.suite;
+    const languages = suite.cases.map((conflictCase) => conflictCase.language);
+    const categories = suite.cases.map((conflictCase) => conflictCase.category);
+    const unresolvedConflictCount = suite.cases.filter(
+      (conflictCase) => conflictCase.expected_unresolved_conflict
+    ).length;
+
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(languages).toEqual(fixture.expected.languages);
+    expect(categories).toEqual(fixture.expected.categories);
+    expect(unresolvedConflictCount).toBe(fixture.expected.expected_unresolved_conflict_count);
+  });
+
+  it('conforms to the slice-902 git driver smoke fixtures fixture', () => {
+    const fixture = readFixture<{
+      suite: GitDriverSmokeSuite;
+      expected: {
+        driver_name: string;
+        case_count: number;
+        placeholder_set: readonly string[];
+        updated_current_file_count: number;
+      };
+    }>('diagnostics', 'slice-902-git-driver-smoke-fixtures', 'git-driver-smoke-fixtures.json');
+    const suite = fixture.suite;
+    const firstCase = suite.cases[0];
+    const placeholderSet = firstCase
+      ? [
+          firstCase.ancestor_placeholder,
+          firstCase.current_placeholder,
+          firstCase.other_placeholder,
+          firstCase.path_placeholder
+        ]
+      : [];
+    const updatedCurrentFileCount = suite.cases.filter(
+      (smokeCase) => smokeCase.expected_current_file_updated
+    ).length;
+
+    expect(suite.driver_name).toBe(fixture.expected.driver_name);
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(placeholderSet).toEqual(fixture.expected.placeholder_set);
+    expect(updatedCurrentFileCount).toBe(fixture.expected.updated_current_file_count);
+  });
+
+  it('conforms to the slice-903 diff driver smoke fixtures fixture', () => {
+    const fixture = readFixture<{
+      suite: DiffDriverSmokeSuite;
+      expected: {
+        driver_name: string;
+        case_count: number;
+        argument_counts: readonly number[];
+        structured_diff_count: number;
+      };
+    }>('diagnostics', 'slice-903-diff-driver-smoke-fixtures', 'diff-driver-smoke-fixtures.json');
+    const suite = fixture.suite;
+    const argumentCounts = suite.cases.map((smokeCase) => smokeCase.argument_count);
+    const structuredDiffCount = suite.cases.filter(
+      (smokeCase) => smokeCase.expected_output_kind === 'structured_diff'
+    ).length;
+
+    expect(suite.driver_name).toBe(fixture.expected.driver_name);
+    expect(suite.cases).toHaveLength(fixture.expected.case_count);
+    expect(argumentCounts).toEqual(fixture.expected.argument_counts);
+    expect(structuredDiffCount).toBe(fixture.expected.structured_diff_count);
+  });
+
+  it('conforms to the slice-904 performance guardrails fixture', () => {
+    const fixture = readFixture<{
+      guardrails: PerformanceGuardrails;
+      expected: {
+        max_bytes: number;
+        max_nodes: number;
+        max_match_candidates: number;
+        timeout_ms: number;
+        timeout_code: string;
+        fallback: string;
+      };
+    }>('diagnostics', 'slice-904-performance-guardrails', 'performance-guardrails.json');
+    const guardrails = fixture.guardrails;
+
+    expect(guardrails.max_bytes).toBe(fixture.expected.max_bytes);
+    expect(guardrails.max_nodes).toBe(fixture.expected.max_nodes);
+    expect(guardrails.max_match_candidates).toBe(fixture.expected.max_match_candidates);
+    expect(guardrails.timeout_ms).toBe(fixture.expected.timeout_ms);
+    expect(guardrails.timeout_diagnostic.code).toBe(fixture.expected.timeout_code);
+    expect(guardrails.timeout_diagnostic.fallback).toBe(fixture.expected.fallback);
+  });
+
+  it('conforms to the slice-905 profile conformance reports fixture', () => {
+    const fixture = readFixture<{
+      report: ProfileConformanceReport;
+      expected: {
+        profile: string;
+        enabled_rule_count: number;
+        skipped_rule_count: number;
+        fallback_count: number;
+        unresolved_conflict_count: number;
+        skipped_rule: string;
+      };
+    }>('diagnostics', 'slice-905-profile-conformance-reports', 'profile-conformance-reports.json');
+    const report = fixture.report;
+
+    expect(report.profile).toBe(fixture.expected.profile);
+    expect(report.enabled_rules).toHaveLength(fixture.expected.enabled_rule_count);
+    expect(report.skipped_rules).toHaveLength(fixture.expected.skipped_rule_count);
+    expect(report.fallback_count).toBe(fixture.expected.fallback_count);
+    expect(report.unresolved_conflict_count).toBe(fixture.expected.unresolved_conflict_count);
+    expect(report.skipped_rules[0]?.rule).toBe(fixture.expected.skipped_rule);
+  });
+
   it('conforms to the slice-02 diagnostic vocabulary fixture', () => {
     const fixture = readFixture<DiagnosticFixture>(
       ...diagnosticsFixturePath('diagnostic_vocabulary')
@@ -5648,6 +7348,199 @@ describe('ast-merge shared fixtures', () => {
       supported_dialects: featureProfile.supportedDialects,
       supported_policies: featureProfile.supportedPolicies
     }).toEqual(fixture.feature_profile);
+  });
+
+  it('conforms to the slice-908 language backend profile schema fixture', () => {
+    const fixture = readFixture<LanguageBackendProfileSchemaFixture>(
+      'diagnostics',
+      'slice-908-language-backend-profile-schema',
+      'language-backend-profile-schema.json'
+    );
+
+    expect(fixture.profile.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.profile.family).toBe(fixture.expected.family);
+    expect(fixture.profile.backends[0]?.backend).toBe(fixture.expected.default_backend);
+    expect(fixture.profile.git_attributes.language_attributes[0]).toBe(
+      fixture.expected.primary_language_attribute
+    );
+    expect(fixture.profile.rules.signatures[0]?.name).toBe(fixture.expected.first_signature);
+    expect(fixture.profile.rules.commutative_parents[0]?.selector).toBe(
+      fixture.expected.first_commutative_parent
+    );
+  });
+
+  it('conforms to the slice-909 profile validation fixture', () => {
+    const fixture = readFixture<ProfileValidationFixture>(
+      'diagnostics',
+      'slice-909-profile-validation',
+      'profile-validation.json'
+    );
+
+    const structural = validateLanguageBackendProfile(fixture.structural_profile);
+    expect(sortedProfileValidationMessages(structural.errors)).toEqual(
+      [...fixture.expected.structural_errors].sort()
+    );
+
+    const exhaustive = validateLanguageBackendProfile(
+      fixture.unknown_selector_profile,
+      fixture.backend_metadata
+    );
+    expect(sortedProfileValidationMessages(exhaustive.errors)).toEqual(
+      [...fixture.expected.exhaustive_backend_errors].sort()
+    );
+
+    const partial = validateLanguageBackendProfile(
+      fixture.unknown_selector_profile,
+      fixture.partial_backend_metadata
+    );
+    expect(partial.errors).toHaveLength(0);
+    expect(sortedProfileValidationMessages(partial.warnings)).toEqual(
+      [...fixture.expected.partial_backend_warnings].sort()
+    );
+  });
+
+  it('conforms to the slice-910 active profile reporting fixture', () => {
+    const fixture = readFixture<ActiveProfileReportingFixture>(
+      'diagnostics',
+      'slice-910-active-profile-reporting',
+      'active-profile-reporting.json'
+    );
+
+    expect(fixture.active_profile.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.active_profile.family).toBe(fixture.expected.family);
+    expect(fixture.active_profile.backend).toBe(fixture.expected.backend);
+    expect(fixture.active_profile.parser).toBe(fixture.expected.parser);
+    expect(fixture.active_profile.rule_counts.signatures).toBe(fixture.expected.signature_count);
+    expect(fixture.active_profile.validation.ok).toBe(fixture.expected.validation_ok);
+    expect(fixture.conformance_report.active_profile?.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.debug_output.mode).toBe(fixture.expected.debug_mode);
+    expect(fixture.debug_output.active_profile.profile_id).toBe(fixture.expected.profile_id);
+  });
+
+  it('conforms to the slice-911 profile promotion report fixture', () => {
+    const fixture = readFixture<ProfilePromotionReportFixture>(
+      'diagnostics',
+      'slice-911-profile-promotion-report',
+      'profile-promotion-report.json'
+    );
+
+    expect(fixture.report.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.report.status).toBe(fixture.expected.recommended_status);
+    expect(fixture.report.hard_gates).toHaveLength(fixture.expected.hard_gate_count);
+    expect(fixture.report.metrics.required_fixture_count).toBe(
+      fixture.expected.required_fixture_count
+    );
+    expect(fixture.report.metrics.formatting_threshold).toBe(fixture.expected.formatting_threshold);
+    expect(fixture.report.active_profile?.profile_id).toBe(fixture.expected.profile_id);
+    expect(fixture.blocked_report.status).toBe(fixture.expected.blocked_status);
+    expect(fixture.blocked_report.blocking_reasons).toHaveLength(
+      fixture.expected.blocking_reason_count
+    );
+  });
+
+  it('conforms to the slice-912 profile promotion policy fixture', () => {
+    const fixture = readFixture<ProfilePromotionPolicyFixture>(
+      'diagnostics',
+      'slice-912-profile-promotion-policy',
+      'profile-promotion-policy.json'
+    );
+    const recommendedEligible = fixture.policy.profiles.filter((entry) =>
+      entry.eligible_statuses.includes('recommended')
+    ).length;
+    const defaultEligible = fixture.policy.profiles.filter((entry) =>
+      entry.eligible_statuses.includes('default')
+    ).length;
+    const sourceSubprofiles = fixture.policy.profiles.filter(
+      (entry) => entry.scope === 'source_subprofile'
+    ).length;
+    const jsonPolicy = fixture.policy.profiles.find(
+      (entry) => entry.profile_id === promotionProfileJsonKeyedObject
+    );
+    const rubyPolicy = fixture.policy.profiles.find(
+      (entry) => entry.profile_id === promotionProfileRubyGemspecDependencyDeclarations
+    );
+
+    expect(fixture.policy.policy_id).toBe(fixture.expected.policy_id);
+    expect(fixture.policy.profiles).toHaveLength(fixture.expected.profile_count);
+    expect(fixture.policy.global_hard_gates).toHaveLength(fixture.expected.global_hard_gate_count);
+    expect(recommendedEligible).toBe(fixture.expected.recommended_eligible_count);
+    expect(defaultEligible).toBe(fixture.expected.default_eligible_count);
+    expect(sourceSubprofiles).toBe(fixture.expected.source_subprofile_count);
+    expect(jsonPolicy?.recommendation_gate.requires_cross_implementation_parity).toBe(
+      fixture.expected.json_requires_cross_implementation_parity
+    );
+    expect(rubyPolicy?.recommendation_gate.requires_backend_parity).toBe(
+      fixture.expected.ruby_requires_backend_parity
+    );
+    expect(jsonPolicy?.recommendation_gate.formatting_threshold).toBe(
+      fixture.expected.formatting_threshold
+    );
+    expect(initialProfilePromotionPolicy()).toEqual(fixture.policy);
+  });
+
+  it('conforms to the slice-913 profile promotion evaluation fixture', () => {
+    const fixture = readFixture<ProfilePromotionEvaluationFixture>(
+      'diagnostics',
+      'slice-913-profile-promotion-evaluation',
+      'profile-promotion-evaluation.json'
+    );
+
+    const recommended = evaluateProfilePromotion(fixture.policy, fixture.recommended_report);
+    expect(recommended.status).toBe(fixture.expected.recommended_status);
+    expect(recommended.blocking_reasons).toHaveLength(
+      fixture.expected.recommended_blocking_reason_count
+    );
+
+    const blocked = evaluateProfilePromotion(fixture.policy, fixture.blocked_report);
+    expect(blocked.status).toBe(fixture.expected.blocked_status);
+    expect(blocked.blocking_reasons).toHaveLength(fixture.expected.blocked_blocking_reason_count);
+    expect(blocked.blocking_reasons[0]).toBe(fixture.expected.first_blocking_reason);
+
+    const unknown = evaluateProfilePromotion(fixture.policy, {
+      ...fixture.recommended_report,
+      profile_id: 'unknown.profile'
+    });
+    expect(unknown.status).toBe(fixture.expected.unknown_profile_status);
+  });
+
+  it('conforms to the slice-914 profile selection enforcement fixture', () => {
+    const fixture = readFixture<ProfileSelectionEnforcementFixture>(
+      'diagnostics',
+      'slice-914-profile-selection-enforcement',
+      'profile-selection-enforcement.json'
+    );
+
+    const advisory = evaluateProfileSelectionRequirement(
+      fixture.advisory_requirement,
+      fixture.active_profile,
+      fixture.available_evaluation
+    );
+    expect(advisory.allowed).toBe(fixture.expected.advisory_allowed);
+    expect(advisory.satisfied).toBe(fixture.expected.advisory_satisfied);
+    expect(advisory.enforced).toBe(fixture.expected.advisory_enforced);
+    expect(advisory.rejection_code).toBe(fixture.expected.advisory_rejection_code);
+
+    const required = evaluateProfileSelectionRequirement(
+      fixture.required_requirement,
+      fixture.active_profile,
+      fixture.available_evaluation
+    );
+    expect(required.allowed).toBe(fixture.expected.required_allowed);
+    expect(required.satisfied).toBe(fixture.expected.required_satisfied);
+    expect(required.enforced).toBe(fixture.expected.required_enforced);
+    expect(required.rejection_code).toBe(fixture.expected.required_rejection_code);
+    expect(required.blocking_reasons[0]).toBe(fixture.expected.required_first_blocking_reason);
+
+    const satisfied = evaluateProfileSelectionRequirement(
+      fixture.satisfied_requirement,
+      fixture.active_profile,
+      fixture.recommended_evaluation
+    );
+    expect(satisfied.allowed).toBe(fixture.expected.satisfied_allowed);
+    expect(satisfied.satisfied).toBe(fixture.expected.satisfied_satisfied);
+    expect(satisfied.enforced).toBe(fixture.expected.satisfied_enforced);
+    expect(satisfied.rejection_code).toBe(fixture.expected.satisfied_rejection_code);
+    expect(satisfied.blocking_reasons).toHaveLength(0);
   });
 
   it('conforms to the template source path mapping fixture', () => {
@@ -9449,6 +11342,36 @@ describe('ast-merge shared fixtures', () => {
         error: rejectionCase.expected_error
       });
     }
+  });
+
+  it('conforms to the slice-915 structured-edit profile promotion envelope fixture', () => {
+    const fixture = readFixture<StructuredEditProfilePromotionEnvelopeFixture>(
+      'diagnostics',
+      'slice-915-structured-edit-profile-promotion-envelope',
+      'structured-edit-profile-promotion-envelope.json'
+    );
+    const request = normalizeStructuredEditRequest(fixture.structured_edit_request);
+    const requestEnvelope = {
+      ...structuredEditRequestEnvelope(request),
+      profile_id: fixture.expected_request_envelope.profile_id,
+      minimum_profile_status: fixture.expected_request_envelope.minimum_profile_status,
+      promotion_policy_id: fixture.expected_request_envelope.promotion_policy_id
+    };
+    expect(requestEnvelope).toEqual(
+      normalizeStructuredEditRequestEnvelope(fixture.expected_request_envelope)
+    );
+    expect(profileSelectionRequirementFromRequestEnvelope(requestEnvelope)).toEqual(
+      fixture.profile_selection_requirement
+    );
+
+    const report = normalizeStructuredEditExecutionReport(fixture.structured_edit_execution_report);
+    expect(structuredEditExecutionReportEnvelope(report)).toEqual(
+      normalizeStructuredEditExecutionReportEnvelope(fixture.expected_execution_report_envelope)
+    );
+    expect(report.profile_selection_decision?.rejection_code).toBe(fixture.expected.rejection_code);
+    expect(report.profile_blocking_reasons).toHaveLength(
+      fixture.expected.profile_blocking_reason_count
+    );
   });
 
   it('conforms to the slice-438 structured-edit execution report fixture', () => {

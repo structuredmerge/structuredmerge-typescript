@@ -9,6 +9,9 @@ export default defineConfig({
       '@structuredmerge/ast-merge': fileURLToPath(
         new URL('./packages/ast-merge/src/index.ts', import.meta.url)
       ),
+      '@structuredmerge/ast-merge-git': fileURLToPath(
+        new URL('./packages/ast-merge-git/src/index.ts', import.meta.url)
+      ),
       '@structuredmerge/tree-haver': fileURLToPath(
         new URL('./packages/tree-haver/src/index.ts', import.meta.url)
       ),
@@ -17,6 +20,9 @@ export default defineConfig({
       ),
       '@structuredmerge/json-merge': fileURLToPath(
         new URL('./packages/json-merge/src/index.ts', import.meta.url)
+      ),
+      '@structuredmerge/go-merge': fileURLToPath(
+        new URL('./packages/go-merge/src/index.ts', import.meta.url)
       ),
       '@structuredmerge/toml-merge': fileURLToPath(
         new URL('./packages/toml-merge/src/index.ts', import.meta.url)
