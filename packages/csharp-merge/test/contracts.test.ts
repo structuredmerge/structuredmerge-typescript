@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { csharpFeatureProfile, matchCSharpOwners, mergeCSharp, parseCSharp } from '../src/index';
+import { matchCSharpOwners, mergeCSharp, parseCSharp } from '../src/index';
 
 describe('csharp-merge', () => {
   it('extracts module owners', () => {

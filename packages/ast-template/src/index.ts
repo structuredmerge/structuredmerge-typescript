@@ -84,12 +84,14 @@ export function readmeFamilyTokenValues(
     SELF_PACKAGE_MANAGER: stringField(self.package_manager)
   };
 
-  README_FAMILY_LANGUAGE_ORDER.filter((language) => language !== selfId).forEach((language, index) => {
-    const implementation = implementations.get(language) ?? {};
-    const prefix = `IMP_LANG${index + 1}`;
-    tokens[`${prefix}_PACKAGE_ROOT`] = stringField(implementation.package_root);
-    tokens[`${prefix}_PACKAGE_MANAGER`] = stringField(implementation.package_manager);
-  });
+  README_FAMILY_LANGUAGE_ORDER.filter((language) => language !== selfId).forEach(
+    (language, index) => {
+      const implementation = implementations.get(language) ?? {};
+      const prefix = `IMP_LANG${index + 1}`;
+      tokens[`${prefix}_PACKAGE_ROOT`] = stringField(implementation.package_root);
+      tokens[`${prefix}_PACKAGE_MANAGER`] = stringField(implementation.package_manager);
+    }
+  );
 
   return tokens;
 }
@@ -114,7 +116,10 @@ export function applyReadmeFamilySection(
   destinationContent: string | null,
   config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
 ): { content: string; changed: boolean } {
-  const renderedSection = renderReadmeFamilySection(templatePartial, family, config).replace(/\n+$/u, '');
+  const renderedSection = renderReadmeFamilySection(templatePartial, family, config).replace(
+    /\n+$/u,
+    ''
+  );
   const baseContent =
     destinationContent ??
     `# ${stringField(packageMetadata.name)}\n\n${stringField(packageMetadata.summary)}\n`;
@@ -169,7 +174,13 @@ export function applyReadmeFamilySectionsToPackageDirectories(
   packages: readonly ReadmeFamilyPackage[],
   config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
 ): ReadmeFamilyPackageReport {
-  return runReadmeFamilySectionsForPackageDirectories(root, templatePartial, packages, true, config);
+  return runReadmeFamilySectionsForPackageDirectories(
+    root,
+    templatePartial,
+    packages,
+    true,
+    config
+  );
 }
 
 export function planReadmeFamilySectionsForPackageDirectories(
@@ -178,7 +189,13 @@ export function planReadmeFamilySectionsForPackageDirectories(
   packages: readonly ReadmeFamilyPackage[],
   config: TemplateTokenConfig = DEFAULT_TEMPLATE_TOKEN_CONFIG
 ): ReadmeFamilyPackageReport {
-  return runReadmeFamilySectionsForPackageDirectories(root, templatePartial, packages, false, config);
+  return runReadmeFamilySectionsForPackageDirectories(
+    root,
+    templatePartial,
+    packages,
+    false,
+    config
+  );
 }
 
 export function runReadmeFamilySectionCommand(

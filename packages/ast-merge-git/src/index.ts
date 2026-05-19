@@ -477,7 +477,11 @@ function mergeJsonObjects(
   return result;
 }
 
-function classifyJsonChanges(base: unknown, ours: unknown, theirs: unknown): readonly ChangeClassification[] {
+function classifyJsonChanges(
+  base: unknown,
+  ours: unknown,
+  theirs: unknown
+): readonly ChangeClassification[] {
   if (isRecord(base) && isRecord(ours) && isRecord(theirs)) {
     const keys = [
       ...new Set([...Object.keys(base), ...Object.keys(ours), ...Object.keys(theirs)])

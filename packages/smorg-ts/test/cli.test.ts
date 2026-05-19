@@ -332,7 +332,10 @@ describe('smorg-ts cli', () => {
         runGit(caseDir, 'init');
         runGit(caseDir, 'config', 'user.email', 'smorg-ts@example.invalid');
         runGit(caseDir, 'config', 'user.name', 'smorg-ts test');
-        writeFileSync(path.join(caseDir, '.gitattributes'), '*.json merge=smorg-ts smorg.language=json\n');
+        writeFileSync(
+          path.join(caseDir, '.gitattributes'),
+          '*.json merge=smorg-ts smorg.language=json\n'
+        );
         writeFileSync(path.join(caseDir, testCase.path_name), testCase.base_source);
         runGit(caseDir, 'add', '.');
         runGit(caseDir, 'commit', '-m', 'base');

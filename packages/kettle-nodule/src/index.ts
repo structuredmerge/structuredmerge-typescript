@@ -646,7 +646,9 @@ function parseKettleConfig(source: string): KettleConfig {
     if (trimmed.length === 0 || trimmed === 'readme:') continue;
     if (trimmed.endsWith(':') && !trimmed.startsWith('- ')) {
       const key = trimmed.slice(0, -1);
-      if (['logo_row', 'badges', 'section_aliases', 'conditional_sections', 'license'].includes(key)) {
+      if (
+        ['logo_row', 'badges', 'section_aliases', 'conditional_sections', 'license'].includes(key)
+      ) {
         section = key;
         list = '';
       } else if (section === 'logo_row' && key === 'logos') {
@@ -815,7 +817,7 @@ function readmeFamilyIntroAndBackendMatrix(): string {
     '',
     'JSONC migration note: JSONC is handled by `json-merge` as the `jsonc` dialect. The old `jsonc-merge` package name is superseded in the cross-language toolset; only Ruby may grow a legacy `require "jsonc/merge"` wrapper if packaging compatibility requires it. Current fixture-backed JSONC claims are parse support and comment-neutral owner structure; comment-preserving merge output, freeze blocks, and JSONC emitter behavior need dedicated fixtures before they appear in package examples.',
     '',
-    'YAML provider note: `yaml-merge` is the canonical YAML family package. Ruby\'s `psych-merge` package is the Psych provider for that family, not a separate YAML family; old `Psych::Merge::*` examples remain provider-specific until portable fixtures cover the behavior.',
+    "YAML provider note: `yaml-merge` is the canonical YAML family package. Ruby's `psych-merge` package is the Psych provider for that family, not a separate YAML family; old `Psych::Merge::*` examples remain provider-specific until portable fixtures cover the behavior.",
     '',
     'Markdown provider note: `markdown-merge` is the canonical Markdown family package. Provider packages own parser-specific docs and backend defaults: Go `goldmarkmerge`, Ruby `commonmarker-merge`, `markly-merge`, and `kramdown-merge`, Rust `pulldown-cmark-merge`, and TypeScript `@structuredmerge/markdown-it-merge`.',
     '',
@@ -845,7 +847,12 @@ function readmeFamilyIntroAndBackendMatrix(): string {
   ].join('\n');
 }
 
-function defaultReadmeConfig(config: ReadmeConfig): Required<Pick<ReadmeConfig, 'style' | 'project_emoji' | 'preserve_sections' | 'section_aliases'>> & ReadmeConfig {
+function defaultReadmeConfig(
+  config: ReadmeConfig
+): Required<
+  Pick<ReadmeConfig, 'style' | 'project_emoji' | 'preserve_sections' | 'section_aliases'>
+> &
+  ReadmeConfig {
   return {
     ...config,
     style: config.style ?? 'thin',
@@ -884,7 +891,9 @@ function markdownSectionBodies(content: string): Record<string, string> {
   const lines = content.split('\n');
   const headings = lines.flatMap((line, index) => {
     const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
-    return match ? [{ index, level: match[1]!.length, key: normalizeReadmeHeading(match[2]!) }] : [];
+    return match
+      ? [{ index, level: match[1]!.length, key: normalizeReadmeHeading(match[2]!) }]
+      : [];
   });
   return Object.fromEntries(
     headings.map((heading, index) => {
@@ -944,7 +953,9 @@ function readmeBadgeCloud(
   );
   const badges = [
     ...(facts.package.sourceUrl
-      ? [`[![Source](https://img.shields.io/badge/source-github-238636.svg)](${facts.package.sourceUrl})`]
+      ? [
+          `[![Source](https://img.shields.io/badge/source-github-238636.svg)](${facts.package.sourceUrl})`
+        ]
       : []),
     `![License](https://img.shields.io/badge/license-${license.replaceAll(' ', '%20')}-259D6C.svg)`,
     ...(hasSecurity

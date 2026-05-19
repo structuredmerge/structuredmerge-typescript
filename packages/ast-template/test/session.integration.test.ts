@@ -145,7 +145,9 @@ describe('README family section template contract fixture', () => {
       'slice-738-readme-family-section-template-contract',
       'readme-family-section-template-contract.json'
     );
-    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as ReadmeFamilySectionTemplateContractFixture;
+    const fixture = JSON.parse(
+      readFileSync(fixturePath, 'utf8')
+    ) as ReadmeFamilySectionTemplateContractFixture;
 
     for (const testCase of fixture.alias_derivation_cases) {
       const aliases = readmeFamilyLanguageAliases(testCase.self, fixture.canonical_language_order);

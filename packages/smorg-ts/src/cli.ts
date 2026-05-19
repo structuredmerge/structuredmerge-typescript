@@ -204,7 +204,8 @@ function runMergeDriver(
   }
 
   if (options.checkOnly) {
-    const exit = options.exitCode && output !== currentSource ? exitUnresolvedConflict : exitSuccess;
+    const exit =
+      options.exitCode && output !== currentSource ? exitUnresolvedConflict : exitSuccess;
     const reportExit = writeMergeDriverMachineReport(
       options.report,
       effectivePath,

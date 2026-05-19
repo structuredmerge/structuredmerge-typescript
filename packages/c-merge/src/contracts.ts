@@ -121,7 +121,7 @@ function byteOffsetToPoint(source: string, byteOffset: number): { row: number; c
 }
 
 function extractCImports(source: string): ModuleImport[] {
-  const matches = [...source.matchAll(/^\s*#include\s+([<\"][^>"\n]+[>"])/gm)];
+  const matches = [...source.matchAll(/^\s*#include\s+([<"][^>"\n]+[>"])/gm)];
   return matches
     .map((match, index) => {
       if (match.index === undefined) {

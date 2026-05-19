@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { javaFeatureProfile, matchJavaOwners, mergeJava, parseJava } from '../src/index';
+import { matchJavaOwners, mergeJava, parseJava } from '../src/index';
 
 describe('java-merge', () => {
   it('extracts module owners', () => {
