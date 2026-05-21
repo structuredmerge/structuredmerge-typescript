@@ -15,6 +15,46 @@ Project links:
 - Specification: <https://github.com/structuredmerge/structuredmerge-spec>
 - Shared fixtures: <https://github.com/structuredmerge/structuredmerge-fixtures>
 
+## Package Family
+
+StructuredMerge TypeScript is a layered npm package family. The lower layers
+provide parser, range, AST, merge, and template contracts; format packages apply
+those contracts to specific languages and data formats; provider packages bind a
+format family to a parser or serializer; workflow packages package TypeScript
+project maintenance and Git-driver behavior.
+
+Each package README keeps this section short and links here. This root guide is
+the implementation inventory for TypeScript users who need to choose packages,
+understand backend coverage, or wire a focused backend into a test suite.
+
+| Package | Layer | What it provides |
+| --- | --- | --- |
+| [`@structuredmerge/tree-haver`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/tree-haver) | Parser substrate | Parser backend registry, byte ranges, node wrappers, source locations, and binary tree contracts. |
+| [`@structuredmerge/ast-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ast-merge) | Merge substrate | AST merge contracts, diagnostics, planning, review, replay, and nested merge vocabulary. |
+| [`@structuredmerge/ast-template`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ast-template) | Template substrate | Template/session transport contracts. |
+| [`@structuredmerge/plain-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/plain-merge) | Text | Plain-text fallback contracts. |
+| [`@structuredmerge/json-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/json-merge) | JSON and JSONC | Object/array-aware JSON merge behavior. |
+| [`@structuredmerge/yaml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/yaml-merge) | YAML | YAML-family merge contracts. |
+| [`@structuredmerge/toml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/toml-merge) | TOML | TOML-family merge contracts. |
+| [`@structuredmerge/markdown-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/markdown-merge) | Markdown | Markdown-family merge contracts. |
+| [`@structuredmerge/ruby-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ruby-merge) | Ruby source | Ruby source merge contracts. |
+| [`@structuredmerge/go-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/go-merge) | Go source | Go source merge contracts. |
+| [`@structuredmerge/javascript-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/javascript-merge) | JavaScript source | JavaScript source merge contracts. |
+| [`@structuredmerge/c-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/c-merge) | C source | C source merge contracts. |
+| [`@structuredmerge/cpp-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/cpp-merge) | C++ source | C++ source merge contracts. |
+| [`@structuredmerge/csharp-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/csharp-merge) | C# source | C# source merge contracts. |
+| [`@structuredmerge/java-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/java-merge) | Java source | Java source merge contracts. |
+| [`@structuredmerge/python-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/python-merge) | Python source | Python source merge contracts. |
+| [`@structuredmerge/rust-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/rust-merge) | Rust source | Rust source merge contracts. |
+| [`@structuredmerge/typescript-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-merge) | TypeScript source | TypeScript source merge contracts. |
+| [`@structuredmerge/binary-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/binary-merge) | Binary | Binary tree planning contracts. |
+| [`@structuredmerge/zip-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/zip-merge) | Archives | ZIP archive planning helpers. |
+| [`@structuredmerge/js-yaml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/js-yaml-merge) | YAML provider | js-yaml-backed YAML parser/emitter provider path. |
+| [`@structuredmerge/peggy-toml-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/peggy-toml-merge) | TOML provider | Peggy-backed TOML parser provider path. |
+| [`@structuredmerge/markdown-it-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/markdown-it-merge) | Markdown provider | markdown-it-backed Markdown parser provider path. |
+| [`@structuredmerge/typescript-compiler-merge`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/typescript-compiler-merge) | TypeScript provider | TypeScript compiler API provider path. |
+| [`@structuredmerge/kettle-nodule`](https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/kettle-nodule) | Recipe tooling | npm workspace maintenance and package recipe helpers. |
+
 ## Install
 
 Install the packages your tool needs:
@@ -51,9 +91,9 @@ seven- or nine-argument forms Git passes to external diff commands.
 `conflicts diff` reports conflict-marker regions in a file that already contains
 Git conflict markers.
 
-Current semantic merge-driver coverage is fixture-backed for JSON. Other
-language and format paths should be treated as git-compatible command surfaces
-until their `ast-merge-git` coverage is promoted.
+Semantic merge-driver coverage is fixture-backed for JSON. Other language and
+format paths are git-compatible command surfaces without semantic driver
+coverage.
 
 ## Packages
 
