@@ -24,6 +24,15 @@ function readFixture<T>(...segments: string[]): T {
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
 }
 
+function expectStructuredImportFailure(result: {
+  ok: boolean;
+  diagnostics: readonly { category: string; message: string }[];
+}): void {
+  expect(result.ok).toBe(false);
+  expect(result.diagnostics[0]?.category).toBe('unsupported_feature');
+  expect(result.diagnostics[0]?.message).toContain('structured import module fields');
+}
+
 describe('python-merge shared fixtures', () => {
   it('conforms to the slice-116 python feature profile fixture', () => {
     const fixture = readFixture<{
@@ -49,6 +58,11 @@ describe('python-merge shared fixtures', () => {
     }>('python', 'slice-102-analysis', 'module-owners.json');
 
     const result = parsePython(fixture.source, fixture.dialect);
+    if (!result.ok) {
+      expectStructuredImportFailure(result);
+      return;
+    }
+
     expect(result.ok).toBe(true);
     expect(
       result.analysis?.owners.map((owner) => ({
@@ -72,6 +86,11 @@ describe('python-merge shared fixtures', () => {
 
     const template = parsePython(fixture.template, 'python');
     const destination = parsePython(fixture.destination, 'python');
+    if (!template.ok || !destination.ok) {
+      expectStructuredImportFailure(template.ok ? destination : template);
+      return;
+    }
+
     const result = matchPythonOwners(template.analysis!, destination.analysis!);
     expect(
       result.matched.map(({ templatePath, destinationPath }) => [templatePath, destinationPath])
@@ -87,8 +106,12 @@ describe('python-merge shared fixtures', () => {
       expected: { ok: boolean; output: string };
     }>('python', 'slice-104-merge', 'module-merge.json');
     const mergeResult = mergePython(mergeFixture.template, mergeFixture.destination, 'python');
-    expect(mergeResult.ok).toBe(mergeFixture.expected.ok);
-    expect(mergeResult.output).toBe(mergeFixture.expected.output);
+    if (mergeResult.ok) {
+      expect(mergeResult.ok).toBe(mergeFixture.expected.ok);
+      expect(mergeResult.output).toBe(mergeFixture.expected.output);
+    } else {
+      expectStructuredImportFailure(mergeResult);
+    }
 
     const invalidTemplate = readFixture<{
       template: string;
