@@ -606,13 +606,30 @@ function replaceBetweenMarkers(
   replacement: string,
   fallback: () => string
 ): string {
-  const openIndex = content.indexOf(openMarker);
-  const closeIndex = content.indexOf(closeMarker);
-  if (openIndex < 0 || closeIndex < openIndex) return fallback();
+  const lines = content.split('\n');
+  const openLine = markerLineIndex(lines, openMarker, 0);
+  if (openLine < 0) return fallback();
 
-  let closeEnd = closeIndex + closeMarker.length;
-  if (content[closeEnd] === '\n') closeEnd += 1;
-  return `${content.slice(0, openIndex)}${replacement}\n${content.slice(closeEnd)}`;
+  const closeLine = markerLineIndex(lines, closeMarker, openLine + 1);
+  if (closeLine < 0) return fallback();
+
+  return [
+    ...lines.slice(0, openLine),
+    ...replacementLines(replacement),
+    ...lines.slice(closeLine + 1)
+  ].join('\n');
+}
+
+function markerLineIndex(lines: readonly string[], marker: string, startLine: number): number {
+  for (let index = startLine; index < lines.length; index += 1) {
+    if (lines[index] === marker) return index;
+  }
+  return -1;
+}
+
+function replacementLines(replacement: string): string[] {
+  const normalized = replacement.endsWith('\n') ? replacement.slice(0, -1) : replacement;
+  return normalized.split('\n');
 }
 
 function repositoryUrl(repository: PackageJson['repository']): string | undefined {
