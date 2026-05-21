@@ -10,6 +10,7 @@ import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  structuredImportSourceDiagnostics,
   type BackendReference,
   type ParserRequest,
   type ProcessRequest,
@@ -100,67 +101,17 @@ function importText(source: string, span: ProcessSpan): string {
   return `${sliceSpan(source, span)}\n`;
 }
 
-function normalizeCImportSource(importSource: string): string {
-  return importSource.trim();
+function unsupportedCBackendFeature(message: string): ParseResult<CAnalysis> {
+  return {
+    ok: false,
+    diagnostics: [{ severity: 'error', category: 'unsupported_feature', message }]
+  };
 }
 
-function byteOffsetToPoint(source: string, byteOffset: number): { row: number; column: number } {
-  const sourceBytes = Buffer.from(source, 'utf8');
-  const before = sourceBytes.slice(0, byteOffset);
-  let row = 0;
-  let column = 0;
-  for (const value of before) {
-    if (value === 10) {
-      row += 1;
-      column = 0;
-    } else {
-      column += 1;
-    }
-  }
-  return { row, column };
-}
-
-function extractCImports(source: string): ModuleImport[] {
-  const matches = [...source.matchAll(/^\s*#include\s+([<"][^>"\n]+[>"])/gm)];
-  return matches
-    .map((match, index) => {
-      if (match.index === undefined) {
-        return undefined;
-      }
-
-      const line = match[0];
-      const path = match[1]!.slice(1, -1);
-      const startByte = Buffer.from(source.slice(0, match.index), 'utf8').length;
-      const endByte = startByte + Buffer.from(line, 'utf8').length;
-      const startPoint = byteOffsetToPoint(source, startByte);
-      const endPoint = byteOffsetToPoint(source, endByte);
-
-      return {
-        path: `/imports/${index}`,
-        matchKey: normalizeCImportSource(path),
-        text: importText(source, {
-          startByte,
-          endByte,
-          startRow: startPoint.row,
-          endRow: endPoint.row,
-          startCol: startPoint.column,
-          endCol: endPoint.column
-        })
-      };
-    })
-    .filter((item): item is ModuleImport => item !== undefined);
-}
-
-function extractFunctionName(source: string, span: ProcessSpan): string | undefined {
-  const sourceText = source.slice(span.startByte, span.endByte);
-  const openBrace = sourceText.indexOf('{');
-  if (openBrace < 0) {
-    return undefined;
-  }
-  const signature = sourceText.slice(0, openBrace);
-  const beforeParen = signature.slice(0, signature.lastIndexOf('('));
-  const match = beforeParen.match(/([A-Za-z_][A-Za-z0-9_]*)\s*$/);
-  return match?.[1];
+function hasIncludeDirective(source: string): boolean {
+  return source
+    .split('\n')
+    .some((line) => line.trimStart().startsWith('#include'));
 }
 
 function analyzeCModule(source: string): ParseResult<CAnalysis> {
@@ -190,21 +141,33 @@ function analyzeCModuleWithBackend(source: string, backend: CBackend): ParseResu
   if (!processed.ok || !processed.analysis) {
     return { ok: false, diagnostics: processed.diagnostics };
   }
+  const importDiagnostics = structuredImportSourceDiagnostics('c', processed.analysis.imports);
+  if (importDiagnostics.length > 0) {
+    return { ok: false, diagnostics: importDiagnostics };
+  }
+  if (processed.analysis.imports.length === 0 && hasIncludeDirective(source)) {
+    return unsupportedCBackendFeature(
+      'tree-sitter-language-pack did not provide structured import records for c; report this as a backend import-record bug.'
+    );
+  }
+  if (processed.analysis.structure.some((item) => item.kind === 'function' && !item.name)) {
+    return unsupportedCBackendFeature(
+      'tree-sitter-language-pack did not provide structured function names for c; report this as a backend structure-record bug.'
+    );
+  }
 
-  const imports = extractCImports(source);
+  const imports = processed.analysis.imports.map((item, index) => ({
+    path: `/imports/${index}`,
+    matchKey: item.source,
+    text: importText(source, item.span)
+  }));
   const declarations = processed.analysis.structure
-    .filter((item) => item.kind === 'function')
-    .map((item) => {
-      const matchKey = extractFunctionName(source, item.span);
-      return matchKey
-        ? {
-            path: `/declarations/${matchKey}`,
-            matchKey,
-            text: declarationText(source, item.span)
-          }
-        : undefined;
-    })
-    .filter((item): item is ModuleDeclaration => item !== undefined)
+    .filter((item) => item.kind === 'function' && item.name)
+    .map((item) => ({
+      path: `/declarations/${item.name}`,
+      matchKey: item.name!,
+      text: declarationText(source, item.span)
+    }))
     .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
 
   return {

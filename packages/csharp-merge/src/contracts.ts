@@ -10,6 +10,7 @@ import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  structuredImportSourceDiagnostics,
   type BackendReference,
   type ParserRequest,
   type ProcessRequest,
@@ -100,56 +101,17 @@ function importText(source: string, span: ProcessSpan): string {
   return `${sliceSpan(source, span)}\n`;
 }
 
-function normalizeCSharpImportSource(importSource: string): string {
-  const match = importSource.match(/using\s+(?:static\s+)?([A-Za-z0-9_.]+)\s*;/i);
-  return (match?.[1] ?? importSource).trim();
+function unsupportedCSharpBackendFeature(message: string): ParseResult<CSharpAnalysis> {
+  return {
+    ok: false,
+    diagnostics: [{ severity: 'error', category: 'unsupported_feature', message }]
+  };
 }
 
-function byteOffsetToPoint(source: string, byteOffset: number): { row: number; column: number } {
-  const sourceBytes = Buffer.from(source, 'utf8');
-  const before = sourceBytes.slice(0, byteOffset);
-  let row = 0;
-  let column = 0;
-  for (const value of before) {
-    if (value === 10) {
-      row += 1;
-      column = 0;
-    } else {
-      column += 1;
-    }
-  }
-  return { row, column };
-}
-
-function extractCSharpUsings(source: string): ModuleImport[] {
-  const matches = [...source.matchAll(/^\s*using\s+(?:static\s+)?([A-Za-z0-9_.]+)\s*;/gm)];
-  return matches
-    .map((match, index) => {
-      if (match.index === undefined) {
-        return undefined;
-      }
-
-      const line = match[0];
-      const normalized = normalizeCSharpImportSource(line);
-      const startByte = Buffer.from(source.slice(0, match.index), 'utf8').length;
-      const endByte = startByte + Buffer.from(line, 'utf8').length;
-      const startPoint = byteOffsetToPoint(source, startByte);
-      const endPoint = byteOffsetToPoint(source, endByte);
-
-      return {
-        path: `/imports/${index}`,
-        matchKey: normalized,
-        text: importText(source, {
-          startByte,
-          endByte,
-          startRow: startPoint.row,
-          endRow: endPoint.row,
-          startCol: startPoint.column,
-          endCol: endPoint.column
-        })
-      };
-    })
-    .filter((item): item is ModuleImport => item !== undefined);
+function hasUsingDirective(source: string): boolean {
+  return source
+    .split('\n')
+    .some((line) => line.trimStart().startsWith('using '));
 }
 
 function analyzeCSharpModule(source: string): ParseResult<CSharpAnalysis> {
@@ -182,8 +144,21 @@ function analyzeCSharpModuleWithBackend(
   if (!processed.ok || !processed.analysis) {
     return { ok: false, diagnostics: processed.diagnostics };
   }
+  const importDiagnostics = structuredImportSourceDiagnostics('csharp', processed.analysis.imports);
+  if (importDiagnostics.length > 0) {
+    return { ok: false, diagnostics: importDiagnostics };
+  }
+  if (processed.analysis.imports.length === 0 && hasUsingDirective(source)) {
+    return unsupportedCSharpBackendFeature(
+      'tree-sitter-language-pack did not provide structured import records for csharp; report this as a backend import-record bug.'
+    );
+  }
 
-  const imports = extractCSharpUsings(source);
+  const imports = processed.analysis.imports.map((item, index) => ({
+    path: `/imports/${index}`,
+    matchKey: item.source,
+    text: importText(source, item.span)
+  }));
   const declarations = processed.analysis.structure
     .filter((item) => item.name)
     .map((item) => ({

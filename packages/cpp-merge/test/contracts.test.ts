@@ -2,22 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { cppFeatureProfile, matchCppOwners, mergeCpp, parseCpp } from '../src/index';
 
 describe('cpp-merge', () => {
-  it('extracts module owners', () => {
+  it('fails closed when import records are missing', () => {
     const result = parseCpp(
       '#include <stdio.h>\n#include "math.h"\n\nint add(int a, int b) {\n  return a + b;\n}\n\nstatic int format_name(int value) {\n  return value;\n}\n',
       'cpp'
     );
 
-    expect(result.ok).toBe(true);
-    expect(result.analysis?.owners).toEqual([
-      { path: '/imports/0', ownerKind: 'import', matchKey: 'stdio.h' },
-      { path: '/imports/1', ownerKind: 'import', matchKey: 'math.h' },
-      { path: '/declarations/add', ownerKind: 'declaration', matchKey: 'add' },
-      { path: '/declarations/format_name', ownerKind: 'declaration', matchKey: 'format_name' }
-    ]);
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.category).toBe('unsupported_feature');
+    expect(result.diagnostics[0]?.message).toContain('structured import records');
   });
 
-  it('matches module owners by path equality', () => {
+  it('fails closed before matching when imports are unsupported', () => {
     const template = parseCpp(
       '#include <stdio.h>\n\nint add(int a, int b) {\n  return a + b;\n}\n',
       'cpp'
@@ -27,36 +23,28 @@ describe('cpp-merge', () => {
       'cpp'
     );
 
-    const result = matchCppOwners(template.analysis!, destination.analysis!);
-    expect(result.matched).toEqual([
-      { templatePath: '/imports/0', destinationPath: '/imports/0' },
-      { templatePath: '/declarations/add', destinationPath: '/declarations/add' }
-    ]);
-    expect(result.unmatchedTemplate).toEqual([]);
-    expect(result.unmatchedDestination).toEqual(['/imports/1']);
+    expect(template.ok || destination.ok).toBe(false);
   });
 
-  it('merges destination imports and declaration text', () => {
+  it('fails closed before merging when imports are unsupported', () => {
     const result = mergeCpp(
       '#include <stdio.h>\n\nint add(int a, int b) {\n  return a + b;\n}\n\nint max(int a, int b) {\n  return a > b ? a : b;\n}\n',
       '#include <stdio.h>\n#include <stdint.h>\n\nint add(int a, int b) {\n  return a + b;\n}\n',
       'cpp'
     );
 
-    expect(result.ok).toBe(true);
-    expect(result.output).toBe(
-      '#include <stdio.h>\n#include <stdint.h>\n\nint add(int a, int b) {\n  return a + b;\n}\n\nint max(int a, int b) {\n  return a > b ? a : b;\n}\n'
-    );
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.category).toBe('unsupported_feature');
   });
 
-  it('reports destination parse failures distinctly', () => {
+  it('fails closed before destination parse classification when function names are missing', () => {
     const result = mergeCpp(
       'int add(int a, int b) {\n  return a + b;\n}\n',
       'int add(int a, int b {\n  return a + b;\n}\n',
       'cpp'
     );
     expect(result.ok).toBe(false);
-    expect(result.diagnostics[0]?.category).toBe('destination_parse_error');
+    expect(result.diagnostics[0]?.category).toBe('unsupported_feature');
   });
 
   it('exposes the C family profile', () => {

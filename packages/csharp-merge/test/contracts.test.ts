@@ -2,50 +2,45 @@ import { describe, expect, it } from 'vitest';
 import { matchCSharpOwners, mergeCSharp, parseCSharp } from '../src/index';
 
 describe('csharp-merge', () => {
-  it('extracts module owners', () => {
+  it('fails closed when import records are missing', () => {
     const result = parseCSharp(
       'using System;\nusing System.Collections.Generic;\n\nnamespace Demo {\n  public class Shape {\n    public int Area(int a) => a;\n  }\n}\n\ninternal sealed class FormatName { }\n',
       'csharp'
     );
 
-    expect(result.ok).toBe(true);
-    expect(result.analysis?.owners).toEqual([
-      { path: '/imports/0', ownerKind: 'import', matchKey: 'System' },
-      { path: '/imports/1', ownerKind: 'import', matchKey: 'System.Collections.Generic' },
-      { path: '/declarations/FormatName', ownerKind: 'declaration', matchKey: 'FormatName' },
-      { path: '/declarations/Shape', ownerKind: 'declaration', matchKey: 'Shape' }
-    ]);
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.category).toBe('unsupported_feature');
+    expect(result.diagnostics[0]?.message).toContain('structured import records');
   });
 
-  it('matches module owners by path equality', () => {
+  it('matches declaration owners when imports are absent', () => {
     const template = parseCSharp(
-      'using System;\n\npublic class Shape {\n  public int Area(int a) => a;\n}\n',
+      'public class Shape {\n  public int Area(int a) => a;\n}\n',
       'csharp'
     );
     const destination = parseCSharp(
-      'using System;\nusing System.Text;\n\npublic class Shape {\n  public int Area(int a) => a;\n}\n',
+      'public class Shape {\n  public int Area(int a) => a;\n}\n',
       'csharp'
     );
 
     const result = matchCSharpOwners(template.analysis!, destination.analysis!);
     expect(result.matched).toEqual([
-      { templatePath: '/imports/0', destinationPath: '/imports/0' },
       { templatePath: '/declarations/Shape', destinationPath: '/declarations/Shape' }
     ]);
     expect(result.unmatchedTemplate).toEqual([]);
-    expect(result.unmatchedDestination).toEqual(['/imports/1']);
+    expect(result.unmatchedDestination).toEqual([]);
   });
 
-  it('merges destination imports and declaration text', () => {
+  it('merges declaration text when imports are absent', () => {
     const result = mergeCSharp(
-      'using System;\n\npublic class Shape {\n  public int Area(int a) => a;\n}\n\npublic class Point {\n  public int X { get; set; }\n}\n',
-      'using System;\nusing System.Text;\n\npublic class Shape {\n  public int Area(int a) => a;\n}\n',
+      'public class Shape {\n  public int Area(int a) => a;\n}\n\npublic class Point {\n  public int X { get; set; }\n}\n',
+      'public class Shape {\n  public int Area(int a) => a;\n}\n',
       'csharp'
     );
 
     expect(result.ok).toBe(true);
     expect(result.output).toBe(
-      'using System;\nusing System.Text;\n\npublic class Shape {\n  public int Area(int a) => a;\n}\n\npublic class Point {\n  public int X { get; set; }\n}\n'
+      'public class Shape {\n  public int Area(int a) => a;\n}\n\npublic class Point {\n  public int X { get; set; }\n}\n'
     );
   });
 
