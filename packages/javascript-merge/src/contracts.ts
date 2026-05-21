@@ -10,6 +10,7 @@ import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  structuredImportSourceDiagnostics,
   type BackendReference,
   type ParserRequest,
   type ProcessRequest,
@@ -100,20 +101,6 @@ function importText(source: string, span: ProcessSpan): string {
   return `${sliceSpan(source, span)}\n`;
 }
 
-function normalizeJavaScriptImportPath(importSource: string): string {
-  const fromMatch = importSource.match(/from\s+['"]([^'"]+)['"]/);
-  if (fromMatch) {
-    return fromMatch[1]!;
-  }
-
-  const bareImportMatch = importSource.match(/import\s+['"]([^'"]+)['"]/);
-  if (bareImportMatch) {
-    return bareImportMatch[1]!;
-  }
-
-  return importSource;
-}
-
 function analyzeJavaScriptModule(source: string): ParseResult<JavaScriptAnalysis> {
   return analyzeJavaScriptModuleWithBackend(source, 'kreuzberg-language-pack');
 }
@@ -144,12 +131,18 @@ function analyzeJavaScriptModuleWithBackend(
   if (!processed.ok || !processed.analysis) {
     return { ok: false, diagnostics: processed.diagnostics };
   }
+  const importDiagnostics = structuredImportSourceDiagnostics(
+    'javascript',
+    processed.analysis.imports
+  );
+  if (importDiagnostics.length > 0) {
+    return { ok: false, diagnostics: importDiagnostics };
+  }
 
   const imports = processed.analysis.imports.map((item, index) => {
-    const matchKey = normalizeJavaScriptImportPath(item.source);
     return {
       path: `/imports/${index}`,
-      matchKey,
+      matchKey: item.source,
       text: importText(source, item.span)
     };
   });

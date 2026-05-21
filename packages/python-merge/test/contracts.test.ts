@@ -4,33 +4,36 @@ import { matchPythonOwners, mergePython, parsePython, pythonFeatureProfile } fro
 describe('python-merge', () => {
   it('extracts module owners', () => {
     const result = parsePython(
-      'import os\nfrom pathlib import Path\n\nclass Greeter:\n    def __init__(self, name):\n        self.name = name\n\n\ndef format_name(name):\n    return name.title()\n',
+      'class Greeter:\n    def __init__(self, name):\n        self.name = name\n\n\ndef format_name(name):\n    return name.title()\n',
       'python'
     );
 
     expect(result.ok).toBe(true);
     expect(result.analysis?.owners).toEqual([
-      { path: '/imports/0', ownerKind: 'import', matchKey: 'os' },
-      { path: '/imports/1', ownerKind: 'import', matchKey: 'pathlib' },
       { path: '/declarations/Greeter', ownerKind: 'declaration', matchKey: 'Greeter' },
       { path: '/declarations/format_name', ownerKind: 'declaration', matchKey: 'format_name' }
     ]);
   });
 
+  it('fails closed when import records are raw source text', () => {
+    const result = parsePython('import os\n\nclass Greeter:\n    pass\n', 'python');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.message).toContain('structured import module fields');
+  });
+
   it('matches module owners by path equality', () => {
     const template = parsePython(
-      'import os\nfrom pathlib import Path\n\nclass Greeter:\n    pass\n\ndef format_name(name):\n    return name\n\ndef greet(name):\n    return name\n',
+      'class Greeter:\n    pass\n\ndef format_name(name):\n    return name\n\ndef greet(name):\n    return name\n',
       'python'
     );
     const destination = parsePython(
-      'import os\nfrom json import loads\n\nclass Greeter:\n    pass\n\ndef greet(name):\n    return loads(name)\n',
+      'class Greeter:\n    pass\n\ndef greet(name):\n    return name.title()\n',
       'python'
     );
 
     const result = matchPythonOwners(template.analysis!, destination.analysis!);
     expect(result.matched).toEqual([
-      { templatePath: '/imports/0', destinationPath: '/imports/0' },
-      { templatePath: '/imports/1', destinationPath: '/imports/1' },
       { templatePath: '/declarations/Greeter', destinationPath: '/declarations/Greeter' },
       { templatePath: '/declarations/greet', destinationPath: '/declarations/greet' }
     ]);
@@ -40,14 +43,14 @@ describe('python-merge', () => {
 
   it('merges destination imports and declaration text', () => {
     const result = mergePython(
-      'import os\nfrom pathlib import Path\n\nclass Greeter:\n    pass\n\ndef format_name(name):\n    return name.title()\n',
-      'import os\nimport sys\n\ndef format_name(name):\n    return name\n',
+      'class Greeter:\n    pass\n\ndef format_name(name):\n    return name.title()\n',
+      'def format_name(name):\n    return name\n',
       'python'
     );
 
     expect(result.ok).toBe(true);
     expect(result.output).toBe(
-      'import os\nimport sys\n\ndef format_name(name):\n    return name\n\nclass Greeter:\n    pass\n'
+      'def format_name(name):\n    return name\n\nclass Greeter:\n    pass\n'
     );
   });
 

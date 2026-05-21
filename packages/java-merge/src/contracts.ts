@@ -10,6 +10,7 @@ import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  structuredImportSourceDiagnostics,
   type BackendReference,
   type ParserRequest,
   type ProcessRequest,
@@ -100,14 +101,6 @@ function importText(source: string, span: ProcessSpan): string {
   return `${sliceSpan(source, span)}\n`;
 }
 
-function normalizeJavaImportSource(importSource: string): string {
-  const trimmed = importSource
-    .trim()
-    .replace(/^import\s+/, '')
-    .replace(/;$/, '');
-  return trimmed.replace(/^static\s+/, '').trim();
-}
-
 function analyzeJavaModule(source: string): ParseResult<JavaAnalysis> {
   return analyzeJavaModuleWithBackend(source, 'kreuzberg-language-pack');
 }
@@ -138,10 +131,14 @@ function analyzeJavaModuleWithBackend(
   if (!processed.ok || !processed.analysis) {
     return { ok: false, diagnostics: processed.diagnostics };
   }
+  const importDiagnostics = structuredImportSourceDiagnostics('java', processed.analysis.imports);
+  if (importDiagnostics.length > 0) {
+    return { ok: false, diagnostics: importDiagnostics };
+  }
 
   const imports = processed.analysis.imports.map((item, index) => ({
     path: `/imports/${index}`,
-    matchKey: normalizeJavaImportSource(item.source),
+    matchKey: item.source,
     text: importText(source, item.span)
   }));
 

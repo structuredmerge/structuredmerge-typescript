@@ -107,6 +107,7 @@ export {
   safeSymbolName,
   sanitizeLanguageName,
   sliceByteRange,
+  structuredImportSourceDiagnostics,
   validateLibraryPath,
   withBackend
 } from './contracts';

@@ -605,8 +605,26 @@ export interface ProcessStructureItem {
 
 export interface ProcessImportInfo {
   readonly source: string;
+  readonly sourceKind: 'module' | 'raw_source';
   readonly items: readonly string[];
   readonly span: ProcessSpan;
+}
+
+export function structuredImportSourceDiagnostics(
+  language: string,
+  imports: readonly ProcessImportInfo[]
+): readonly Diagnostic[] {
+  if (imports.every((item) => item.sourceKind === 'module')) {
+    return [];
+  }
+
+  return [
+    {
+      severity: 'error',
+      category: 'unsupported_feature',
+      message: `tree-sitter-language-pack did not provide structured import module fields for ${language}; report this as a backend import-record bug.`
+    }
+  ];
 }
 
 export interface ProcessDiagnostic {
@@ -952,20 +970,6 @@ function normalizeStructureKind(kind: string): string {
   return kind.toLowerCase();
 }
 
-function normalizeTypeScriptImport(importText: string, span: ProcessSpan): ProcessImportInfo {
-  const sourceMatch = importText.match(/from\s+['"]([^'"]+)['"]|import\s+['"]([^'"]+)['"]/);
-  const source = sourceMatch?.[1] ?? sourceMatch?.[2] ?? importText.trim();
-  const namedItemsMatch = importText.match(/\{([^}]+)\}/);
-  const items = namedItemsMatch
-    ? namedItemsMatch[1]
-        .split(',')
-        .map((item) => item.replace(/\btype\b/g, '').trim())
-        .filter((item) => item.length > 0)
-    : [];
-
-  return { source, items, span };
-}
-
 export function processWithLanguagePack(
   request: ProcessRequest
 ): ParseResult<LanguagePackProcessAnalysis> {
@@ -993,14 +997,14 @@ export function processWithLanguagePack(
           const rawItem = item as typeof item & {
             source?: string;
             module?: string;
+            names?: string[];
             items?: string[];
           };
-          const importSourceText = rawItem.source ?? rawItem.module ?? '';
+          const importSourceText = rawItem.module ?? rawItem.source ?? '';
           const importItems = rawItem.items ?? rawItem.names ?? [];
+          const sourceKind = rawItem.module === undefined ? 'raw_source' : 'module';
 
-          return request.language === 'typescript'
-            ? normalizeTypeScriptImport(importSourceText, item.span)
-            : { source: importSourceText, items: importItems, span: item.span };
+          return { source: importSourceText, sourceKind, items: importItems, span: item.span };
         }),
         diagnostics: (result.diagnostics ?? []).map((diagnostic) => ({
           message: diagnostic.message,

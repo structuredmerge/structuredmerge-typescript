@@ -10,6 +10,7 @@ import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  structuredImportSourceDiagnostics,
   type BackendReference,
   type ParserRequest,
   type ProcessRequest,
@@ -100,22 +101,6 @@ function importText(source: string, span: ProcessSpan): string {
   return `${sliceSpan(source, span)}\n`;
 }
 
-function normalizePythonImportSource(importSource: string): string {
-  const trimmed = importSource.trim();
-  const fromMatch = trimmed.match(/^from\s+([^\s]+)\s+import\b/i);
-  if (fromMatch) {
-    return fromMatch[1]!;
-  }
-
-  const importMatch = trimmed.match(/^import\s+(.+)$/i);
-  if (!importMatch) {
-    return trimmed;
-  }
-
-  const [moduleSource] = importMatch[1]!.split(',');
-  return moduleSource?.trim().replace(/\s+as\s+.*$/i, '') ?? trimmed;
-}
-
 function analyzePythonModule(source: string): ParseResult<PythonAnalysis> {
   return analyzePythonModuleWithBackend(source, 'kreuzberg-language-pack');
 }
@@ -146,12 +131,15 @@ function analyzePythonModuleWithBackend(
   if (!processed.ok || !processed.analysis) {
     return { ok: false, diagnostics: processed.diagnostics };
   }
+  const importDiagnostics = structuredImportSourceDiagnostics('python', processed.analysis.imports);
+  if (importDiagnostics.length > 0) {
+    return { ok: false, diagnostics: importDiagnostics };
+  }
 
   const imports = processed.analysis.imports.map((item, index) => {
-    const sourceText = normalizePythonImportSource(item.source);
     return {
       path: `/imports/${index}`,
-      matchKey: sourceText,
+      matchKey: item.source,
       text: importText(source, item.span)
     };
   });

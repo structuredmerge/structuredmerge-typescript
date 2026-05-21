@@ -10,6 +10,7 @@ import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  structuredImportSourceDiagnostics,
   type BackendReference,
   type ParserRequest,
   type ProcessRequest,
@@ -129,6 +130,13 @@ function analyzeTypeScriptModuleWithBackend(
   const processed = processWithLanguagePack(typeScriptProcessRequest(source));
   if (!processed.ok || !processed.analysis) {
     return { ok: false, diagnostics: processed.diagnostics };
+  }
+  const importDiagnostics = structuredImportSourceDiagnostics(
+    'typescript',
+    processed.analysis.imports
+  );
+  if (importDiagnostics.length > 0) {
+    return { ok: false, diagnostics: importDiagnostics };
   }
 
   const imports = processed.analysis.imports.map((item, index) => {

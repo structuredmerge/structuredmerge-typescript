@@ -10,6 +10,7 @@ import {
   KREUZBERG_LANGUAGE_PACK_BACKEND,
   parseWithLanguagePack,
   processWithLanguagePack,
+  structuredImportSourceDiagnostics,
   type BackendReference,
   type ParserRequest,
   type ProcessRequest,
@@ -100,11 +101,6 @@ function importText(source: string, span: ProcessSpan): string {
   return `${sliceSpan(source, span)}\n`;
 }
 
-function normalizeGoImportPath(importSource: string): string {
-  const quoteMatch = importSource.match(/"([^"]+)"/);
-  return quoteMatch?.[1] ?? importSource.replace(/^import\s+/, '').trim();
-}
-
 function analyzeGoModule(source: string): ParseResult<GoAnalysis> {
   const parsed = parseWithLanguagePack(goParseRequest(source));
   if (!parsed.ok) {
@@ -115,10 +111,14 @@ function analyzeGoModule(source: string): ParseResult<GoAnalysis> {
   if (!processed.ok || !processed.analysis) {
     return { ok: false, diagnostics: processed.diagnostics };
   }
+  const importDiagnostics = structuredImportSourceDiagnostics('go', processed.analysis.imports);
+  if (importDiagnostics.length > 0) {
+    return { ok: false, diagnostics: importDiagnostics };
+  }
 
   const dedupedImports = new Map<string, ModuleImport>();
   for (const item of processed.analysis.imports) {
-    const matchKey = normalizeGoImportPath(item.source);
+    const matchKey = item.source;
     const candidate: ModuleImport = {
       path: '',
       matchKey,

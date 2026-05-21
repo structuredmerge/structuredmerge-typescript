@@ -9,47 +9,55 @@ import {
 describe('javascript-merge', () => {
   it('extracts module owners', () => {
     const result = parseJavaScript(
-      "import { formatName } from './format-name';\nimport { trimName } from './trim-name';\n\nfunction greet(name) {\n  return trimName(formatName(name));\n}\n\nconst helper = (name) => name.toLowerCase();\n",
+      'function greet(name) {\n  return name;\n}\n\nfunction helper(name) {\n  return name.toLowerCase();\n}\n',
       'javascript'
     );
 
     expect(result.ok).toBe(true);
     expect(result.analysis?.owners).toEqual([
-      { path: '/imports/0', ownerKind: 'import', matchKey: './format-name' },
-      { path: '/imports/1', ownerKind: 'import', matchKey: './trim-name' },
-      { path: '/declarations/greet', ownerKind: 'declaration', matchKey: 'greet' }
+      { path: '/declarations/greet', ownerKind: 'declaration', matchKey: 'greet' },
+      { path: '/declarations/helper', ownerKind: 'declaration', matchKey: 'helper' }
     ]);
+  });
+
+  it('fails closed when import records are raw source text', () => {
+    const result = parseJavaScript(
+      "import { formatName } from './format-name';\n\nfunction greet() {}\n",
+      'javascript'
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.message).toContain('structured import module fields');
   });
 
   it('matches module owners by path equality', () => {
     const template = parseJavaScript(
-      "import { formatName } from './format-name';\n\nfunction greet(name) {\n  return formatName(name);\n}\n\nfunction helper(name) {\n  return name.toUpperCase();\n}\n",
+      'function greet(name) {\n  return name;\n}\n\nfunction helper(name) {\n  return name.toUpperCase();\n}\n',
       'javascript'
     );
     const destination = parseJavaScript(
-      "import { formatName } from './format-name';\nimport { sanitizeName } from './sanitize-name';\n\nfunction greet(name) {\n  return sanitizeName(formatName(name));\n}\n",
+      'function greet(name) {\n  return name.trim();\n}\n',
       'javascript'
     );
 
     const result = matchJavaScriptOwners(template.analysis!, destination.analysis!);
     expect(result.matched).toEqual([
-      { templatePath: '/imports/0', destinationPath: '/imports/0' },
       { templatePath: '/declarations/greet', destinationPath: '/declarations/greet' }
     ]);
     expect(result.unmatchedTemplate).toEqual(['/declarations/helper']);
-    expect(result.unmatchedDestination).toEqual(['/imports/1']);
+    expect(result.unmatchedDestination).toEqual([]);
   });
 
   it('merges destination imports and declaration text', () => {
     const result = mergeJavaScript(
-      "import { formatName } from './format-name';\n\nfunction greet(name) {\n  return formatName(name);\n}\n\nfunction helper(name) {\n  return name.toUpperCase();\n}\n",
-      "import { formatName } from './format-name';\nimport { sanitizeName } from './sanitize-name';\n\nfunction greet(name) {\n  return sanitizeName(formatName(name));\n}\n",
+      'function greet(name) {\n  return name;\n}\n\nfunction helper(name) {\n  return name.toUpperCase();\n}\n',
+      'function greet(name) {\n  return name.trim();\n}\n',
       'javascript'
     );
 
     expect(result.ok).toBe(true);
     expect(result.output).toBe(
-      "import { formatName } from './format-name';\nimport { sanitizeName } from './sanitize-name';\n\nfunction greet(name) {\n  return sanitizeName(formatName(name));\n}\n\nfunction helper(name) {\n  return name.toUpperCase();\n}\n"
+      'function greet(name) {\n  return name.trim();\n}\n\nfunction helper(name) {\n  return name.toUpperCase();\n}\n'
     );
   });
 
