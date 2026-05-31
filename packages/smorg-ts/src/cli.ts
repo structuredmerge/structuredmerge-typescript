@@ -151,6 +151,7 @@ function runGit(
   if (!options) return exitUserError;
   const step = executeGitInstall(options);
   const report = {
+    report_version: 1,
     ok: step.status === 'succeeded' || step.status === 'planned',
     profile: step.profile,
     scope: step.scope,

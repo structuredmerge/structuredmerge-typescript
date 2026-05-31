@@ -178,9 +178,11 @@ describe('smorg-ts cli', () => {
 
     expect(exit, stderr.output()).toBe(exitSuccess);
     const report = JSON.parse(stdout.output()) as {
+      readonly report_version: number;
       readonly profile: string;
       readonly scope: string;
     };
+    expect(report.report_version).toBe(1);
     expect(report.profile).toBe('semantic-diff');
     expect(report.scope).toBe('local');
     expect(readFileSync('.gitattributes', 'utf8')).toContain(
