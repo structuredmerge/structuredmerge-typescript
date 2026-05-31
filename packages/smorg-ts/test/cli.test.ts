@@ -170,6 +170,35 @@ describe('smorg-ts cli', () => {
     expect(merged).toContain('"other":true');
   });
 
+  it('installs local Git diff driver attributes', () => {
+    const stdout = writer();
+    const stderr = writer();
+
+    const exit = run(['git', 'install', '--json'], stdout.stream, stderr.stream);
+
+    expect(exit, stderr.output()).toBe(exitSuccess);
+    const report = JSON.parse(stdout.output()) as {
+      readonly profile: string;
+      readonly scope: string;
+    };
+    expect(report.profile).toBe('semantic-diff');
+    expect(report.scope).toBe('local');
+    expect(readFileSync('.gitattributes', 'utf8')).toContain(
+      '*.json merge=smorg-ts diff=smorg-ts smorg.language=json'
+    );
+  });
+
+  it('supports builtin Git diff driver install profile', () => {
+    const stdout = writer();
+    const stderr = writer();
+
+    const exit = run(['git', 'install', '--profile', 'builtin-diff'], stdout.stream, stderr.stream);
+
+    expect(exit, stderr.output()).toBe(exitSuccess);
+    expect(stdout.output()).toContain('git install: succeeded builtin-diff local');
+    expect(readFileSync('.gitattributes', 'utf8')).toContain('*.json diff=json');
+  });
+
   it('returns conflict exit code for strict merge failures', () => {
     const ancestor = write('ancestor.json', '{"name":"structuredmerge"}');
     const current = write('current.json', '{"name":');

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 import {
   evaluateProfileSelectionRequirement,
@@ -47,6 +48,24 @@ interface ConflictDiffOptions {
   readonly exitCode: boolean;
 }
 
+interface GitInstallOptions {
+  readonly scope: 'local' | 'global' | 'include-file';
+  readonly profile: 'semantic-diff' | 'builtin-diff';
+  readonly check: boolean;
+  readonly undo: boolean;
+  readonly dryRun: boolean;
+  readonly json: boolean;
+}
+
+interface GitInstallStep {
+  readonly name: string;
+  readonly status: string;
+  readonly profile: string;
+  readonly scope: string;
+  readonly path?: string;
+  readonly diagnostics: readonly { readonly key: string; readonly message: string }[];
+}
+
 interface PathSettings {
   language?: string;
   conflictMarkerSize: number;
@@ -86,6 +105,8 @@ export function run(
       return runConflicts(rest, stdout, stderr);
     case 'languages':
       return runLanguages(rest, stdout, stderr);
+    case 'git':
+      return runGit(rest, stdout, stderr);
     case 'help':
     case '-h':
     case '--help':
@@ -108,9 +129,229 @@ function printUsage(out: Pick<NodeJS.WriteStream, 'write'>): void {
       '       smorg-ts diff-driver [--path-name PATH] OLD NEW',
       '       smorg-ts diff-driver PATH OLD-FILE OLD-HEX OLD-MODE NEW-FILE NEW-HEX NEW-MODE [OLD-PREFIX NEW-PREFIX]',
       '       smorg-ts conflicts diff [--path-name PATH] [--exit-code] FILE',
-      '       smorg-ts languages --gitattributes'
+      '       smorg-ts languages --gitattributes',
+      '       smorg-ts git install [--scope local|global|include-file] [--profile semantic-diff|builtin-diff] [--check] [--undo] [--dry-run] [--json]'
     ].join('\n') + '\n'
   );
+}
+
+function runGit(
+  args: readonly string[],
+  stdout: Pick<NodeJS.WriteStream, 'write'>,
+  stderr: Pick<NodeJS.WriteStream, 'write'>
+): number {
+  const [subcommand, ...rest] = args;
+  if (subcommand !== 'install') {
+    stderr.write(
+      'usage: smorg-ts git install [--scope local|global|include-file] [--profile semantic-diff|builtin-diff] [--check] [--undo] [--dry-run] [--json]\n'
+    );
+    return exitUserError;
+  }
+  const options = parseGitInstallOptions(rest, stderr);
+  if (!options) return exitUserError;
+  const step = executeGitInstall(options);
+  const report = {
+    ok: step.status === 'succeeded' || step.status === 'planned',
+    profile: step.profile,
+    scope: step.scope,
+    install_steps: [step],
+    missing: step.status === 'failed' ? [step.name] : []
+  };
+  if (options.json) {
+    stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    stdout.write(`git install: ${step.status} ${step.profile} ${step.scope}\n`);
+    for (const diagnostic of step.diagnostics) {
+      stdout.write(`  ${diagnostic.message}\n`);
+    }
+  }
+  return report.ok ? exitSuccess : exitUserError;
+}
+
+function parseGitInstallOptions(
+  args: readonly string[],
+  stderr: Pick<NodeJS.WriteStream, 'write'>
+): GitInstallOptions | undefined {
+  const options: GitInstallOptions = {
+    scope: 'local',
+    profile: 'semantic-diff',
+    check: false,
+    undo: false,
+    dryRun: false,
+    json: false
+  };
+  const mutable = [...args];
+  while (mutable.length > 0) {
+    const value = mutable.shift();
+    if (value === '--scope') {
+      const scope = mutable.shift();
+      if (scope !== 'local' && scope !== 'global' && scope !== 'include-file') {
+        stderr.write(`invalid git install scope ${JSON.stringify(scope)}\n`);
+        return undefined;
+      }
+      Object.assign(options, { scope });
+    } else if (value === '--profile') {
+      const profile = mutable.shift();
+      if (profile !== 'semantic-diff' && profile !== 'builtin-diff') {
+        stderr.write(`invalid git install profile ${JSON.stringify(profile)}\n`);
+        return undefined;
+      }
+      Object.assign(options, { profile });
+    } else if (value === '--check') {
+      Object.assign(options, { check: true });
+    } else if (value === '--undo') {
+      Object.assign(options, { undo: true });
+    } else if (value === '--dry-run') {
+      Object.assign(options, { dryRun: true });
+    } else if (value === '--json') {
+      Object.assign(options, { json: true });
+    } else {
+      stderr.write(`unknown git install option ${JSON.stringify(value)}\n`);
+      return undefined;
+    }
+  }
+  return options;
+}
+
+function executeGitInstall(options: GitInstallOptions): GitInstallStep {
+  const profile = options.profile;
+  const scope = options.scope;
+  if (options.check) return checkGitInstall(profile, scope);
+  if (options.undo) return undoGitInstall(profile, scope, options.dryRun);
+  if (scope === 'global') return configureGlobalGitDriver(profile, options.dryRun);
+  if (scope === 'include-file') return configureIncludeFile(profile, options.dryRun);
+  return configureLocalAttributes(profile, options.dryRun);
+}
+
+function checkGitInstall(profile: string, scope: string): GitInstallStep {
+  const expected =
+    profile === 'builtin-diff' ? builtinGitAttributeLines() : semanticGitAttributeLines();
+  const actual = readOptional('.gitattributes');
+  const missing = expected.filter((line) => !actual.includes(line));
+  return {
+    name: 'git_drivers',
+    status: missing.length === 0 ? 'succeeded' : 'failed',
+    profile,
+    scope,
+    path: '.gitattributes',
+    diagnostics: missing.map((line) => ({
+      key: 'missing_gitattributes_line',
+      message: `.gitattributes is missing ${line}`
+    }))
+  };
+}
+
+function undoGitInstall(profile: string, scope: string, dryRun: boolean): GitInstallStep {
+  if (!dryRun && scope === 'local') {
+    const source = readOptional('.gitattributes');
+    const managed = [...semanticGitAttributeLines(), ...builtinGitAttributeLines()];
+    const remaining = source
+      .split('\n')
+      .filter((line) => line.trim() !== '' && !managed.includes(line.trim()))
+      .join('\n');
+    if (remaining) writeFileSync('.gitattributes', `${remaining}\n`);
+    else rmSync('.gitattributes', { force: true });
+  }
+  return {
+    name: 'git_drivers',
+    status: dryRun ? 'planned' : 'succeeded',
+    profile,
+    scope,
+    path: scope === 'local' ? '.gitattributes' : undefined,
+    diagnostics: []
+  };
+}
+
+function configureLocalAttributes(profile: string, dryRun: boolean): GitInstallStep {
+  const lines =
+    profile === 'builtin-diff' ? builtinGitAttributeLines() : semanticGitAttributeLines();
+  if (!dryRun) mergeGitAttributeLines(lines);
+  return {
+    name: 'git_drivers',
+    status: dryRun ? 'planned' : 'succeeded',
+    profile,
+    scope: 'local',
+    path: '.gitattributes',
+    diagnostics: forgeDiagnostics()
+  };
+}
+
+function configureIncludeFile(profile: string, dryRun: boolean): GitInstallStep {
+  const configPath = path.join('.git', 'smorg', 'config');
+  if (!dryRun) {
+    mkdirSync(path.dirname(configPath), { recursive: true });
+    writeFileSync(configPath, gitConfigSource(profile));
+    execFileSync('git', ['config', '--local', 'include.path', configPath], { stdio: 'pipe' });
+  }
+  return {
+    name: 'git_drivers',
+    status: dryRun ? 'planned' : 'succeeded',
+    profile,
+    scope: 'include-file',
+    path: configPath,
+    diagnostics: forgeDiagnostics()
+  };
+}
+
+function configureGlobalGitDriver(profile: string, dryRun: boolean): GitInstallStep {
+  if (!dryRun) {
+    const command = profile === 'builtin-diff' ? 'cat' : 'smorg-ts diff-driver';
+    execFileSync('git', ['config', '--global', 'diff.smorg-ts.command', command], {
+      stdio: 'pipe'
+    });
+  }
+  return {
+    name: 'git_drivers',
+    status: dryRun ? 'planned' : 'succeeded',
+    profile,
+    scope: 'global',
+    diagnostics: forgeDiagnostics()
+  };
+}
+
+function semanticGitAttributeLines(): string[] {
+  return [
+    '*.go merge=smorg-ts diff=smorg-ts smorg.language=go',
+    '*.json merge=smorg-ts diff=smorg-ts smorg.language=json',
+    '*.jsonc merge=smorg-ts diff=smorg-ts smorg.language=jsonc'
+  ];
+}
+
+function builtinGitAttributeLines(): string[] {
+  return ['*.go diff=go', '*.json diff=json', '*.jsonc diff=json'];
+}
+
+function gitConfigSource(profile: string): string {
+  const command = profile === 'builtin-diff' ? 'cat' : 'smorg-ts diff-driver';
+  return `[diff "smorg-ts"]\n\tcommand = ${command}\n`;
+}
+
+function mergeGitAttributeLines(lines: readonly string[]): void {
+  const existing = readOptional('.gitattributes')
+    .split('\n')
+    .filter((line) => line.trim() !== '');
+  const merged = [...existing];
+  for (const line of lines) {
+    if (!merged.includes(line)) merged.push(line);
+  }
+  writeFileSync('.gitattributes', `${merged.join('\n')}\n`);
+}
+
+function readOptional(filePath: string): string {
+  try {
+    return readFileSync(filePath, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function forgeDiagnostics(): GitInstallStep['diagnostics'] {
+  return [
+    {
+      key: 'forge_ignores_external_diff_drivers',
+      message: 'Git hosting forges generally ignore external diff drivers; install them locally.'
+    }
+  ];
 }
 
 function runMergeDriver(
