@@ -45,6 +45,22 @@ interface GitDriverFallbackFixture {
   readonly cases: readonly GitDriverFallbackCase[];
 }
 
+interface GitInstallReportFixture {
+  readonly report: {
+    readonly report_version: number;
+    readonly ok: boolean;
+    readonly profile: string;
+    readonly scope: string;
+    readonly step: Record<string, unknown>;
+    readonly diagnostic_keys: readonly string[];
+  };
+  readonly implementations: {
+    readonly typescript: {
+      readonly attribute_contains: string;
+    };
+  };
+}
+
 interface GitDriverFallbackCase {
   readonly case_id: string;
   readonly path_name: string;
@@ -99,6 +115,21 @@ function readGitDriverFallbackFixture(): GitDriverFallbackFixture {
     'utf8'
   );
   return JSON.parse(source) as GitDriverFallbackFixture;
+}
+
+function readGitInstallReportFixture(): GitInstallReportFixture {
+  const source = readFileSync(
+    path.join(
+      repoRoot,
+      '..',
+      'fixtures',
+      'diagnostics',
+      'slice-1017-git-driver-opt-in-setup',
+      'git-install-report.json'
+    ),
+    'utf8'
+  );
+  return JSON.parse(source) as GitInstallReportFixture;
 }
 
 function runGit(dir: string, ...args: readonly string[]): void {
@@ -171,6 +202,7 @@ describe('smorg-ts cli', () => {
   });
 
   it('installs local Git diff driver attributes', () => {
+    const fixture = readGitInstallReportFixture();
     const stdout = writer();
     const stderr = writer();
 
@@ -179,14 +211,24 @@ describe('smorg-ts cli', () => {
     expect(exit, stderr.output()).toBe(exitSuccess);
     const report = JSON.parse(stdout.output()) as {
       readonly report_version: number;
+      readonly ok: boolean;
       readonly profile: string;
       readonly scope: string;
+      readonly install_steps: ReadonlyArray<{
+        readonly diagnostics?: ReadonlyArray<{ readonly key: string }>;
+      }>;
     };
-    expect(report.report_version).toBe(1);
-    expect(report.profile).toBe('semantic-diff');
-    expect(report.scope).toBe('local');
+    expect(report.report_version).toBe(fixture.report.report_version);
+    expect(report.ok).toBe(fixture.report.ok);
+    expect(report.profile).toBe(fixture.report.profile);
+    expect(report.scope).toBe(fixture.report.scope);
+    expect(report.install_steps[0]).toMatchObject(fixture.report.step);
+    const diagnosticKeys = report.install_steps.flatMap((step) =>
+      (step.diagnostics ?? []).map((diagnostic) => diagnostic.key)
+    );
+    expect(diagnosticKeys).toEqual(expect.arrayContaining([...fixture.report.diagnostic_keys]));
     expect(readFileSync('.gitattributes', 'utf8')).toContain(
-      '*.json merge=smorg-ts diff=smorg-ts smorg.language=json'
+      fixture.implementations.typescript.attribute_contains
     );
   });
 
