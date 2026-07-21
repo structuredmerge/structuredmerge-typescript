@@ -7204,6 +7204,8 @@ describe('ast-merge shared fixtures', () => {
         case_count: number;
         argument_counts: readonly number[];
         structured_diff_count: number;
+        reviewable_output_case_count: number;
+        real_source_pair_count: number;
       };
     }>('diagnostics', 'slice-903-diff-driver-smoke-fixtures', 'diff-driver-smoke-fixtures.json');
     const suite = fixture.suite;
@@ -7211,11 +7213,16 @@ describe('ast-merge shared fixtures', () => {
     const structuredDiffCount = suite.cases.filter(
       (smokeCase) => smokeCase.expected_output_kind === 'structured_diff'
     ).length;
+    const reviewableOutputCaseCount = suite.cases.filter(
+      (smokeCase) => smokeCase.expected_output_fragments.length > 0
+    ).length;
 
     expect(suite.driver_name).toBe(fixture.expected.driver_name);
     expect(suite.cases).toHaveLength(fixture.expected.case_count);
     expect(argumentCounts).toEqual(fixture.expected.argument_counts);
     expect(structuredDiffCount).toBe(fixture.expected.structured_diff_count);
+    expect(reviewableOutputCaseCount).toBe(fixture.expected.reviewable_output_case_count);
+    expect(fixture.suite.real_source_pairs).toHaveLength(fixture.expected.real_source_pair_count);
   });
 
   it('conforms to the slice-904 performance guardrails fixture', () => {

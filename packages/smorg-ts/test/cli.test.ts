@@ -539,6 +539,10 @@ describe('smorg-ts cli', () => {
 
       expect(exit, stderr.output()).toBe(exitSuccess);
       expect(stdout.output()).toContain('structured-diff package.json');
+      expect(stdout.output()).toContain('review-diff unified');
+      expect(stdout.output()).toContain('@@ -1,1 +1,1 @@');
+      expect(stdout.output()).toContain('-{"old":true}');
+      expect(stdout.output()).toContain('+{"new":true}');
     }
   });
 

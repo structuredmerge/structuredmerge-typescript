@@ -771,6 +771,38 @@ function printStructuredDiff(
   stdout.write(
     `status changed\nold-lines ${lineCount(oldSource)}\nnew-lines ${lineCount(newSource)}\n`
   );
+  printStructuredDiffReviewHunk(stdout, pathName, oldSource, newSource);
+}
+
+function printStructuredDiffReviewHunk(
+  stdout: Pick<NodeJS.WriteStream, 'write'>,
+  pathName: string,
+  oldSource: string,
+  newSource: string
+): void {
+  const oldLines = diffSourceLines(oldSource);
+  const newLines = diffSourceLines(newSource);
+  stdout.write('review-diff unified\n');
+  stdout.write(`--- a/${pathName}\n`);
+  stdout.write(`+++ b/${pathName}\n`);
+  stdout.write(`@@ -1,${oldLines.length} +1,${newLines.length} @@\n`);
+  for (const line of oldLines) writeDiffLine(stdout, '-', line);
+  for (const line of newLines) writeDiffLine(stdout, '+', line);
+}
+
+function diffSourceLines(source: string): readonly string[] {
+  if (source === '') return [];
+  return source.match(/[^\n]*\n|[^\n]+/g) ?? [];
+}
+
+function writeDiffLine(
+  stdout: Pick<NodeJS.WriteStream, 'write'>,
+  prefix: string,
+  line: string
+): void {
+  stdout.write(prefix);
+  stdout.write(line);
+  if (!line.endsWith('\n')) stdout.write('\n');
 }
 
 function runConflicts(

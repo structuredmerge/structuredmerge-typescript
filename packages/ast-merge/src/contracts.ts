@@ -1803,6 +1803,7 @@ export interface DiffDriverSmokeCase {
   readonly argument_roles: readonly string[];
   readonly expected_exit_code: number;
   readonly expected_output_kind: string;
+  readonly expected_output_fragments: readonly string[];
 }
 
 export interface DiffDriverSmokeSuite {
@@ -1810,6 +1811,7 @@ export interface DiffDriverSmokeSuite {
   readonly version: string;
   readonly driver_name: string;
   readonly cases: readonly DiffDriverSmokeCase[];
+  readonly real_source_pairs: readonly Record<string, unknown>[];
   readonly diagnostics: readonly string[];
 }
 
