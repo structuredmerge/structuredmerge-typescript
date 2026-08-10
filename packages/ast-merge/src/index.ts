@@ -1,5 +1,28 @@
 export const packageName = '@structuredmerge/ast-merge';
 
+export {
+  PORTABLE_BENCHMARK_SCHEMA_MAJOR,
+  PortableBenchmarkContractConsumer,
+  PortableBenchmarkValidationError,
+  loadPortableBenchmarkContract,
+  parsePortableBenchmarkContract
+} from './portable-benchmark-contract';
+
+export type {
+  PortableBenchmarkAdapter,
+  PortableBenchmarkAggregateReport,
+  PortableBenchmarkCanonicalSummary,
+  PortableBenchmarkCase,
+  PortableBenchmarkCaseResult,
+  PortableBenchmarkContractDocument,
+  PortableBenchmarkEnumContract,
+  PortableBenchmarkFalseAutoMergeSummary,
+  PortableBenchmarkRunManifest,
+  PortableBenchmarkSafetyGateSummary,
+  PortableBenchmarkSummaryCounts,
+  PortableBenchmarkValidationCategory
+} from './portable-benchmark-contract';
+
 export type {
   ActiveProfileRuleCounts,
   ActiveProfileValidationSummary,
