@@ -22,3 +22,8 @@ run = "pnpm run test"
 
 [tasks.check]
 run = "pnpm run check"
+
+[tasks.release]
+raw = true
+description = "Publish TypeScript packages; pass release options after --"
+run = "ruby workspace-scripts/release_typescript_packages.rb"
