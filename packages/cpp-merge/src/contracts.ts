@@ -109,9 +109,7 @@ function unsupportedCppBackendFeature(message: string): ParseResult<CppAnalysis>
 }
 
 function hasIncludeDirective(source: string): boolean {
-  return source
-    .split('\n')
-    .some((line) => line.trimStart().startsWith('#include'));
+  return source.split('\n').some((line) => line.trimStart().startsWith('#include'));
 }
 
 function analyzeCppModule(source: string): ParseResult<CppAnalysis> {

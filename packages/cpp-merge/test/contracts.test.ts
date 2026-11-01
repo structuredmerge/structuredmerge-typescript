@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cppFeatureProfile, matchCppOwners, mergeCpp, parseCpp } from '../src/index';
+import { cppFeatureProfile, mergeCpp, parseCpp } from '../src/index';
 
 describe('cpp-merge', () => {
   it('fails closed when import records are missing', () => {

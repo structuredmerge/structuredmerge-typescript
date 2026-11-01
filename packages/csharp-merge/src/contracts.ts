@@ -109,9 +109,7 @@ function unsupportedCSharpBackendFeature(message: string): ParseResult<CSharpAna
 }
 
 function hasUsingDirective(source: string): boolean {
-  return source
-    .split('\n')
-    .some((line) => line.trimStart().startsWith('using '));
+  return source.split('\n').some((line) => line.trimStart().startsWith('using '));
 }
 
 function analyzeCSharpModule(source: string): ParseResult<CSharpAnalysis> {

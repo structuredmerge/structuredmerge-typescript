@@ -109,9 +109,7 @@ function unsupportedCBackendFeature(message: string): ParseResult<CAnalysis> {
 }
 
 function hasIncludeDirective(source: string): boolean {
-  return source
-    .split('\n')
-    .some((line) => line.trimStart().startsWith('#include'));
+  return source.split('\n').some((line) => line.trimStart().startsWith('#include'));
 }
 
 function analyzeCModule(source: string): ParseResult<CAnalysis> {

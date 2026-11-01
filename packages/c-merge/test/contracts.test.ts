@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cFeatureProfile, matchCOwners, mergeC, parseC } from '../src/index';
+import { cFeatureProfile, mergeC, parseC } from '../src/index';
 
 describe('c-merge', () => {
   it('fails closed when import records are missing', () => {

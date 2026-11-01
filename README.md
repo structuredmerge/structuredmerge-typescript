@@ -46,35 +46,35 @@ The family is intentionally layered:
 - Family packages such as [`@structuredmerge/markdown-merge`][ts-markdown-merge], [`@structuredmerge/yaml-merge`][ts-yaml-merge], and [`@structuredmerge/toml-merge`][ts-toml-merge] own parser-neutral behavior for one format family.
 - Provider packages such as [`@structuredmerge/markdown-it-merge`][ts-markdown-it-merge], [`@structuredmerge/js-yaml-merge`][ts-js-yaml-merge], and [`@structuredmerge/peggy-toml-merge`][ts-peggy-toml-merge] bind those families to concrete JavaScript parser libraries.
 
-| Package | Layer | What it provides |
-| --- | --- | --- |
-| [`@structuredmerge/tree-haver`][ts-tree-haver] | Parser substrate | Parser backend registry, byte ranges, node wrappers, source locations, and binary tree contracts. |
-| [`@structuredmerge/ast-merge`][ts-ast-merge] | Merge substrate | AST merge contracts, diagnostics, planning, review, replay, and nested merge vocabulary. |
-| [`@structuredmerge/ast-template`][ts-ast-template] | Template substrate | Template/session transport contracts. |
-| [`@structuredmerge/ast-crispr`][ts-ast-crispr] | Structured edits | AST edit recipes for generated blocks and template-owned regions. |
-| [`@structuredmerge/ast-merge-git`][ts-ast-merge-git] | Git integration | Merge-driver, diff-driver, conflict inspection, and language registry plumbing for `smorg-ts`. |
-| [`@structuredmerge/plain-merge`][ts-plain-merge] | Text | Plain-text fallback contracts. |
-| [`@structuredmerge/json-merge`][ts-json-merge] | JSON and JSONC | Object/array-aware JSON merge behavior. |
-| [`@structuredmerge/yaml-merge`][ts-yaml-merge] | YAML | YAML-family merge contracts. |
-| [`@structuredmerge/toml-merge`][ts-toml-merge] | TOML | TOML-family merge contracts. |
-| [`@structuredmerge/markdown-merge`][ts-markdown-merge] | Markdown | Markdown-family merge contracts. |
-| [`@structuredmerge/ruby-merge`][ts-ruby-merge] | Ruby source | Ruby source merge contracts. |
-| [`@structuredmerge/go-merge`][ts-go-merge] | Go source | Go source merge contracts. |
-| [`@structuredmerge/javascript-merge`][ts-javascript-merge] | JavaScript source | JavaScript source merge contracts. |
-| [`@structuredmerge/c-merge`][ts-c-merge] | C source | C source merge contracts. |
-| [`@structuredmerge/cpp-merge`][ts-cpp-merge] | C++ source | C++ source merge contracts. |
-| [`@structuredmerge/csharp-merge`][ts-csharp-merge] | C# source | C# source merge contracts. |
-| [`@structuredmerge/java-merge`][ts-java-merge] | Java source | Java source merge contracts. |
-| [`@structuredmerge/python-merge`][ts-python-merge] | Python source | Python source merge contracts. |
-| [`@structuredmerge/rust-merge`][ts-rust-merge] | Rust source | Rust source merge contracts. |
-| [`@structuredmerge/typescript-merge`][ts-typescript-merge] | TypeScript source | TypeScript source merge contracts. |
-| [`@structuredmerge/binary-merge`][ts-binary-merge] | Binary | Binary tree planning contracts. |
-| [`@structuredmerge/zip-merge`][ts-zip-merge] | Archives | ZIP archive planning helpers. |
-| [`@structuredmerge/js-yaml-merge`][ts-js-yaml-merge] | YAML provider | Uses [`js-yaml`][js-yaml] as the YAML parser/emitter provider path. |
-| [`@structuredmerge/peggy-toml-merge`][ts-peggy-toml-merge] | TOML provider | Uses [Peggy][peggy] generated parser code as the TOML provider path. |
-| [`@structuredmerge/markdown-it-merge`][ts-markdown-it-merge] | Markdown provider | Uses [markdown-it][markdown-it] as the Markdown parser provider path. |
-| [`@structuredmerge/typescript-compiler-merge`][ts-typescript-compiler-merge] | TypeScript provider | Uses the [TypeScript compiler API][typescript-compiler-api] provider path. |
-| [`@structuredmerge/kettle-nodule`][ts-kettle-nodule] | Recipe tooling | npm workspace maintenance and package recipe helpers. |
+| Package                                                                      | Layer               | What it provides                                                                                  |
+| ---------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------- |
+| [`@structuredmerge/tree-haver`][ts-tree-haver]                               | Parser substrate    | Parser backend registry, byte ranges, node wrappers, source locations, and binary tree contracts. |
+| [`@structuredmerge/ast-merge`][ts-ast-merge]                                 | Merge substrate     | AST merge contracts, diagnostics, planning, review, replay, and nested merge vocabulary.          |
+| [`@structuredmerge/ast-template`][ts-ast-template]                           | Template substrate  | Template/session transport contracts.                                                             |
+| [`@structuredmerge/ast-crispr`][ts-ast-crispr]                               | Structured edits    | AST edit recipes for generated blocks and template-owned regions.                                 |
+| [`@structuredmerge/ast-merge-git`][ts-ast-merge-git]                         | Git integration     | Merge-driver, diff-driver, conflict inspection, and language registry plumbing for `smorg-ts`.    |
+| [`@structuredmerge/plain-merge`][ts-plain-merge]                             | Text                | Plain-text fallback contracts.                                                                    |
+| [`@structuredmerge/json-merge`][ts-json-merge]                               | JSON and JSONC      | Object/array-aware JSON merge behavior.                                                           |
+| [`@structuredmerge/yaml-merge`][ts-yaml-merge]                               | YAML                | YAML-family merge contracts.                                                                      |
+| [`@structuredmerge/toml-merge`][ts-toml-merge]                               | TOML                | TOML-family merge contracts.                                                                      |
+| [`@structuredmerge/markdown-merge`][ts-markdown-merge]                       | Markdown            | Markdown-family merge contracts.                                                                  |
+| [`@structuredmerge/ruby-merge`][ts-ruby-merge]                               | Ruby source         | Ruby source merge contracts.                                                                      |
+| [`@structuredmerge/go-merge`][ts-go-merge]                                   | Go source           | Go source merge contracts.                                                                        |
+| [`@structuredmerge/javascript-merge`][ts-javascript-merge]                   | JavaScript source   | JavaScript source merge contracts.                                                                |
+| [`@structuredmerge/c-merge`][ts-c-merge]                                     | C source            | C source merge contracts.                                                                         |
+| [`@structuredmerge/cpp-merge`][ts-cpp-merge]                                 | C++ source          | C++ source merge contracts.                                                                       |
+| [`@structuredmerge/csharp-merge`][ts-csharp-merge]                           | C# source           | C# source merge contracts.                                                                        |
+| [`@structuredmerge/java-merge`][ts-java-merge]                               | Java source         | Java source merge contracts.                                                                      |
+| [`@structuredmerge/python-merge`][ts-python-merge]                           | Python source       | Python source merge contracts.                                                                    |
+| [`@structuredmerge/rust-merge`][ts-rust-merge]                               | Rust source         | Rust source merge contracts.                                                                      |
+| [`@structuredmerge/typescript-merge`][ts-typescript-merge]                   | TypeScript source   | TypeScript source merge contracts.                                                                |
+| [`@structuredmerge/binary-merge`][ts-binary-merge]                           | Binary              | Binary tree planning contracts.                                                                   |
+| [`@structuredmerge/zip-merge`][ts-zip-merge]                                 | Archives            | ZIP archive planning helpers.                                                                     |
+| [`@structuredmerge/js-yaml-merge`][ts-js-yaml-merge]                         | YAML provider       | Uses [`js-yaml`][js-yaml] as the YAML parser/emitter provider path.                               |
+| [`@structuredmerge/peggy-toml-merge`][ts-peggy-toml-merge]                   | TOML provider       | Uses [Peggy][peggy] generated parser code as the TOML provider path.                              |
+| [`@structuredmerge/markdown-it-merge`][ts-markdown-it-merge]                 | Markdown provider   | Uses [markdown-it][markdown-it] as the Markdown parser provider path.                             |
+| [`@structuredmerge/typescript-compiler-merge`][ts-typescript-compiler-merge] | TypeScript provider | Uses the [TypeScript compiler API][typescript-compiler-api] provider path.                        |
+| [`@structuredmerge/kettle-nodule`][ts-kettle-nodule]                         | Recipe tooling      | npm workspace maintenance and package recipe helpers.                                             |
 
 [ts-tree-haver]: https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/tree-haver
 [ts-ast-merge]: https://github.com/structuredmerge/structuredmerge-typescript/tree/main/packages/ast-merge

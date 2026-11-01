@@ -1,6 +1,6 @@
 [tools]
-node = "22"
-pnpm = "10.19.0"
+node = "latest"
+pnpm = "latest"
 
 [tasks.install]
 run = "pnpm install"
